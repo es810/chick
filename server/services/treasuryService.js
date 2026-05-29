@@ -1,0 +1,203 @@
+const Treasury = require('../models/Treasury');
+const TreasuryMovement = require('../models/TreasuryMovement');
+const Invoice = require('../models/Invoice');
+const EmployeeLedger = require('../models/EmployeeLedger');
+const ApiError = require('../utils/apiError');
+const { logAction } = require('./auditService');
+
+const MAIN_KEY = 'main';
+
+/**
+ * إجمالي الخزنة =
+ * رصيد أول المدة + إجمالي التحصيل + الإيرادات الخارجية
+ * − إجمالي التحميل − المصاريف الأخرى − السحوبات
+ */
+const computeTreasuryBalance = ({
+  openingBalance,
+  totalCollection,
+  externalRevenue,
+  totalLoading,
+  otherExpenses,
+  withdrawals,
+}) =>
+  openingBalance +
+  totalCollection +
+  externalRevenue -
+  totalLoading -
+  otherExpenses -
+  withdrawals;
+
+const getOpeningBalance = (treasury) => treasury.openingBalance ?? treasury.balance ?? 0;
+
+const getMainTreasury = async () => {
+  let treasury = await Treasury.findOne({ key: MAIN_KEY }).populate('updatedBy', 'name');
+  if (!treasury) {
+    treasury = await Treasury.create({ key: MAIN_KEY, openingBalance: 0, balance: 0 });
+    treasury = await Treasury.findById(treasury._id).populate('updatedBy', 'name');
+  }
+  return treasury;
+};
+
+const updateMainTreasury = async (openingBalance, user) => {
+  const treasury = await getMainTreasury();
+  const oldOpening = getOpeningBalance(treasury);
+  treasury.openingBalance = openingBalance;
+  treasury.balance = openingBalance;
+  treasury.updatedBy = user._id;
+  await treasury.save();
+
+  await logAction(user._id, user.name, 'UPDATE_MAIN_TREASURY', MAIN_KEY, {
+    from: oldOpening,
+    to: openingBalance,
+  });
+
+  return Treasury.findById(treasury._id).populate('updatedBy', 'name');
+};
+
+const deductFromMainTreasury = async (amount, user, details = {}) => {
+  const summary = await getTreasurySummary();
+  if (summary.balance < amount) {
+    throw new ApiError(400, 'Insufficient main treasury balance');
+  }
+
+  await TreasuryMovement.create({
+    type: 'withdrawal',
+    amount,
+    description: details.reason || 'خصم من الخزينة',
+    createdBy: user._id,
+  });
+
+  await logAction(user._id, user.name, 'DEDUCT_MAIN_TREASURY', MAIN_KEY, {
+    amount,
+    ...details,
+  });
+
+  return getTreasurySummary();
+};
+
+const ensureMainTreasuryInSession = async (session) => {
+  let treasury = await Treasury.findOne({ key: MAIN_KEY }).session(session);
+  if (!treasury) {
+    [treasury] = await Treasury.create([{ key: MAIN_KEY, openingBalance: 0, balance: 0 }], { session });
+  }
+  return treasury;
+};
+
+/** @deprecated Balance is computed from ledger aggregates; kept for compatibility, no-op on balance field. */
+const applyMainTreasuryDeltaInSession = async () => null;
+
+const getTreasurySummary = async () => {
+  const [treasury, collectionRows, ledgerRows, movementRows] = await Promise.all([
+    getMainTreasury(),
+    Invoice.aggregate([{ $group: { _id: null, total: { $sum: '$totalPrice' } } }]),
+    EmployeeLedger.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
+    TreasuryMovement.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
+  ]);
+
+  let totalLoading = 0;
+  let otherExpenses = 0;
+  for (const row of ledgerRows) {
+    if (row._id === 'debt') totalLoading = row.total;
+    if (row._id === 'expense') otherExpenses = row.total;
+  }
+
+  let externalRevenue = 0;
+  let withdrawals = 0;
+  for (const row of movementRows) {
+    if (row._id === 'external_revenue') externalRevenue = row.total;
+    if (row._id === 'withdrawal') withdrawals = row.total;
+  }
+
+  const openingBalance = getOpeningBalance(treasury);
+  const totalCollection = collectionRows[0]?.total ?? 0;
+
+  const balance = computeTreasuryBalance({
+    openingBalance,
+    totalCollection,
+    externalRevenue,
+    totalLoading,
+    otherExpenses,
+    withdrawals,
+  });
+
+  treasury.balance = balance;
+  await treasury.save();
+
+  return {
+    openingBalance,
+    balance,
+    totalCollection,
+    externalRevenue,
+    totalLoading,
+    otherExpenses,
+    withdrawals,
+    updatedAt: treasury.updatedAt,
+    updatedByName: treasury.updatedBy?.name ?? null,
+  };
+};
+
+const addExternalRevenue = async (amount, description, user) => {
+  if (!amount || amount <= 0) throw new ApiError(400, 'Amount must be greater than zero');
+
+  await TreasuryMovement.create({
+    type: 'external_revenue',
+    amount,
+    description: description || 'إيراد خارجي',
+    createdBy: user._id,
+  });
+
+  await logAction(user._id, user.name, 'TREASURY_EXTERNAL_REVENUE', MAIN_KEY, { amount, description });
+
+  return getTreasurySummary();
+};
+
+const withdrawFromTreasury = async (amount, description, user) => {
+  if (!amount || amount <= 0) throw new ApiError(400, 'Amount must be greater than zero');
+
+  const summary = await getTreasurySummary();
+  if (summary.balance < amount) {
+    throw new ApiError(400, 'Insufficient main treasury balance');
+  }
+
+  await TreasuryMovement.create({
+    type: 'withdrawal',
+    amount,
+    description: description || 'سحب من الخزنة',
+    createdBy: user._id,
+  });
+
+  await logAction(user._id, user.name, 'TREASURY_WITHDRAWAL', MAIN_KEY, { amount, description });
+
+  return getTreasurySummary();
+};
+
+const resetMainTreasury = async (user) => {
+  const treasury = await getMainTreasury();
+  const oldOpening = getOpeningBalance(treasury);
+
+  treasury.openingBalance = 0;
+  treasury.balance = 0;
+  treasury.updatedBy = user._id;
+  await treasury.save();
+
+  await TreasuryMovement.deleteMany({});
+
+  await logAction(user._id, user.name, 'ZERO_MAIN_TREASURY', MAIN_KEY, {
+    from: oldOpening,
+    to: 0,
+  });
+
+  return getTreasurySummary();
+};
+
+module.exports = {
+  getMainTreasury,
+  getTreasurySummary,
+  updateMainTreasury,
+  deductFromMainTreasury,
+  applyMainTreasuryDeltaInSession,
+  addExternalRevenue,
+  withdrawFromTreasury,
+  resetMainTreasury,
+  computeTreasuryBalance,
+};

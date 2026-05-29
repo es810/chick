@@ -1,0 +1,51 @@
+name: chicken_farm
+description: Chicken Farm Management System - Professional mobile app
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+  go_router: ^14.6.2
+  dio: ^5.7.0
+  shared_preferences: ^2.3.3
+  flutter_secure_storage: ^9.2.2
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  equatable: ^2.0.7
+  intl: ^0.20.2
+  fl_chart: ^0.69.2
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  path_provider: ^2.1.5
+  share_plus: ^10.1.2
+  qr_flutter: ^4.1.0
+  connectivity_plus: ^6.1.0
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+  shimmer: ^3.0.0
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.2
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.6.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

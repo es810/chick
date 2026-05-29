@@ -1,0 +1,30 @@
+# Secrets & local env
+.env
+.env.*
+!.env.example
+
+# Dependencies
+server/node_modules/
+app/.dart_tool/
+app/.pub-cache/
+app/.pub/
+
+# Build outputs
+app/build/
+server/logs/
+*.log
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Android local SDK path (machine-specific)
+app/android/local.properties
+
+# Cursor / agent (optional local)
+.cursor/
+
+# Upload artifacts
+*.zip
