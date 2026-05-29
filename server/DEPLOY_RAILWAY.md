@@ -12,7 +12,8 @@
 
 1. Push this project to GitHub (only the `server` folder is required, but the whole repo is fine).
 2. In Railway: **New Project** → **Deploy from GitHub repo** → select your repo.
-3. Open the service → **Settings** → **Root Directory** → set to `server`.
+3. **Root Directory** can stay at repo root — the root `Dockerfile` and `railway.toml` build `server/`.  
+   (Optional: set Root Directory to `server` and use `server/railway.toml` instead.)
 4. **Variables** → add:
 
 | Variable | Example |

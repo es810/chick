@@ -1,0 +1,9 @@
+# Fallback if Railway uses Nixpacks/Railpack instead of Dockerfile
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm ci --omit=dev --prefix server"]
+
+[start]
+cmd = "npm start --prefix server"

@@ -157,6 +157,8 @@ See **[server/DEPLOY_RAILWAY.md](server/DEPLOY_RAILWAY.md)** for MongoDB Atlas +
 
 Quick check after deploy: `GET https://YOUR-APP.up.railway.app/health`
 
+If Railway build fails with “could not determine how to build”, ensure the latest code is pushed (root `Dockerfile` + `railway.toml` target `server/`).
+
 ## Security
 
 - Passwords hashed with bcrypt (12 rounds)
