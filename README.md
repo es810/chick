@@ -133,6 +133,24 @@ Stock is **never** decreased directly. All changes go through `StockMovements`:
 - Audit logging
 - Search, filter, pagination
 
+## GitHub
+
+Repository: **https://github.com/es810/chick** (create the empty repo on GitHub, then push — see below).
+
+```powershell
+cd c:\chick
+gh auth login
+gh repo create chick --public --source=. --remote=origin --push
+```
+
+If the repo already exists:
+
+```powershell
+git push -u origin main
+```
+
+`.env` files are not committed; use `server/.env.example` as a template.
+
 ## Deploy API to Railway
 
 See **[server/DEPLOY_RAILWAY.md](server/DEPLOY_RAILWAY.md)** for MongoDB Atlas + Railway variables and Flutter `API_BASE_URL`.
