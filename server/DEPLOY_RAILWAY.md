@@ -28,16 +28,25 @@
 6. Deploy. Copy your public URL, e.g. `https://chicken-farm-api-production.up.railway.app`.
 7. API base for the app: `https://YOUR-URL/api` (test: `https://YOUR-URL/health`).
 
-### Seed production database (once)
+### Login: "Invalid email or password"
 
-From your PC (with `MONGODB_URI` pointing at Atlas):
+The API **auto-creates** demo users on startup if `admin@chickenfarm.com` is missing (after you deploy the latest server code). **Redeploy** Railway once, wait ~1 minute, then try:
 
-```bash
-cd server
-npm install
-# set MONGODB_URI and JWT_SECRET in .env to the same values as Railway
-npm run seed
+- `admin@chickenfarm.com` / `admin123`
+
+**Local `npm run ensure-users` fails with `querySrv ECONNREFUSED`?**  
+Your PC DNS cannot resolve `mongodb+srv://`. That is normal on some networks. Use one of:
+
+1. **Redeploy Railway** (recommended) — users are created on the server.
+2. **Atlas → Connect → Drivers** → copy the **standard** connection string (`mongodb://...`, not `srv`), then:
+
+```powershell
+cd c:\chick\server
+$env:MONGODB_URI = "mongodb://...."
+npm run ensure-users
 ```
+
+3. **Railway CLI** (uses Railway network): `railway login` → `railway link` → `railway run npm run ensure-users`
 
 ---
 

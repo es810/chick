@@ -1,13 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/constants/api_constants.dart';
+import '../core/config/api_config.dart';
 import 'storage_service.dart';
 
 class ApiClient {
   ApiClient(this._storage) {
-    final baseUrl = ApiConstants.baseUrl;
     _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},

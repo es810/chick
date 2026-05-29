@@ -28,6 +28,14 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Chicken Farm API — use /api/auth/login, /api/stock, etc.',
+    health: '/health',
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/stock', stockRoutes);

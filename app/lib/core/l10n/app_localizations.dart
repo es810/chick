@@ -33,7 +33,10 @@ class AppLocalizations {
   'invalidEmail': {'en': 'Enter valid email', 'ar': 'أدخل بريداً إلكترونياً صالحاً'},
   'minPassword': {'en': 'Min 6 characters', 'ar': '6 أحرف على الأقل'},
   'loginFailed': {'en': 'Login failed', 'ar': 'فشل تسجيل الدخول'},
-  'cannotReachServer': {'en': 'Cannot reach server. Is the API running?', 'ar': 'تعذّر الاتصال بالخادم. هل الخادم يعمل؟'},
+  'cannotReachServer': {
+    'en': 'Cannot reach server. Is the API running?',
+    'ar': 'تعذّر الاتصال بالخادم. هل الخادم يعمل؟',
+  },
 
   'dashboard': {'en': 'Dashboard', 'ar': 'لوحة التحكم'},
   'home': {'en': 'Home', 'ar': 'الرئيسية'},

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/api_constants.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/user_model.dart';
@@ -147,15 +146,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(
                       l10n.demoCredentials,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'API: ${ApiConstants.baseUrl}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey.shade500,
-                            fontSize: 11,
-                          ),
                       textAlign: TextAlign.center,
                     ),
                   ],

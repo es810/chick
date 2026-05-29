@@ -2,6 +2,8 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const { port, nodeEnv } = require('./config/env');
 const logger = require('./utils/logger');
+const User = require('./models/User');
+const { ensureDemoUsers } = require('./utils/ensureUsers');
 
 const MAX_DB_ATTEMPTS = nodeEnv === 'production' ? 12 : 1;
 const DB_RETRY_MS = 5000;
@@ -10,6 +12,12 @@ async function startMongoWithRetry() {
   for (let attempt = 1; attempt <= MAX_DB_ATTEMPTS; attempt += 1) {
     try {
       await connectDB();
+      const adminExists = await User.exists({ email: 'admin@chickenfarm.com' });
+      if (!adminExists) {
+        logger.info('No admin user in database — creating demo logins...');
+        await ensureDemoUsers();
+        logger.info('Demo users ready: admin@chickenfarm.com / admin123');
+      }
       return;
     } catch (error) {
       logger.error(`MongoDB attempt ${attempt}/${MAX_DB_ATTEMPTS}: ${error.message}`);
