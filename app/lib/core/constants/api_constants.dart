@@ -1,24 +1,8 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
+import '../config/api_config.dart';
 
 class ApiConstants {
-  /// Resolves API base URL by platform unless overridden at build time.
-  ///
-  /// - Windows/macOS/Linux desktop → localhost
-  /// - Android emulator → 10.0.2.2 (host machine)
-  /// - Physical device → pass `--dart-define=API_BASE_URL=http://YOUR_PC_IP:3000/api`
-  static String get baseUrl {
-    const fromEnv = String.fromEnvironment('API_BASE_URL');
-    if (fromEnv.isNotEmpty) return fromEnv;
-
-    if (kIsWeb) return 'http://localhost:3000/api';
-
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000/api';
-    }
-
-  return 'http://localhost:3000/api';
-  }
+  /// Build-time define, saved server URL on login screen, or platform default.
+  static String get baseUrl => ApiConfig.baseUrl;
 
   static const String login = '/auth/login';
   static const String me = '/auth/me';

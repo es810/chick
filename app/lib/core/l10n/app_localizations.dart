@@ -194,6 +194,10 @@ class AppLocalizations {
   'noStockItems': {'en': 'No stock items', 'ar': 'لا توجد عناصر مخزون'},
   'addStock': {'en': 'Add Stock', 'ar': 'إضافة مخزون'},
   'addStockMovement': {'en': 'Add Stock (IN Movement)', 'ar': 'إضافة مخزون (حركة دخول)'},
+  'stockLocation': {'en': 'Location', 'ar': 'المكان'},
+  'stockTypeLabel': {'en': 'Type', 'ar': 'النوع'},
+  'stockPrice': {'en': 'Price', 'ar': 'السعر'},
+  'stockTotal': {'en': 'Total', 'ar': 'إجمالي'},
   'avgWeight': {'en': 'Avg Weight (kg)', 'ar': 'متوسط الوزن (كغ)'},
   'pricePerKg': {'en': 'Price/kg (EGP)', 'ar': 'السعر/كغ (ج.م)'},
   'add': {'en': 'Add', 'ar': 'إضافة'},
@@ -445,6 +449,10 @@ class AppLocalizations {
   String get noStockItems => _get('noStockItems');
   String get addStock => _get('addStock');
   String get addStockMovement => _get('addStockMovement');
+  String get stockLocation => _get('stockLocation');
+  String get stockTypeLabel => _get('stockTypeLabel');
+  String get stockPrice => _get('stockPrice');
+  String get stockTotal => _get('stockTotal');
   String get avgWeight => _get('avgWeight');
   String get pricePerKg => _get('pricePerKg');
   String get add => _get('add');

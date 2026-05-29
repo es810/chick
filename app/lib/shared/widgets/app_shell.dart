@@ -22,7 +22,7 @@ class AppShell extends StatelessWidget {
       if (item.path.endsWith('/invoices') && location.startsWith('${item.path}/')) {
         return true;
       }
-      if (item.path.endsWith('/treasury') && location.startsWith('${item.path}')) {
+      if (item.path.endsWith('/treasury') && location.startsWith(item.path)) {
         return true;
       }
     }

@@ -16,12 +16,31 @@ const createStock = asyncHandler(async (req, res) => {
 });
 
 const updateStock = asyncHandler(async (req, res) => {
-  const { averageWeight, pricePerKg, lowStockThreshold, quantity } = req.body;
+  const {
+    location,
+    chickenType,
+    averageWeight,
+    pricePerKg,
+    lowStockThreshold,
+    quantity,
+    tareWeight,
+    netWeight,
+    totalAmount,
+  } = req.body;
   const updates = {};
+  if (location != null) updates.location = location;
+  if (chickenType != null) updates.chickenType = chickenType;
   if (averageWeight != null) updates.averageWeight = averageWeight;
   if (pricePerKg != null) updates.pricePerKg = pricePerKg;
   if (lowStockThreshold != null) updates.lowStockThreshold = lowStockThreshold;
   if (quantity != null) updates.quantity = quantity;
+  if (tareWeight != null) updates.tareWeight = tareWeight;
+  if (netWeight != null) updates.netWeight = netWeight;
+  if (totalAmount != null) {
+    updates.totalAmount = totalAmount;
+  } else if (pricePerKg != null && netWeight != null) {
+    updates.totalAmount = pricePerKg * netWeight;
+  }
 
   const stock = await Stock.findByIdAndUpdate(req.params.id, updates, {
     new: true,

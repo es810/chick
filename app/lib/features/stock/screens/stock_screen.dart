@@ -11,6 +11,7 @@ import '../../../models/user_model.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/stat_card.dart';
+import '../widgets/stock_entry_form.dart';
 
 class StockScreen extends ConsumerWidget {
   const StockScreen({super.key, this.embedded = false});
@@ -114,53 +115,31 @@ class StockScreen extends ConsumerWidget {
 
   void _showAddStockDialog(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final typeController = TextEditingController();
-    final qtyController = TextEditingController(text: '100');
-    final weightController = TextEditingController(text: '2.5');
-    final priceController = TextEditingController(text: '4.5');
+    final formKey = GlobalKey<StockEntryFormState>();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.addStockMovement),
         content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: typeController,
-                decoration: InputDecoration(labelText: l10n.chickenType),
-              ),
-              TextField(
-                controller: qtyController,
-                decoration: InputDecoration(labelText: l10n.quantity),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: weightController,
-                decoration: InputDecoration(labelText: l10n.avgWeight),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: priceController,
-                decoration: InputDecoration(labelText: l10n.pricePerKg),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+          child: StockEntryForm(
+            key: formKey,
+            initialCount: '100',
+            initialTare: '0',
+            initialNet: '0',
+            initialPrice: '4.5',
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
           ElevatedButton(
             onPressed: () async {
+              final form = formKey.currentState;
+              if (form == null || !form.validate(context)) return;
               try {
-                await ref.read(stockRepositoryProvider).addStock({
-                  'chickenType': typeController.text.trim(),
-                  'quantity': int.parse(qtyController.text),
-                  'averageWeight': double.parse(weightController.text),
-                  'pricePerKg': double.parse(priceController.text),
-                  'reason': 'Manual stock replenishment',
-                });
+                final payload = form.toPayload();
+                payload['reason'] = 'Manual stock replenishment';
+                await ref.read(stockRepositoryProvider).addStock(payload);
                 ref.invalidate(stockProvider);
                 if (context.mounted) Navigator.pop(ctx);
               } catch (e) {
@@ -183,55 +162,33 @@ class StockScreen extends ConsumerWidget {
 
   void _showEditStockDialog(BuildContext context, WidgetRef ref, StockModel item) {
     final l10n = context.l10n;
-    final qtyController = TextEditingController(text: '${item.quantity}');
-    final weightController = TextEditingController(text: item.averageWeight.toString());
-    final priceController = TextEditingController(text: item.pricePerKg.toString());
-    final thresholdController = TextEditingController(text: '${item.lowStockThreshold}');
+    final formKey = GlobalKey<StockEntryFormState>();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.editStock),
         content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(item.chickenType, style: Theme.of(ctx).textTheme.titleMedium),
-              const SizedBox(height: 12),
-              TextField(
-                controller: qtyController,
-                decoration: InputDecoration(labelText: l10n.quantity),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: weightController,
-                decoration: InputDecoration(labelText: l10n.avgWeight),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: priceController,
-                decoration: InputDecoration(labelText: l10n.pricePerKg),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: thresholdController,
-                decoration: const InputDecoration(labelText: 'Low stock alert at'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+          child: StockEntryForm(
+            key: formKey,
+            initialLocation: item.location,
+            initialType: item.chickenType,
+            initialCount: '${item.quantity}',
+            initialTare: item.tareWeight.toStringAsFixed(2),
+            initialNet: item.netWeight.toStringAsFixed(2),
+            initialPrice: item.pricePerKg.toStringAsFixed(2),
+            typeReadOnly: true,
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
           ElevatedButton(
             onPressed: () async {
+              final form = formKey.currentState;
+              if (form == null || !form.validate(context)) return;
               try {
-                await ref.read(stockRepositoryProvider).updateStock(item.id, {
-                  'quantity': int.parse(qtyController.text),
-                  'averageWeight': double.parse(weightController.text),
-                  'pricePerKg': double.parse(priceController.text),
-                  'lowStockThreshold': int.parse(thresholdController.text),
-                });
+                final payload = form.toPayload();
+                await ref.read(stockRepositoryProvider).updateStock(item.id, payload);
                 ref.invalidate(stockProvider);
                 if (context.mounted) {
                   Navigator.pop(ctx);
@@ -326,6 +283,14 @@ class _StockCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (item.location.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  '${l10n.stockLocation}: ${item.location}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
             Row(
               children: [
                 Expanded(
@@ -352,7 +317,7 @@ class _StockCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: StatCard(
-                    title: l10n.quantity,
+                    title: l10n.itemCount,
                     value: '${item.quantity}',
                     icon: Icons.numbers,
                   ),
@@ -360,7 +325,7 @@ class _StockCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: StatCard(
-                    title: l10n.pricePerKg,
+                    title: l10n.stockPrice,
                     value: context.formatCurrency(item.pricePerKg),
                     icon: Icons.attach_money,
                   ),
@@ -368,7 +333,24 @@ class _StockCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text('${l10n.avgWeight}: ${item.averageWeight.toStringAsFixed(2)} kg'),
+            Row(
+              children: [
+                Expanded(
+                  child: Text('${l10n.tareWeight}: ${item.tareWeight.toStringAsFixed(2)}'),
+                ),
+                Expanded(
+                  child: Text('${l10n.netWeight}: ${item.netWeight.toStringAsFixed(2)}'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${l10n.stockTotal}: ${context.formatCurrency(item.displayTotal)}',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryGreen,
+                  ),
+            ),
           ],
         ),
       ),

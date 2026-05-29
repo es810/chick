@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../models/user_model.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../services/api_client.dart';
@@ -47,7 +48,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState(user: auth.user, isLoading: false);
       return true;
     } on DioException catch (e) {
-      final message = _repo.parseError(e) ?? 'Cannot reach server. Is the API running?';
+      final message = _repo.parseError(e) ?? apiErrorMessage(e);
       state = state.copyWith(isLoading: false, error: message);
       return false;
     } catch (e) {

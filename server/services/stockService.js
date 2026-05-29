@@ -9,18 +9,52 @@ const addStock = async (data, employee) => {
   session.startTransaction();
 
   try {
-    const { chickenType, quantity, averageWeight, pricePerKg, reason = 'Stock replenishment' } = data;
+    const {
+      chickenType,
+      quantity,
+      location = '',
+      tareWeight = 0,
+      netWeight = 0,
+      averageWeight,
+      pricePerKg,
+      totalAmount,
+      reason = 'Stock replenishment',
+    } = data;
+
+    const avgWeight =
+      averageWeight != null
+        ? averageWeight
+        : quantity > 0 && netWeight > 0
+          ? netWeight / quantity
+          : 0;
+    const total =
+      totalAmount != null ? totalAmount : (pricePerKg || 0) * (netWeight || 0);
 
     let stock = await Stock.findOne({ chickenType }).session(session);
 
     if (stock) {
       stock.quantity += quantity;
-      if (averageWeight) stock.averageWeight = averageWeight;
-      if (pricePerKg) stock.pricePerKg = pricePerKg;
+      stock.location = location || stock.location;
+      stock.tareWeight = tareWeight;
+      stock.netWeight = netWeight;
+      stock.averageWeight = avgWeight;
+      stock.pricePerKg = pricePerKg ?? stock.pricePerKg;
+      stock.totalAmount = total;
       await stock.save({ session });
     } else {
       [stock] = await Stock.create(
-        [{ chickenType, quantity, averageWeight, pricePerKg }],
+        [
+          {
+            location,
+            chickenType,
+            quantity,
+            tareWeight,
+            netWeight,
+            averageWeight: avgWeight,
+            pricePerKg,
+            totalAmount: total,
+          },
+        ],
         { session }
       );
     }
@@ -32,6 +66,11 @@ const addStock = async (data, employee) => {
           stockId: stock._id,
           chickenType: stock.chickenType,
           quantity,
+          location,
+          tareWeight,
+          netWeight,
+          unitPrice: pricePerKg,
+          totalAmount: total,
           reason,
           employeeId: employee._id,
         },
