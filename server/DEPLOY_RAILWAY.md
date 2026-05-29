@@ -82,7 +82,10 @@ APK output: `app/build/app/outputs/flutter-apk/app-release.apk`
 
 | Issue | Fix |
 |-------|-----|
-| Build fails | Root directory must be `server`; `package.json` must be there |
-| Crash on start | Set `MONGODB_URI` and `JWT_SECRET` in Railway variables |
-| MongoDB timeout | Atlas → Network Access → allow `0.0.0.0/0` |
+| Build fails | Push latest repo (root `Dockerfile` + `railway.toml`) |
+| **Healthcheck failed** | Set `MONGODB_URI` + `JWT_SECRET`; Atlas → **Network Access** → `0.0.0.0/0` |
+| Crash on start | `JWT_SECRET` must not be empty; `NODE_ENV=production` |
+| MongoDB timeout | URL-encode special characters in password (`@` → `%40`) |
 | App cannot login | Use `https://.../api` (with `/api`), not bare domain |
+
+Check **Deploy Logs**. If you see `JWT_SECRET must be set` or `MONGODB_URI must be set`, add variables and redeploy.

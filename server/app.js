@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
 const errorHandler = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/authRoutes');
@@ -19,7 +20,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 
 app.get('/health', (req, res) => {
-  res.json({ success: true, message: 'Chicken Farm API is running' });
+  const dbConnected = mongoose.connection.readyState === 1;
+  res.status(200).json({
+    success: true,
+    message: 'Chicken Farm API is running',
+    db: dbConnected ? 'connected' : 'connecting',
+  });
 });
 
 app.use('/api/auth', authRoutes);

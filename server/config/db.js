@@ -13,7 +13,7 @@ const connectDB = async () => {
     logger.error('Set MONGODB_URI in server/.env to one of:');
     logger.error('  Local:  mongodb://127.0.0.1:27017/chicken_farm');
     logger.error('  Atlas:  mongodb+srv://USER:PASS@your-cluster.mongodb.net/chicken_farm');
-    process.exit(1);
+    throw new Error('MongoDB URI is still a placeholder — set MONGODB_URI in Railway variables');
   }
 
   try {
@@ -28,10 +28,10 @@ const connectDB = async () => {
       logger.error('Local MongoDB is not running. Start it with (Admin PowerShell):');
       logger.error('  net start MongoDB');
     } else if (error.message.includes('querySrv ECONNREFUSED')) {
-      logger.error('Cannot reach MongoDB Atlas. Check your internet/DNS or cluster URI.');
+      logger.error('Cannot reach MongoDB Atlas. Check Network Access (0.0.0.0/0) and the URI.');
     }
 
-    process.exit(1);
+    throw error;
   }
 };
 
