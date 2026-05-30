@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 
-/// Stock IN / edit fields: location, type, count, tare, net, price, total (read-only).
+/// Stock IN / edit fields: location, type, gross, count, tare, net, price, total (read-only).
 class StockEntryForm extends StatefulWidget {
   const StockEntryForm({
     super.key,
     this.initialLocation = '',
     this.initialType = '',
+    this.initialGross = '',
     this.initialCount = '',
     this.initialTare = '',
     this.initialNet = '',
@@ -17,6 +18,7 @@ class StockEntryForm extends StatefulWidget {
 
   final String initialLocation;
   final String initialType;
+  final String initialGross;
   final String initialCount;
   final String initialTare;
   final String initialNet;
@@ -30,6 +32,7 @@ class StockEntryForm extends StatefulWidget {
 class StockEntryFormState extends State<StockEntryForm> {
   late final TextEditingController _locationController;
   late final TextEditingController _typeController;
+  late final TextEditingController _grossController;
   late final TextEditingController _countController;
   late final TextEditingController _tareController;
   late final TextEditingController _netController;
@@ -43,6 +46,7 @@ class StockEntryFormState extends State<StockEntryForm> {
     super.initState();
     _locationController = TextEditingController(text: widget.initialLocation);
     _typeController = TextEditingController(text: widget.initialType);
+    _grossController = TextEditingController(text: widget.initialGross);
     _countController = TextEditingController(text: widget.initialCount);
     _tareController = TextEditingController(text: widget.initialTare);
     _netController = TextEditingController(text: widget.initialNet);
@@ -58,6 +62,7 @@ class StockEntryFormState extends State<StockEntryForm> {
   void dispose() {
     _locationController.dispose();
     _typeController.dispose();
+    _grossController.dispose();
     _countController.dispose();
     _tareController.dispose();
     _netController.dispose();
@@ -79,12 +84,14 @@ class StockEntryFormState extends State<StockEntryForm> {
 
   Map<String, dynamic> toPayload() {
     final count = int.parse(_countController.text.trim());
+    final gross = double.parse(_grossController.text.trim().replaceAll(',', ''));
     final tare = double.parse(_tareController.text.trim().replaceAll(',', ''));
     final net = double.parse(_netController.text.trim().replaceAll(',', ''));
     final price = double.parse(_priceController.text.trim().replaceAll(',', ''));
     return {
       'location': _locationController.text.trim(),
       'chickenType': _typeController.text.trim(),
+      'grossWeight': gross,
       'quantity': count,
       'tareWeight': tare,
       'netWeight': net,
@@ -97,6 +104,7 @@ class StockEntryFormState extends State<StockEntryForm> {
   bool validate(BuildContext context) {
     final l10n = context.l10n;
     if (_typeController.text.trim().isEmpty) return false;
+    if (double.tryParse(_grossController.text.trim().replaceAll(',', '')) == null) return false;
     if (int.tryParse(_countController.text.trim()) == null) return false;
     if (double.tryParse(_tareController.text.trim().replaceAll(',', '')) == null) return false;
     if (double.tryParse(_netController.text.trim().replaceAll(',', '')) == null) return false;
@@ -132,6 +140,15 @@ class StockEntryFormState extends State<StockEntryForm> {
           decoration: InputDecoration(
             labelText: l10n.stockTypeLabel,
             prefixIcon: const Icon(Icons.category_outlined),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _grossController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: l10n.grossWeight,
+            prefixIcon: const Icon(Icons.inventory_2_outlined),
           ),
         ),
         const SizedBox(height: 12),

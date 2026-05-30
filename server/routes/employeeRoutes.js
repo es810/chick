@@ -37,7 +37,18 @@ router.post(
   createEmployee
 );
 
-router.put('/:id', updateEmployee);
+router.put(
+  '/:id',
+  [
+    body('name').optional().trim().notEmpty(),
+    body('phone').optional().trim().notEmpty(),
+    body('email').optional().isEmail().normalizeEmail(),
+    body('password').optional().isLength({ min: 6 }),
+    body('isActive').optional().isBoolean(),
+  ],
+  validate,
+  updateEmployee
+);
 router.delete('/:id', deleteEmployee);
 
 module.exports = router;

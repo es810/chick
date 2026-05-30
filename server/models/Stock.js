@@ -5,6 +5,7 @@ const stockSchema = new mongoose.Schema(
     location: { type: String, trim: true, default: '' },
     chickenType: { type: String, required: true, trim: true, unique: true },
     quantity: { type: Number, required: true, min: 0, default: 0 },
+    grossWeight: { type: Number, default: 0, min: 0 },
     tareWeight: { type: Number, default: 0, min: 0 },
     netWeight: { type: Number, default: 0, min: 0 },
     averageWeight: { type: Number, required: true, min: 0 },

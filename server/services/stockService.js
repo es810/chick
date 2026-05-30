@@ -13,6 +13,7 @@ const addStock = async (data, employee) => {
       chickenType,
       quantity,
       location = '',
+      grossWeight = 0,
       tareWeight = 0,
       netWeight = 0,
       averageWeight,
@@ -35,6 +36,7 @@ const addStock = async (data, employee) => {
     if (stock) {
       stock.quantity += quantity;
       stock.location = location || stock.location;
+      stock.grossWeight = grossWeight;
       stock.tareWeight = tareWeight;
       stock.netWeight = netWeight;
       stock.averageWeight = avgWeight;
@@ -48,6 +50,7 @@ const addStock = async (data, employee) => {
             location,
             chickenType,
             quantity,
+            grossWeight,
             tareWeight,
             netWeight,
             averageWeight: avgWeight,
@@ -67,6 +70,7 @@ const addStock = async (data, employee) => {
           chickenType: stock.chickenType,
           quantity,
           location,
+          grossWeight,
           tareWeight,
           netWeight,
           unitPrice: pricePerKg,

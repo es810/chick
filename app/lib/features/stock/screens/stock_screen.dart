@@ -124,6 +124,7 @@ class StockScreen extends ConsumerWidget {
         content: SingleChildScrollView(
           child: StockEntryForm(
             key: formKey,
+            initialGross: '0',
             initialCount: '100',
             initialTare: '0',
             initialNet: '0',
@@ -173,6 +174,7 @@ class StockScreen extends ConsumerWidget {
             key: formKey,
             initialLocation: item.location,
             initialType: item.chickenType,
+            initialGross: item.grossWeight.toStringAsFixed(2),
             initialCount: '${item.quantity}',
             initialTare: item.tareWeight.toStringAsFixed(2),
             initialNet: item.netWeight.toStringAsFixed(2),
@@ -333,6 +335,8 @@ class _StockCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
+            Text('${l10n.grossWeight}: ${item.grossWeight.toStringAsFixed(2)}'),
+            const SizedBox(height: 4),
             Row(
               children: [
                 Expanded(

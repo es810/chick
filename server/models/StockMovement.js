@@ -7,6 +7,7 @@ const stockMovementSchema = new mongoose.Schema(
     chickenType: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     location: { type: String, trim: true, default: '' },
+    grossWeight: { type: Number, default: 0, min: 0 },
     tareWeight: { type: Number, default: 0, min: 0 },
     netWeight: { type: Number, default: 0, min: 0 },
     unitPrice: { type: Number, default: 0, min: 0 },

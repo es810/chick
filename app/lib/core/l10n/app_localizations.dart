@@ -32,6 +32,7 @@ class AppLocalizations {
   'demoCredentials': {'en': 'Demo: admin@chickenfarm.com / admin123', 'ar': 'تجريبي: admin@chickenfarm.com / admin123'},
   'invalidEmail': {'en': 'Enter valid email', 'ar': 'أدخل بريداً إلكترونياً صالحاً'},
   'minPassword': {'en': 'Min 6 characters', 'ar': '6 أحرف على الأقل'},
+  'fieldRequired': {'en': 'Required', 'ar': 'مطلوب'},
   'loginFailed': {'en': 'Login failed', 'ar': 'فشل تسجيل الدخول'},
   'cannotReachServer': {
     'en': 'Cannot reach server. Is the API running?',
@@ -175,7 +176,7 @@ class AppLocalizations {
   'notes': {'en': 'Notes', 'ar': 'ملاحظات'},
   'distributionReceipt': {'en': 'Distribution Receipt', 'ar': 'إيصال توزيع'},
   'itemCount': {'en': 'Count', 'ar': 'العدد'},
-  'grossWeight': {'en': 'Gross Weight (kg)', 'ar': 'وزن القائم (كجم)'},
+  'grossWeight': {'en': 'Gross Weight (kg)', 'ar': 'الوزن القايم (كجم)'},
   'tareWeight': {'en': 'Tare Weight (kg)', 'ar': 'الوزن الفارغ (كجم)'},
   'tareWeightFormula': {
     'en': 'Tare weight = count × 8 kg',
@@ -271,6 +272,23 @@ class AppLocalizations {
   'amount': {'en': 'Amount (EGP)', 'ar': 'المبلغ (ج.م)'},
   'description': {'en': 'Description', 'ar': 'الوصف'},
   'addEmployee': {'en': 'Add Employee', 'ar': 'إضافة موظف'},
+  'employeeAdded': {'en': 'Employee added', 'ar': 'تمت إضافة الموظف'},
+  'employeeAddFailed': {'en': 'Could not add employee', 'ar': 'تعذّر إضافة الموظف'},
+  'editEmployee': {'en': 'Edit Employee', 'ar': 'تعديل الموظف'},
+  'employeeUpdated': {'en': 'Employee updated', 'ar': 'تم تحديث الموظف'},
+  'employeeUpdateFailed': {'en': 'Could not update employee', 'ar': 'تعذّر تحديث الموظف'},
+  'employeeDeleted': {'en': 'Employee removed', 'ar': 'تم إلغاء تفعيل الموظف'},
+  'employeeDeleteFailed': {'en': 'Could not remove employee', 'ar': 'تعذّر حذف الموظف'},
+  'confirmDeleteEmployee': {
+    'en': 'Deactivate this employee? They will not be able to sign in.',
+    'ar': 'إلغاء تفعيل هذا الموظف؟ لن يتمكن من تسجيل الدخول.',
+  },
+  'newPasswordOptional': {
+    'en': 'New password (optional)',
+    'ar': 'كلمة مرور جديدة (اختياري)',
+  },
+  'employeeActive': {'en': 'Active', 'ar': 'نشط'},
+  'viewLedger': {'en': 'View ledger', 'ar': 'عرض الخزنة'},
   'editStock': {'en': 'Edit Stock', 'ar': 'تعديل المخزون'},
   'stockUpdated': {'en': 'Stock updated', 'ar': 'تم تحديث المخزون'},
   'stockDeleted': {'en': 'Stock deleted', 'ar': 'تم حذف المخزون'},
@@ -312,6 +330,7 @@ class AppLocalizations {
   String get demoCredentials => _get('demoCredentials');
   String get invalidEmail => _get('invalidEmail');
   String get minPassword => _get('minPassword');
+  String get fieldRequired => _get('fieldRequired');
   String get loginFailed => _get('loginFailed');
   String get cannotReachServer => _get('cannotReachServer');
 
@@ -511,6 +530,17 @@ class AppLocalizations {
   String get amount => _get('amount');
   String get description => _get('description');
   String get addEmployee => _get('addEmployee');
+  String get employeeAdded => _get('employeeAdded');
+  String get employeeAddFailed => _get('employeeAddFailed');
+  String get editEmployee => _get('editEmployee');
+  String get employeeUpdated => _get('employeeUpdated');
+  String get employeeUpdateFailed => _get('employeeUpdateFailed');
+  String get employeeDeleted => _get('employeeDeleted');
+  String get employeeDeleteFailed => _get('employeeDeleteFailed');
+  String get confirmDeleteEmployee => _get('confirmDeleteEmployee');
+  String get newPasswordOptional => _get('newPasswordOptional');
+  String get employeeActive => _get('employeeActive');
+  String get viewLedger => _get('viewLedger');
   String get editStock => _get('editStock');
   String get stockUpdated => _get('stockUpdated');
   String get stockDeleted => _get('stockDeleted');

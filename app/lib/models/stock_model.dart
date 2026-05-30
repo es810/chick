@@ -8,6 +8,7 @@ class StockModel extends Equatable {
     required this.averageWeight,
     required this.pricePerKg,
     this.location = '',
+    this.grossWeight = 0,
     this.tareWeight = 0,
     this.netWeight = 0,
     this.totalAmount = 0,
@@ -18,6 +19,7 @@ class StockModel extends Equatable {
   final String location;
   final String chickenType;
   final int quantity;
+  final double grossWeight;
   final double tareWeight;
   final double netWeight;
   final double averageWeight;
@@ -36,6 +38,7 @@ class StockModel extends Equatable {
       location: json['location'] as String? ?? '',
       chickenType: json['chickenType'] as String,
       quantity: (json['quantity'] as num).toInt(),
+      grossWeight: (json['grossWeight'] as num?)?.toDouble() ?? 0,
       tareWeight: (json['tareWeight'] as num?)?.toDouble() ?? 0,
       netWeight: (json['netWeight'] as num?)?.toDouble() ?? 0,
       averageWeight: (json['averageWeight'] as num).toDouble(),
@@ -49,6 +52,7 @@ class StockModel extends Equatable {
         'location': location,
         'chickenType': chickenType,
         'quantity': quantity,
+        'grossWeight': grossWeight,
         'tareWeight': tareWeight,
         'netWeight': netWeight,
         'averageWeight': averageWeight,

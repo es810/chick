@@ -26,6 +26,7 @@ router.post(
     body('chickenType').trim().notEmpty(),
     body('quantity').isInt({ min: 1 }),
     body('location').optional().isString(),
+    body('grossWeight').optional().isFloat({ min: 0 }),
     body('tareWeight').optional().isFloat({ min: 0 }),
     body('netWeight').optional().isFloat({ min: 0 }),
     body('totalAmount').optional().isFloat({ min: 0 }),

@@ -23,6 +23,7 @@ const updateStock = asyncHandler(async (req, res) => {
     pricePerKg,
     lowStockThreshold,
     quantity,
+    grossWeight,
     tareWeight,
     netWeight,
     totalAmount,
@@ -34,6 +35,7 @@ const updateStock = asyncHandler(async (req, res) => {
   if (pricePerKg != null) updates.pricePerKg = pricePerKg;
   if (lowStockThreshold != null) updates.lowStockThreshold = lowStockThreshold;
   if (quantity != null) updates.quantity = quantity;
+  if (grossWeight != null) updates.grossWeight = grossWeight;
   if (tareWeight != null) updates.tareWeight = tareWeight;
   if (netWeight != null) updates.netWeight = netWeight;
   if (totalAmount != null) {

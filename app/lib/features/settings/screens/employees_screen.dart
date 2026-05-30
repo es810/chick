@@ -2,8 +2,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../services/api_client.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -37,116 +39,396 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
       final response = await ref.read(apiClientProvider).get('/employees');
       final data = response.data as Map<String, dynamic>;
       setState(() {
-        _employees = (data['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _employees = (data['data'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
         _loading = false;
       });
     } on DioException catch (e) {
       setState(() {
-        _error = e.response?.data?['message']?.toString() ?? e.message;
+        _error = apiErrorMessage(e);
         _loading = false;
       });
     }
   }
 
-  void _showAddDialog() {
-    final nameController = TextEditingController();
-    final phoneController = TextEditingController();
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController(text: 'employee123');
+  void _openLedger(Map<String, dynamic> emp) {
+    final id = (emp['_id'] ?? emp['id']).toString();
+    final name = emp['name'] as String;
+    context.push(
+      '/admin/employees/$id?name=${Uri.encodeQueryComponent(name)}',
+    );
+  }
 
-    showDialog(
+  Future<void> _showEmployeeFormDialog({Map<String, dynamic>? employee}) async {
+    final l10n = context.l10n;
+    final isEdit = employee != null;
+    final nameController = TextEditingController(text: employee?['name'] as String? ?? '');
+    final phoneController = TextEditingController(text: employee?['phone'] as String? ?? '');
+    final emailController = TextEditingController(text: employee?['email'] as String? ?? '');
+    final passwordController = TextEditingController();
+    var isActive = employee?['isActive'] as bool? ?? true;
+    final formKey = GlobalKey<FormState>();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(isEdit ? l10n.editEmployee : l10n.addEmployee),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    textDirection: TextDirection.rtl,
+                    decoration: InputDecoration(
+                      labelText: l10n.name,
+                      prefixIcon: const Icon(Icons.person_outline),
+                    ),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? l10n.fieldRequired : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: l10n.phone,
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                    ),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? l10n.fieldRequired : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: l10n.email,
+                      prefixIcon: const Icon(Icons.email_outlined),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return l10n.fieldRequired;
+                      if (!v.contains('@')) return l10n.invalidEmail;
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: isEdit ? l10n.newPasswordOptional : l10n.password,
+                      prefixIcon: const Icon(Icons.lock_outline),
+                    ),
+                    validator: (v) {
+                      if (!isEdit && (v == null || v.length < 6)) {
+                        return l10n.minPassword;
+                      }
+                      if (isEdit && v != null && v.isNotEmpty && v.length < 6) {
+                        return l10n.minPassword;
+                      }
+                      return null;
+                    },
+                  ),
+                  if (isEdit) ...[
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.employeeActive),
+                      value: isActive,
+                      onChanged: (v) => setDialogState(() => isActive = v),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.pop(ctx, true);
+                }
+              },
+              child: Text(isEdit ? l10n.save : l10n.add),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true || !mounted) {
+      nameController.dispose();
+      phoneController.dispose();
+      emailController.dispose();
+      passwordController.dispose();
+      return;
+    }
+
+    final api = ref.read(apiClientProvider);
+    final body = <String, dynamic>{
+      'name': nameController.text.trim(),
+      'phone': phoneController.text.trim(),
+      'email': emailController.text.trim().toLowerCase(),
+    };
+    if (passwordController.text.isNotEmpty) {
+      body['password'] = passwordController.text;
+    }
+    if (isEdit) body['isActive'] = isActive;
+
+    nameController.dispose();
+    phoneController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+
+    try {
+      if (isEdit) {
+        final id = (employee['_id'] ?? employee['id']).toString();
+        await api.put('/employees/$id', data: body);
+      } else {
+        if (!body.containsKey('password')) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.minPassword), backgroundColor: AppColors.error),
+            );
+          }
+          return;
+        }
+        await api.post('/employees', data: body);
+      }
+
+      await _loadEmployees();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isEdit ? l10n.employeeUpdated : l10n.employeeAdded),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              apiErrorMessage(
+                e,
+                fallback: isEdit ? l10n.employeeUpdateFailed : l10n.employeeAddFailed,
+              ),
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteEmployee(Map<String, dynamic> emp) async {
+    final l10n = context.l10n;
+    final name = emp['name'] as String;
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(context.l10n.addEmployee),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name')),
-              TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Phone')),
-              TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
-              TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
-            ],
-          ),
-        ),
+        title: Text(l10n.delete),
+        content: Text(l10n.confirmDeleteEmployee),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              await ref.read(apiClientProvider).post('/employees', data: {
-                'name': nameController.text,
-                'phone': phoneController.text,
-                'email': emailController.text,
-                'password': passwordController.text,
-              });
-              if (!ctx.mounted) return;
-              Navigator.pop(ctx);
-              _loadEmployees();
-            },
-            child: const Text('Add'),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(l10n.delete),
           ),
         ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final id = (emp['_id'] ?? emp['id']).toString();
+      await ref.read(apiClientProvider).delete('/employees/$id');
+      await _loadEmployees();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${l10n.employeeDeleted} ($name)'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(apiErrorMessage(e, fallback: l10n.employeeDeleteFailed)),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildList() {
+    final l10n = context.l10n;
+
+    if (_loading) {
+      return const LoadingShimmer();
+    }
+    if (_error != null) {
+      return ErrorStateWidget(message: _error!, onRetry: _loadEmployees);
+    }
+    if (_employees.isEmpty) {
+      return EmptyStateWidget(
+        icon: Icons.people,
+        title: l10n.noEmployees,
+        action: ElevatedButton.icon(
+          onPressed: () => _showEmployeeFormDialog(),
+          icon: const Icon(Icons.person_add),
+          label: Text(l10n.addEmployee),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadEmployees,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _employees.length,
+        itemBuilder: (_, i) {
+          final emp = _employees[i];
+          final isActive = emp['isActive'] as bool? ?? true;
+          final name = emp['name'] as String;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              onTap: () => _openLedger(emp),
+              leading: CircleAvatar(
+                backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.15),
+                child: Text(name[0].toUpperCase()),
+              ),
+              title: Text(
+                name,
+                style: TextStyle(
+                  decoration: isActive ? null : TextDecoration.lineThrough,
+                  color: isActive ? null : Colors.grey,
+                ),
+              ),
+              subtitle: Text('${emp['email']}\n${emp['phone']}'),
+              isThreeLine: true,
+              trailing: PopupMenuButton<String>(
+                onSelected: (action) {
+                  switch (action) {
+                    case 'ledger':
+                      _openLedger(emp);
+                    case 'edit':
+                      _showEmployeeFormDialog(employee: emp);
+                    case 'delete':
+                      _confirmDeleteEmployee(emp);
+                  }
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'ledger',
+                    child: ListTile(
+                      leading: const Icon(Icons.account_balance_wallet_outlined),
+                      title: Text(l10n.viewLedger),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: const Icon(Icons.edit_outlined),
+                      title: Text(l10n.editEmployee),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline, color: AppColors.error),
+                      title: Text(l10n.delete, style: TextStyle(color: AppColors.error)),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final body = _loading
-          ? const LoadingShimmer()
-          : _error != null
-              ? ErrorStateWidget(message: _error!, onRetry: _loadEmployees)
-              : _employees.isEmpty
-                  ? EmptyStateWidget(icon: Icons.people, title: context.l10n.noEmployees)
-                  : RefreshIndicator(
-                      onRefresh: _loadEmployees,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _employees.length,
-                        itemBuilder: (_, i) {
-                          final emp = _employees[i];
-                          final isActive = emp['isActive'] as bool? ?? true;
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              onTap: () {
-                                final id = emp['_id'] as String;
-                                final name = emp['name'] as String;
-                                context.push(
-                                  '/admin/employees/$id?name=${Uri.encodeQueryComponent(name)}',
-                                );
-                              },
-                              leading: CircleAvatar(
-                                backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.15),
-                                child: Text((emp['name'] as String)[0].toUpperCase()),
-                              ),
-                              title: Text(emp['name'] as String),
-                              subtitle: Text('${emp['email']}\n${emp['phone']}'),
-                              isThreeLine: true,
-                              trailing: Icon(
-                                isActive ? Icons.check_circle : Icons.cancel,
-                                color: isActive ? AppColors.success : AppColors.error,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
+    final l10n = context.l10n;
 
     if (widget.embedded) {
-      return ColoredBox(color: const Color(0xFF0D1B3E), child: body);
+      return ColoredBox(
+        color: const Color(0xFF0D1B3E),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.employeesTreasury,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _showEmployeeFormDialog(),
+                    icon: const Icon(Icons.person_add, color: Colors.white),
+                    tooltip: l10n.addEmployee,
+                  ),
+                  IconButton(
+                    onPressed: _loadEmployees,
+                    icon: const Icon(Icons.refresh, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildList()),
+          ],
+        ),
+      );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l10n.employees),
+        title: Text(l10n.employees),
         actions: [
-          IconButton(icon: const Icon(Icons.person_add), onPressed: _showAddDialog),
+          IconButton(
+            icon: const Icon(Icons.person_add),
+            onPressed: () => _showEmployeeFormDialog(),
+            tooltip: l10n.addEmployee,
+          ),
         ],
       ),
-      body: body,
+      body: _buildList(),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
+        onPressed: () => _showEmployeeFormDialog(),
+        tooltip: l10n.addEmployee,
         child: const Icon(Icons.person_add),
       ),
     );
