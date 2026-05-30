@@ -45,6 +45,7 @@ class AppLocalizations {
   'stock': {'en': 'Stock', 'ar': 'المخزون'},
   'clients': {'en': 'Clients', 'ar': 'العملاء'},
   'settings': {'en': 'Settings', 'ar': 'الإعدادات'},
+  'appVersion': {'en': 'App version', 'ar': 'إصدار التطبيق'},
   'reports': {'en': 'Reports', 'ar': 'التقارير'},
   'employees': {'en': 'Employees', 'ar': 'الموظفون'},
 
@@ -340,6 +341,7 @@ class AppLocalizations {
   String get stock => _get('stock');
   String get clients => _get('clients');
   String get settings => _get('settings');
+  String get appVersion => _get('appVersion');
   String get reports => _get('reports');
   String get employees => _get('employees');
 

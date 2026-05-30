@@ -133,6 +133,20 @@ Stock is **never** decreased directly. All changes go through `StockMovements`:
 - Audit logging
 - Search, filter, pagination
 
+## Releases (Android)
+
+| Version | APK |
+|---------|-----|
+| **1.1.0** | `release/ChickenFarm-v1.1.0-3.apk` (after build) |
+
+Build from repo root (uses Railway API by default):
+
+```powershell
+.\release\build-android-apk.ps1
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 ## GitHub
 
 Repository: **https://github.com/es810/chick** (create the empty repo on GitHub, then push — see below).

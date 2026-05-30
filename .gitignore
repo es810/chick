@@ -28,3 +28,4 @@ app/android/local.properties
 
 # Upload artifacts
 *.zip
+release/*.apk

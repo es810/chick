@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_version.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/providers/locale_provider.dart';
@@ -91,6 +92,11 @@ class SettingsScreen extends ConsumerWidget {
             title: Text(l10n.pushNotifications),
             subtitle: Text(l10n.lowStockAlertsEnabled),
             trailing: Switch(value: true, onChanged: (_) {}),
+          ),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: Text(l10n.appVersion),
+            subtitle: Text(AppVersion.label),
           ),
           const Divider(),
           ListTile(
