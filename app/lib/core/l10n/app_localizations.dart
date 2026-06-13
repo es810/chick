@@ -272,6 +272,8 @@ class AppLocalizations {
   'noLedgerEntries': {'en': 'No entries yet', 'ar': 'لا توجد حركات بعد'},
   'amount': {'en': 'Amount (EGP)', 'ar': 'المبلغ (ج.م)'},
   'description': {'en': 'Description', 'ar': 'الوصف'},
+  'addCollection': {'en': 'Add collection', 'ar': 'إضافة تحصيل'},
+  'collectedAmount': {'en': 'Collected amount', 'ar': 'المبلغ المحصّل'},
   'addEmployee': {'en': 'Add Employee', 'ar': 'إضافة موظف'},
   'employeeAdded': {'en': 'Employee added', 'ar': 'تمت إضافة الموظف'},
   'employeeAddFailed': {'en': 'Could not add employee', 'ar': 'تعذّر إضافة الموظف'},
@@ -532,6 +534,8 @@ class AppLocalizations {
   String get amount => _get('amount');
   String get description => _get('description');
   String get addEmployee => _get('addEmployee');
+  String get addCollection => _get('addCollection');
+  String get collectedAmount => _get('collectedAmount');
   String get employeeAdded => _get('employeeAdded');
   String get employeeAddFailed => _get('employeeAddFailed');
   String get editEmployee => _get('editEmployee');

@@ -49,5 +49,8 @@ extension TreasuryCategoryApi on TreasuryCategory {
 
   bool get needsEmployee => this == TreasuryCategory.loading || this == TreasuryCategory.expense;
 
-  bool get isMovement => this == TreasuryCategory.externalRevenue || this == TreasuryCategory.withdrawal;
+  bool get isMovement =>
+      this == TreasuryCategory.collection ||
+      this == TreasuryCategory.externalRevenue ||
+      this == TreasuryCategory.withdrawal;
 }

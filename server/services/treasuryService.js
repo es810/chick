@@ -1,6 +1,5 @@
 const Treasury = require('../models/Treasury');
 const TreasuryMovement = require('../models/TreasuryMovement');
-const Invoice = require('../models/Invoice');
 const EmployeeLedger = require('../models/EmployeeLedger');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
@@ -87,9 +86,8 @@ const ensureMainTreasuryInSession = async (session) => {
 const applyMainTreasuryDeltaInSession = async () => null;
 
 const getTreasurySummary = async () => {
-  const [treasury, collectionRows, ledgerRows, movementRows] = await Promise.all([
+  const [treasury, ledgerRows, movementRows] = await Promise.all([
     getMainTreasury(),
-    Invoice.aggregate([{ $group: { _id: null, total: { $sum: '$totalPrice' } } }]),
     EmployeeLedger.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
     TreasuryMovement.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
   ]);
@@ -101,15 +99,16 @@ const getTreasurySummary = async () => {
     if (row._id === 'expense') otherExpenses = row.total;
   }
 
+  let totalCollection = 0;
   let externalRevenue = 0;
   let withdrawals = 0;
   for (const row of movementRows) {
+    if (row._id === 'collection') totalCollection = row.total;
     if (row._id === 'external_revenue') externalRevenue = row.total;
     if (row._id === 'withdrawal') withdrawals = row.total;
   }
 
   const openingBalance = getOpeningBalance(treasury);
-  const totalCollection = collectionRows[0]?.total ?? 0;
 
   const balance = computeTreasuryBalance({
     openingBalance,

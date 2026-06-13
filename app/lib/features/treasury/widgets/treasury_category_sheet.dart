@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../models/treasury_entry_item.dart';
 
 Future<void> showTreasuryCategorySheet({
@@ -72,6 +72,20 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
     _load();
   }
 
+  String _amountLabel(AppLocalizations l10n) {
+    if (widget.category == TreasuryCategory.collection) {
+      return l10n.collectedAmount;
+    }
+    return l10n.amountEgp;
+  }
+
+  String _addButtonLabel(AppLocalizations l10n) {
+    if (widget.category == TreasuryCategory.collection) {
+      return l10n.addCollection;
+    }
+    return l10n.addEntry;
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -94,7 +108,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = apiErrorMessage(e);
           _loading = false;
         });
       }
@@ -140,7 +154,10 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(apiErrorMessage(e)),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
@@ -160,7 +177,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(existing == null ? l10n.addEntry : l10n.editEntry),
+          title: Text(existing == null ? _addButtonLabel(l10n) : l10n.editEntry),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -184,7 +201,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
                 TextField(
                   controller: amountController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: l10n.amountEgp),
+                  decoration: InputDecoration(labelText: _amountLabel(l10n)),
                   autofocus: true,
                 ),
                 const SizedBox(height: 12),
@@ -232,19 +249,12 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
     try {
       final repo = ref.read(treasuryRepositoryProvider);
       if (existing == null) {
-        if (widget.category == TreasuryCategory.collection) {
-          if (mounted) context.push('/admin/invoices/create');
-          return;
-        }
         await repo.createEntry(
           category: widget.category,
           amount: amount,
           description: description.isEmpty ? null : description,
           employeeId: selectedEmployeeId,
         );
-      } else if (widget.category == TreasuryCategory.collection) {
-        if (mounted) context.push('/admin/invoices/${existing.id}/edit');
-        return;
       } else {
         await repo.updateEntry(
           category: widget.category,
@@ -265,28 +275,15 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(apiErrorMessage(e)),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
-  }
-
-  void _onEntryTap(TreasuryEntryItem entry) {
-    if (widget.category == TreasuryCategory.collection) {
-      context.push('/admin/invoices/${entry.id}');
-      return;
-    }
-    _showEntryDialog(existing: entry);
-  }
-
-  void _onAdd() {
-    if (widget.category == TreasuryCategory.collection) {
-      context.push('/admin/invoices/create');
-      return;
-    }
-    _showEntryDialog();
   }
 
   @override
@@ -348,7 +345,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
                               color: Colors.white.withValues(alpha: 0.08),
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
-                                onTap: _submitting ? null : () => _onEntryTap(entry),
+                                onTap: _submitting ? null : () => _showEntryDialog(existing: entry),
                                 title: Text(
                                   context.formatCurrency(entry.amount),
                                   style: const TextStyle(
@@ -367,11 +364,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
                                   icon: const Icon(Icons.more_vert, color: Colors.white70),
                                   onSelected: (action) {
                                     if (action == 'edit') {
-                                      if (widget.category == TreasuryCategory.collection) {
-                                        context.push('/admin/invoices/${entry.id}/edit');
-                                      } else {
-                                        _showEntryDialog(existing: entry);
-                                      }
+                                      _showEntryDialog(existing: entry);
                                     } else if (action == 'delete') {
                                       _confirmDelete(entry);
                                     }
@@ -401,13 +394,9 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _submitting ? null : _onAdd,
+                onPressed: _submitting ? null : () => _showEntryDialog(),
                 icon: const Icon(Icons.add),
-                label: Text(
-                  widget.category == TreasuryCategory.collection
-                      ? l10n.newInvoice
-                      : l10n.addEntry,
-                ),
+                label: Text(_addButtonLabel(l10n)),
               ),
             ),
           ),

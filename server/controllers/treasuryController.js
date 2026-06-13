@@ -7,7 +7,6 @@ const {
   withdrawFromTreasury,
   resetMainTreasury,
 } = require('../services/treasuryService');
-const { deleteInvoice } = require('../services/invoiceService');
 const {
   listCollectionEntries,
   listMovements,
@@ -84,7 +83,7 @@ const createTreasuryEntryHandler = asyncHandler(async (req, res) => {
   const { category, amount, description, employeeId } = req.body;
   let entry;
 
-  if (category === 'external_revenue' || category === 'withdrawal') {
+  if (category === 'collection' || category === 'external_revenue' || category === 'withdrawal') {
     entry = await createMovement(category, amount, description, req.user);
   } else if (category === 'loading' || category === 'expense') {
     if (!employeeId) {
@@ -92,7 +91,7 @@ const createTreasuryEntryHandler = asyncHandler(async (req, res) => {
     }
     entry = await createLedgerEntry(category, employeeId, amount, description, req.user);
   } else {
-    return res.status(400).json({ success: false, message: 'Use invoice screen to add collection' });
+    return res.status(400).json({ success: false, message: 'Invalid category' });
   }
 
   const summary = await getTreasurySummary();
@@ -103,10 +102,7 @@ const updateTreasuryEntryHandler = asyncHandler(async (req, res) => {
   const { category } = req.query;
   const { amount, description } = req.body;
 
-  if (category === 'collection') {
-    return res.status(400).json({ success: false, message: 'Edit invoice from invoice screen' });
-  }
-  if (category === 'external_revenue' || category === 'withdrawal') {
+  if (category === 'collection' || category === 'external_revenue' || category === 'withdrawal') {
     await updateMovement(req.params.id, { amount, description });
   } else if (category === 'loading' || category === 'expense') {
     await updateLedgerEntry(req.params.id, { amount, description });
@@ -121,9 +117,7 @@ const updateTreasuryEntryHandler = asyncHandler(async (req, res) => {
 const deleteTreasuryEntryHandler = asyncHandler(async (req, res) => {
   const { category } = req.query;
 
-  if (category === 'collection') {
-    await deleteInvoice(req.params.id, req.user);
-  } else if (category === 'external_revenue' || category === 'withdrawal') {
+  if (category === 'collection' || category === 'external_revenue' || category === 'withdrawal') {
     await deleteMovement(req.params.id);
   } else if (category === 'loading' || category === 'expense') {
     await deleteLedgerEntry(req.params.id);

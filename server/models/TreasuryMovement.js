@@ -4,7 +4,7 @@ const treasuryMovementSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ['external_revenue', 'withdrawal'],
+      enum: ['collection', 'external_revenue', 'withdrawal'],
       required: true,
     },
     amount: { type: Number, required: true, min: 0 },

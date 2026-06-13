@@ -1,4 +1,3 @@
-const Invoice = require('../models/Invoice');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const EmployeeLedger = require('../models/EmployeeLedger');
 const User = require('../models/User');
@@ -6,22 +5,7 @@ const ApiError = require('../utils/apiError');
 const { getTreasurySummary } = require('./treasuryService');
 const { addLedgerEntry } = require('./employeeLedgerService');
 
-const listCollectionEntries = async () => {
-  const invoices = await Invoice.find()
-    .populate('clientId', 'name')
-    .populate('employeeId', 'name')
-    .sort({ createdAt: -1 })
-    .limit(500);
-
-  return invoices.map((inv) => ({
-    id: inv._id,
-    category: 'collection',
-    amount: inv.totalPrice,
-    description: inv.invoiceNumber,
-    subtitle: inv.clientId?.name ?? '',
-    createdAt: inv.createdAt,
-  }));
-};
+const listCollectionEntries = async () => listMovements('collection');
 
 const listMovements = async (type) => {
   const movements = await TreasuryMovement.find({ type })
@@ -67,13 +51,13 @@ const createMovement = async (type, amount, description, user) => {
   const movement = await TreasuryMovement.create({
     type,
     amount,
-    description: description || (type === 'external_revenue' ? 'إيراد خارجي' : 'سحب'),
+    description: description || (type === 'collection' ? 'تحصيل' : type === 'external_revenue' ? 'إيراد خارجي' : 'سحب'),
     createdBy: user._id,
   });
 
   return {
     id: movement._id,
-    category: type === 'external_revenue' ? 'external_revenue' : 'withdrawal',
+    category: type,
     amount: movement.amount,
     description: movement.description,
     subtitle: user.name,

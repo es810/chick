@@ -51,7 +51,7 @@ router.get('/entries', listTreasuryEntriesHandler);
 router.post(
   '/entries',
   [
-    body('category').isIn(['external_revenue', 'withdrawal', 'loading', 'expense']),
+    body('category').isIn(['collection', 'external_revenue', 'withdrawal', 'loading', 'expense']),
     body('amount').isFloat({ min: 0.01 }),
     body('description').optional().isString(),
     body('employeeId').optional().isMongoId(),
