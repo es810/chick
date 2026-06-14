@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.2.0] — 2026-06-14
+
+### Collection invoices
+- Dedicated collection invoice model, API (`/api/collections`), and admin/employee screens
+- Form: client, date, collector, amount paid/deducted, balance before/after
+- Treasury integration via manual collection movements
+
+### Clients (admin)
+- Add/edit/delete clients with name, address, phone, debt, login email, and password
+- Linked `User` account with `client` role for client app login
+
+### Dashboard
+- Split profits into **daily** (revenue − loading − expenses − discount) and **monthly** (invoice revenue)
+- Main treasury card shows live balance
+
+### Employees
+- Salary field on create/edit; visible to employee on dashboard and settings
+- Fix employee form `TextEditingController` dispose crash
+
+### Auth & stability
+- Expired JWT returns 401 instead of 500; auto logout without logout API loop
+- Friendlier session-expired error messages (Arabic)
+
 ## [1.1.0] — 2026-05-29
 
 ### Employees

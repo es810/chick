@@ -1,4 +1,4 @@
-# Build release APK for Chicken Farm Management (v1.1.0+)
+# Build release APK for Chicken Farm Management
 # Output: release/ChickenFarm-v<version>.apk
 
 $ErrorActionPreference = "Stop"
