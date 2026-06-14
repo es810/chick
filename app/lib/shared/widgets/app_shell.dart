@@ -22,6 +22,9 @@ class AppShell extends StatelessWidget {
       if (item.path.endsWith('/invoices') && location.startsWith('${item.path}/')) {
         return true;
       }
+      if (item.path.endsWith('/collection-invoices') && location.startsWith(item.path)) {
+        return true;
+      }
       if (item.path.endsWith('/treasury') && location.startsWith(item.path)) {
         return true;
       }
@@ -34,6 +37,7 @@ class AppShell extends StatelessWidget {
       final path = navigationItems[i].path;
       if (location == path) return i;
       if (path.endsWith('/invoices') && location.startsWith('$path/')) return i;
+      if (path.endsWith('/collection-invoices') && location.startsWith(path)) return i;
       if (path.endsWith('/treasury') && location.startsWith(path)) return i;
     }
     return 0;

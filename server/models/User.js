@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
       default: 'employee',
     },
     clientProfile: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
+    salary: { type: Number, default: 0, min: 0 },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

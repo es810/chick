@@ -32,6 +32,7 @@ router.post(
     body('phone').trim().notEmpty(),
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
+    body('salary').optional().isFloat({ min: 0 }),
   ],
   validate,
   createEmployee
@@ -45,6 +46,7 @@ router.put(
     body('email').optional().isEmail().normalizeEmail(),
     body('password').optional().isLength({ min: 6 }),
     body('isActive').optional().isBoolean(),
+    body('salary').optional().isFloat({ min: 0 }),
   ],
   validate,
   updateEmployee

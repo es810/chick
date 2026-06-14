@@ -110,6 +110,9 @@ class AppLocalizations {
   'myAccount': {'en': 'My Account', 'ar': 'حسابي'},
 
   'monthlyRevenue': {'en': 'Monthly Revenue', 'ar': 'إيرادات الشهر'},
+  'dailyProfit': {'en': 'Daily Profit', 'ar': 'أرباح يومية'},
+  'monthlyProfit': {'en': 'Monthly Profit', 'ar': 'أرباح شهرية'},
+  'totalDiscount': {'en': 'Total Discount', 'ar': 'إجمالي الخصم'},
   'pendingPayments': {'en': 'Pending Payments', 'ar': 'مدفوعات معلّقة'},
   'lowStockAlerts': {'en': 'Low Stock Alerts', 'ar': 'تنبيهات نقص المخزون'},
   'salesTrend': {'en': 'Sales Trend', 'ar': 'اتجاه المبيعات'},
@@ -211,9 +214,26 @@ class AppLocalizations {
   'noClientsYet': {'en': 'No clients yet', 'ar': 'لا يوجد عملاء بعد'},
   'addClient': {'en': 'Add Client', 'ar': 'إضافة عميل'},
   'editClient': {'en': 'Edit Client', 'ar': 'تعديل العميل'},
+  'clientAdded': {'en': 'Client added', 'ar': 'تمت إضافة العميل'},
+  'clientUpdated': {'en': 'Client updated', 'ar': 'تم تحديث العميل'},
+  'clientDeleted': {'en': 'Client deleted', 'ar': 'تم حذف العميل'},
+  'confirmDeleteClient': {
+    'en': 'Delete this client? Their login account will also be removed.',
+    'ar': 'حذف هذا العميل؟ سيتم حذف حساب الدخول أيضاً.',
+  },
   'name': {'en': 'Name', 'ar': 'الاسم'},
-  'phone': {'en': 'Phone', 'ar': 'الهاتف'},
+  'phone': {'en': 'Phone', 'ar': 'رقم الهاتف'},
   'address': {'en': 'Address', 'ar': 'العنوان'},
+  'clientDebt': {'en': 'Debt (EGP)', 'ar': 'المديونية (ج.م)'},
+  'loginId': {'en': 'Login ID (email)', 'ar': 'معرّف الدخول (البريد)'},
+  'sessionExpired': {
+    'en': 'Session expired. Please login again.',
+    'ar': 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.',
+  },
+  'serverError': {
+    'en': 'Server error. Try again or contact support.',
+    'ar': 'خطأ في الخادم. أعد المحاولة أو تواصل مع الدعم.',
+  },
 
   'reportsAnalytics': {'en': 'Reports & Analytics', 'ar': 'التقارير والتحليلات'},
   'revenue': {'en': 'Revenue', 'ar': 'الإيرادات'},
@@ -273,8 +293,24 @@ class AppLocalizations {
   'amount': {'en': 'Amount (EGP)', 'ar': 'المبلغ (ج.م)'},
   'description': {'en': 'Description', 'ar': 'الوصف'},
   'addCollection': {'en': 'Add collection', 'ar': 'إضافة تحصيل'},
+  'collectionInvoice': {'en': 'Collection invoice', 'ar': 'فاتورة تحصيل'},
+  'collectionInvoices': {'en': 'Collection invoices', 'ar': 'فواتير التحصيل'},
+  'noCollectionInvoices': {'en': 'No collection invoices yet', 'ar': 'لا توجد فواتير تحصيل'},
+  'manageCollectionInvoices': {'en': 'Add and view collection invoices', 'ar': 'إضافة وعرض فواتير التحصيل'},
+  'distributionInvoices': {'en': 'Distribution invoices', 'ar': 'فواتير التوزيع'},
   'collectedAmount': {'en': 'Collected amount', 'ar': 'المبلغ المحصّل'},
+  'amountPaid': {'en': 'Amount paid', 'ar': 'المبلغ الذي دفعه'},
+  'amountDeducted': {'en': 'Amount deducted', 'ar': 'المبلغ الذي تم خصمه'},
+  'balanceBeforePayment': {'en': 'Total before payment', 'ar': 'الإجمالي قبل الدفع'},
+  'balanceAfterPayment': {'en': 'Total after payment', 'ar': 'الإجمالي بعد الدفع'},
+  'collectorEmployee': {'en': 'Collector employee', 'ar': 'الموظف الذي حصل'},
+  'deductExceedsBalance': {
+    'en': 'Deducted amount cannot exceed balance before payment',
+    'ar': 'المبلغ المخصوم لا يمكن أن يتجاوز الإجمالي قبل الدفع',
+  },
   'addEmployee': {'en': 'Add Employee', 'ar': 'إضافة موظف'},
+  'salary': {'en': 'Salary (EGP)', 'ar': 'الراتب (ج.م)'},
+  'mySalary': {'en': 'My Salary', 'ar': 'راتبي'},
   'employeeAdded': {'en': 'Employee added', 'ar': 'تمت إضافة الموظف'},
   'employeeAddFailed': {'en': 'Could not add employee', 'ar': 'تعذّر إضافة الموظف'},
   'editEmployee': {'en': 'Edit Employee', 'ar': 'تعديل الموظف'},
@@ -392,6 +428,9 @@ class AppLocalizations {
   String get myAccount => _get('myAccount');
 
   String get monthlyRevenue => _get('monthlyRevenue');
+  String get dailyProfit => _get('dailyProfit');
+  String get monthlyProfit => _get('monthlyProfit');
+  String get totalDiscount => _get('totalDiscount');
   String get pendingPayments => _get('pendingPayments');
   String get lowStockAlerts => _get('lowStockAlerts');
   String get salesTrend => _get('salesTrend');
@@ -487,9 +526,17 @@ class AppLocalizations {
   String get noClientsYet => _get('noClientsYet');
   String get addClient => _get('addClient');
   String get editClient => _get('editClient');
+  String get clientAdded => _get('clientAdded');
+  String get clientUpdated => _get('clientUpdated');
+  String get clientDeleted => _get('clientDeleted');
+  String get confirmDeleteClient => _get('confirmDeleteClient');
   String get name => _get('name');
   String get phone => _get('phone');
   String get address => _get('address');
+  String get clientDebt => _get('clientDebt');
+  String get loginId => _get('loginId');
+  String get sessionExpired => _get('sessionExpired');
+  String get serverError => _get('serverError');
 
   String get reportsAnalytics => _get('reportsAnalytics');
   String get revenue => _get('revenue');
@@ -534,8 +581,22 @@ class AppLocalizations {
   String get amount => _get('amount');
   String get description => _get('description');
   String get addEmployee => _get('addEmployee');
+  String get salary => _get('salary');
+  String get mySalary => _get('mySalary');
   String get addCollection => _get('addCollection');
+  String get collectionInvoice => _get('collectionInvoice');
+  String get collectionInvoices => _get('collectionInvoices');
+  String get noCollectionInvoices => _get('noCollectionInvoices');
+  String get manageCollectionInvoices => _get('manageCollectionInvoices');
+  String get distributionInvoices => _get('distributionInvoices');
   String get collectedAmount => _get('collectedAmount');
+  String get amountPaid => _get('amountPaid');
+  String get amountDeducted => _get('amountDeducted');
+  String get balanceBeforePayment => _get('balanceBeforePayment');
+  String get balanceAfterPayment => _get('balanceAfterPayment');
+  String get collectorEmployee => _get('collectorEmployee');
+  String get selectCollector => _get('selectCollector');
+  String get deductExceedsBalance => _get('deductExceedsBalance');
   String get employeeAdded => _get('employeeAdded');
   String get employeeAddFailed => _get('employeeAddFailed');
   String get editEmployee => _get('editEmployee');
@@ -588,6 +649,7 @@ class AppLocalizations {
   String navLabelForPath(String path) {
     if (path.contains('dashboard')) return path.contains('/client') ? home : dashboard;
     if (path.contains('invoices')) return invoices;
+    if (path.contains('collection-invoices')) return collectionInvoices;
     if (path.contains('treasury')) return treasury;
     if (path.contains('stock')) return stock;
     if (path.contains('clients')) return clients;

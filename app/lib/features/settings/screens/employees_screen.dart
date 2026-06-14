@@ -67,6 +67,9 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
     final phoneController = TextEditingController(text: employee?['phone'] as String? ?? '');
     final emailController = TextEditingController(text: employee?['email'] as String? ?? '');
     final passwordController = TextEditingController();
+    final salaryController = TextEditingController(
+      text: employee != null ? ((employee['salary'] as num?)?.toString() ?? '0') : '',
+    );
     var isActive = employee?['isActive'] as bool? ?? true;
     final formKey = GlobalKey<FormState>();
 
@@ -113,6 +116,21 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return l10n.fieldRequired;
                       if (!v.contains('@')) return l10n.invalidEmail;
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: salaryController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: l10n.salary,
+                      prefixIcon: const Icon(Icons.payments_outlined),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return l10n.fieldRequired;
+                      if (double.tryParse(v.trim()) == null) return l10n.invalidAmount;
+                      if (double.parse(v.trim()) < 0) return l10n.invalidAmount;
                       return null;
                     },
                   ),
@@ -165,29 +183,33 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
       ),
     );
 
-    if (ok != true || !mounted) {
+    final name = nameController.text.trim();
+    final phone = phoneController.text.trim();
+    final email = emailController.text.trim().toLowerCase();
+    final password = passwordController.text;
+    final salaryText = salaryController.text.trim();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       nameController.dispose();
       phoneController.dispose();
       emailController.dispose();
       passwordController.dispose();
-      return;
-    }
+      salaryController.dispose();
+    });
+
+    if (ok != true || !mounted) return;
 
     final api = ref.read(apiClientProvider);
     final body = <String, dynamic>{
-      'name': nameController.text.trim(),
-      'phone': phoneController.text.trim(),
-      'email': emailController.text.trim().toLowerCase(),
+      'name': name,
+      'phone': phone,
+      'email': email,
+      'salary': double.parse(salaryText),
     };
-    if (passwordController.text.isNotEmpty) {
-      body['password'] = passwordController.text;
+    if (password.isNotEmpty) {
+      body['password'] = password;
     }
     if (isEdit) body['isActive'] = isActive;
-
-    nameController.dispose();
-    phoneController.dispose();
-    emailController.dispose();
-    passwordController.dispose();
 
     try {
       if (isEdit) {
@@ -324,7 +346,9 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                   color: isActive ? null : Colors.grey,
                 ),
               ),
-              subtitle: Text('${emp['email']}\n${emp['phone']}'),
+              subtitle: Text(
+                '${emp['email']}\n${emp['phone']}\n${l10n.salary}: ${context.formatCurrency(((emp['salary'] as num?) ?? 0).toDouble())}',
+              ),
               isThreeLine: true,
               trailing: PopupMenuButton<String>(
                 onSelected: (action) {
@@ -359,8 +383,8 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                   PopupMenuItem(
                     value: 'delete',
                     child: ListTile(
-                      leading: Icon(Icons.delete_outline, color: AppColors.error),
-                      title: Text(l10n.delete, style: TextStyle(color: AppColors.error)),
+                      leading: const Icon(Icons.delete_outline, color: AppColors.error),
+                      title: Text(l10n.delete, style: const TextStyle(color: AppColors.error)),
                       contentPadding: EdgeInsets.zero,
                       dense: true,
                     ),

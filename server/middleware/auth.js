@@ -14,7 +14,19 @@ const protect = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, 'Not authorized. Please login.');
   }
 
-  const decoded = jwt.verify(token, jwtSecret);
+  let decoded;
+  try {
+    decoded = jwt.verify(token, jwtSecret);
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      throw new ApiError(401, 'Session expired. Please login again.');
+    }
+    if (err.name === 'JsonWebTokenError') {
+      throw new ApiError(401, 'Invalid token');
+    }
+    throw err;
+  }
+
   const user = await User.findById(decoded.id).select('+password');
 
   if (!user || !user.isActive) {

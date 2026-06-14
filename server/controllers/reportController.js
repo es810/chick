@@ -2,7 +2,7 @@ const Invoice = require('../models/Invoice');
 const Stock = require('../models/Stock');
 const Client = require('../models/Client');
 const AuditLog = require('../models/AuditLog');
-const { getTreasurySummary } = require('../services/treasuryService');
+const { getTreasurySummary, computeProfitForPeriod } = require('../services/treasuryService');
 const asyncHandler = require('../utils/asyncHandler');
 
 const getSalesReport = asyncHandler(async (req, res) => {
@@ -113,6 +113,8 @@ const getAuditLogs = asyncHandler(async (req, res) => {
 
 const getDashboard = asyncHandler(async (req, res) => {
   const now = new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [
@@ -122,6 +124,7 @@ const getDashboard = asyncHandler(async (req, res) => {
     topClients,
     treasurySummary,
     clientBalances,
+    dailyProfit,
   ] = await Promise.all([
     Invoice.aggregate([
       { $match: { createdAt: { $gte: startOfMonth } } },
@@ -154,15 +157,25 @@ const getDashboard = asyncHandler(async (req, res) => {
     ]),
     getTreasurySummary(),
     Client.aggregate([{ $group: { _id: null, total: { $sum: '$balance' } } }]),
+    computeProfitForPeriod(startOfDay),
   ]);
 
   res.json({
     success: true,
     data: {
       monthlyStats: invoiceStats[0] || { revenue: 0, count: 0, pending: 0 },
+      dailyProfit,
+      monthlyProfit: {
+        profit: invoiceStats[0]?.revenue || 0,
+      },
       mainTreasury: {
         balance: treasurySummary.balance,
         openingBalance: treasurySummary.openingBalance,
+        totalCollection: treasurySummary.totalCollection,
+        externalRevenue: treasurySummary.externalRevenue,
+        totalLoading: treasurySummary.totalLoading,
+        otherExpenses: treasurySummary.otherExpenses,
+        withdrawals: treasurySummary.withdrawals,
         updatedAt: treasurySummary.updatedAt,
         updatedByName: treasurySummary.updatedByName ?? null,
       },

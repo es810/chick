@@ -39,16 +39,32 @@ class AuthRepository {
       final user = UserModel.fromJson(data['data'] as Map<String, dynamic>);
       await _storage.saveUser(user);
       return user;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _storage.clearAll();
+        return null;
+      }
+      return cached;
     } catch (_) {
       return cached;
     }
   }
 
-  Future<void> logout() async {
-    try {
-      await _api.post(ApiConstants.logout);
-    } catch (_) {}
+  Future<void> clearSession() async {
     await _storage.clearAll();
+  }
+
+  Future<void> logout() async {
+    final token = await _storage.getToken();
+    await _storage.clearAll();
+    if (token == null) return;
+
+    try {
+      await _api.dio.post(
+        ApiConstants.logout,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (_) {}
   }
 
   String? parseError(DioException e) {

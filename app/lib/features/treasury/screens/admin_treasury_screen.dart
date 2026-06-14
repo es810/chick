@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -358,7 +359,7 @@ class _MainTreasuryTab extends ConsumerWidget {
               valueColor: const Color(0xFF66BB6A),
               icon: Icons.payments,
               iconColor: const Color(0xFF66BB6A),
-              onTap: () => _openCategory(context, ref, TreasuryCategory.collection, l10n.totalCollection),
+              onTap: () => context.push('/admin/collection-invoices'),
             ),
             _MetricRow(
               label: l10n.externalRevenue,
@@ -401,6 +402,20 @@ class _MainTreasuryTab extends ConsumerWidget {
               isTotal: true,
             ),
             const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isSubmitting ? null : () => context.push('/admin/collection-invoices'),
+                icon: const Icon(Icons.payments),
+                label: Text(l10n.collectionInvoice),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             if (isSubmitting)
               const Center(child: CircularProgressIndicator(color: Colors.white))
             else

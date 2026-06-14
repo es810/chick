@@ -4,6 +4,7 @@ import '../../repositories/invoice_repository.dart';
 import '../../repositories/report_repository.dart';
 import '../../repositories/stock_repository.dart';
 import '../../repositories/employee_repository.dart';
+import '../../repositories/collection_repository.dart';
 import '../../repositories/treasury_repository.dart';
 import '../../services/api_client.dart';
 import '../../services/cache_service.dart';
@@ -27,6 +28,10 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
 
 final treasuryRepositoryProvider = Provider<TreasuryRepository>((ref) {
   return TreasuryRepository(ref.watch(apiClientProvider));
+});
+
+final collectionRepositoryProvider = Provider<CollectionRepository>((ref) {
+  return CollectionRepository(ref.watch(apiClientProvider));
 });
 
 final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {

@@ -57,6 +57,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Clears local session only (used when the token already expired).
+  Future<void> refreshUser() async {
+    final user = await _repo.getCurrentUser();
+    state = AuthState(user: user, isLoading: false);
+  }
+
+  Future<void> logoutLocal() async {
+    await _repo.clearSession();
+    state = const AuthState();
+  }
+
   Future<void> logout() async {
     await _repo.logout();
     state = const AuthState();

@@ -8,6 +8,8 @@ import 'core/providers/locale_provider.dart';
 import 'core/providers/app_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/providers/auth_provider.dart';
+import 'services/api_client.dart';
 import 'services/cache_service.dart';
 import 'services/storage_service.dart';
 
@@ -31,11 +33,24 @@ void main() async {
   );
 }
 
-class ChickenFarmApp extends ConsumerWidget {
+class ChickenFarmApp extends ConsumerStatefulWidget {
   const ChickenFarmApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChickenFarmApp> createState() => _ChickenFarmAppState();
+}
+
+class _ChickenFarmAppState extends ConsumerState<ChickenFarmApp> {
+  @override
+  void initState() {
+    super.initState();
+    ApiClient.onSessionExpired = () async {
+      await ref.read(authProvider.notifier).logoutLocal();
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeModeStr = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);

@@ -5,7 +5,7 @@ const ApiError = require('../utils/apiError');
 const { getTreasurySummary } = require('./treasuryService');
 const { addLedgerEntry } = require('./employeeLedgerService');
 
-const listCollectionEntries = async () => listMovements('collection');
+const { listCollectionInvoices } = require('./collectionInvoiceService');
 
 const listMovements = async (type) => {
   const movements = await TreasuryMovement.find({ type })
@@ -135,7 +135,7 @@ const listEmployeesForPicker = async () => {
 };
 
 module.exports = {
-  listCollectionEntries,
+  listCollectionEntries: listCollectionInvoices,
   listMovements,
   listLedgerEntries,
   createMovement,

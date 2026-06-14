@@ -17,5 +17,6 @@ class ApiConstants {
   static const String revenueReport = '/reports/revenue';
   static const String auditLogs = '/reports/audit-logs';
   static const String treasury = '/treasury';
+  static const String collections = '/collections';
   static const String myAccount = '/me';
 }

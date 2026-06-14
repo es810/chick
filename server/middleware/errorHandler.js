@@ -23,6 +23,11 @@ const errorHandler = (err, req, res, next) => {
     message = 'Invalid ID format';
   }
 
+  if (err.name === 'TokenExpiredError') {
+    statusCode = 401;
+    message = 'Session expired. Please login again.';
+  }
+
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;
     message = 'Invalid token';

@@ -6,6 +6,7 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/clients/screens/clients_screen.dart';
 import '../../features/dashboard/screens/admin_dashboard_screen.dart';
+import '../../features/treasury/screens/collection_invoices_screen.dart';
 import '../../features/treasury/screens/admin_treasury_screen.dart';
 import '../../features/dashboard/screens/client_dashboard_screen.dart';
 import '../../features/dashboard/screens/employee_dashboard_screen.dart';
@@ -91,6 +92,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      GoRoute(
+        path: '/admin/collection-invoices',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, __) => const CollectionInvoicesScreen(),
+      ),
+
       ShellRoute(
         navigatorKey: _adminShellNavigatorKey,
         builder: (context, state, child) => AppShell(
@@ -135,6 +142,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           navigationItems: const [
             (icon: Icons.dashboard, path: '/employee/dashboard'),
             (icon: Icons.receipt_long, path: '/employee/invoices'),
+            (icon: Icons.payments, path: '/employee/collection-invoices'),
             (icon: Icons.inventory, path: '/employee/stock'),
             (icon: Icons.settings, path: '/employee/settings'),
           ],
@@ -142,6 +150,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
         routes: [
           GoRoute(path: '/employee/dashboard', builder: (_, __) => const EmployeeDashboardScreen()),
+          GoRoute(
+            path: '/employee/collection-invoices',
+            builder: (_, __) => const CollectionInvoicesScreen(),
+          ),
           GoRoute(path: '/employee/invoices', builder: (_, __) => const InvoicesListScreen(basePath: '/employee')),
           GoRoute(
             path: '/employee/invoices/create',

@@ -27,16 +27,29 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final invoicesAsync = ref.watch(invoicesProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invoices'),
+        title: Text(context.l10n.distributionInvoices),
         actions: [
+          if (widget.basePath.contains('admin'))
+            IconButton(
+              icon: const Icon(Icons.payments_outlined),
+              tooltip: context.l10n.collectionInvoices,
+              onPressed: () => context.push('/admin/collection-invoices'),
+            ),
+          if (widget.basePath.contains('employee'))
+            IconButton(
+              icon: const Icon(Icons.payments_outlined),
+              tooltip: context.l10n.collectionInvoices,
+              onPressed: () => context.go('/employee/collection-invoices'),
+            ),
           if (widget.basePath.contains('employee') || widget.basePath.contains('admin'))
             IconButton(
               icon: const Icon(Icons.add),
-              tooltip: context.l10n.createInvoice,
+              tooltip: context.l10n.distributionReceipt,
               onPressed: () => context.go('${widget.basePath}/invoices/create'),
             ),
         ],
@@ -64,9 +77,9 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
               ),
               data: (result) {
                 if (result.invoices.isEmpty) {
-                  return const EmptyStateWidget(
+                  return EmptyStateWidget(
                     icon: Icons.receipt_long,
-                    title: 'No invoices found',
+                    title: l10n.noInvoicesFound,
                   );
                 }
                 return RefreshIndicator(

@@ -32,8 +32,11 @@ class ClientRepository {
     }
   }
 
-  Future<ClientModel> createClient(ClientModel client) async {
-    final response = await _api.post(ApiConstants.clients, data: client.toJson());
+  Future<ClientModel> createClient(ClientModel client, {String? password}) async {
+    final response = await _api.post(
+      ApiConstants.clients,
+      data: client.toJson(password: password),
+    );
     final data = response.data as Map<String, dynamic>;
     return ClientModel.fromJson(data['data'] as Map<String, dynamic>);
   }

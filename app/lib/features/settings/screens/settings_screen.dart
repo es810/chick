@@ -6,6 +6,7 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../features/auth/providers/auth_provider.dart';
+import '../../../models/user_model.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/storage_service.dart';
 
@@ -37,6 +38,12 @@ class SettingsScreen extends ConsumerWidget {
             title: Text(l10n.role),
             subtitle: Text(user != null ? l10n.roleLabel(user.role.name) : ''),
           ),
+          if (user?.role == UserRole.employee)
+            ListTile(
+              leading: const Icon(Icons.payments_outlined),
+              title: Text(l10n.mySalary),
+              subtitle: Text(context.formatCurrency(user!.salary)),
+            ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.language),

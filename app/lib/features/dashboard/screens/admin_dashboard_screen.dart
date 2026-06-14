@@ -1,10 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/dashboard_model.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -28,7 +30,15 @@ class AdminDashboardScreen extends ConsumerWidget {
       ),
       body: dashboardAsync.when(
         loading: () => const LoadingShimmer(),
-        error: (e, _) => ErrorStateWidget(message: e.toString(), onRetry: () => ref.invalidate(dashboardProvider)),
+        error: (e, _) => ErrorStateWidget(
+          message: apiErrorMessage(
+            e,
+            fallback: e is DioException && e.response?.statusCode == 401
+                ? l10n.sessionExpired
+                : l10n.serverError,
+          ),
+          onRetry: () => ref.invalidate(dashboardProvider),
+        ),
         data: (dashboard) => RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(dashboardProvider);
@@ -48,16 +58,22 @@ class AdminDashboardScreen extends ConsumerWidget {
                 childAspectRatio: 1.3,
                 children: [
                   StatCard(
-                    title: l10n.monthlyRevenue,
-                    value: context.formatCurrencyCompact(dashboard.monthlyRevenue),
-                    icon: Icons.attach_money,
+                    title: l10n.dailyProfit,
+                    value: context.formatCurrencyCompact(dashboard.dailyProfit.profit),
+                    icon: Icons.today,
                     color: AppColors.primaryGreen,
+                  ),
+                  StatCard(
+                    title: l10n.monthlyProfit,
+                    value: context.formatCurrencyCompact(dashboard.monthlyProfit),
+                    icon: Icons.calendar_month,
+                    color: AppColors.lightGreen,
                   ),
                   StatCard(
                     title: l10n.invoices,
                     value: '${dashboard.monthlyInvoices}',
                     icon: Icons.receipt_long,
-                    color: AppColors.lightGreen,
+                    color: AppColors.primaryGreen,
                   ),
                   StatCard(
                     title: l10n.receivables,
@@ -135,6 +151,16 @@ class AdminDashboardScreen extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  _QuickAction(
+                    icon: Icons.payments,
+                    label: l10n.collectionInvoices,
+                    onTap: () => context.push('/admin/collection-invoices'),
+                  ),
+                  _QuickAction(
+                    icon: Icons.receipt_long,
+                    label: l10n.distributionInvoices,
+                    onTap: () => context.go('/admin/invoices'),
+                  ),
                   _QuickAction(
                     icon: Icons.people,
                     label: l10n.employees,
@@ -215,35 +241,49 @@ class _TreasuryCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              IconButton(
-                onPressed: () => context.go('/admin/treasury'),
-                icon: const Icon(Icons.edit, color: Colors.white),
-                tooltip: l10n.editTreasury,
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.go('/admin/treasury'),
+                    icon: const Icon(Icons.edit, color: Colors.white),
+                    tooltip: l10n.editTreasury,
+                  ),
+                  IconButton(
+                    onPressed: () => _confirmReset(context, ref),
+                    icon: const Icon(Icons.cleaning_services_outlined, color: Colors.white),
+                    tooltip: l10n.zeroTreasury,
+                  ),
+                  Expanded(
+                    child: Text(
+                      l10n.mainTreasury,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 26),
+                  ),
+                ],
               ),
-              IconButton(
-                onPressed: () => _confirmReset(context, ref),
-                icon: const Icon(Icons.cleaning_services_outlined, color: Colors.white),
-                tooltip: l10n.zeroTreasury,
-              ),
-              Expanded(
-                child: Text(
-                  l10n.mainTreasury,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 26),
+              const SizedBox(height: 8),
+              Text(
+                context.formatCurrency(dashboard.mainTreasuryBalance),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ],
           ),

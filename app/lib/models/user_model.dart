@@ -11,6 +11,7 @@ class UserModel extends Equatable {
     required this.role,
     this.clientProfile,
     this.isActive = true,
+    this.salary = 0,
   });
 
   final String id;
@@ -20,6 +21,7 @@ class UserModel extends Equatable {
   final UserRole role;
   final String? clientProfile;
   final bool isActive;
+  final double salary;
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
@@ -33,6 +35,7 @@ class UserModel extends Equatable {
       ),
       clientProfile: json['clientProfile'] as String?,
       isActive: json['isActive'] as bool? ?? true,
+      salary: (json['salary'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -44,6 +47,7 @@ class UserModel extends Equatable {
         'role': role.name,
         'clientProfile': clientProfile,
         'isActive': isActive,
+        'salary': salary,
       };
 
   @override

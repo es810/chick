@@ -1,5 +1,6 @@
 const Treasury = require('../models/Treasury');
 const TreasuryMovement = require('../models/TreasuryMovement');
+const CollectionInvoice = require('../models/CollectionInvoice');
 const EmployeeLedger = require('../models/EmployeeLedger');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
@@ -25,6 +26,52 @@ const computeTreasuryBalance = ({
   totalLoading -
   otherExpenses -
   withdrawals;
+
+/**
+ * أرباح الفترة = إجمالي الإيرادات − إجمالي التحميل − إجمالي المصروفات − إجمالي الخصم
+ * الإيرادات = التحصيل + الإيرادات الخارجية
+ */
+const computeProfitForPeriod = async (startDate, endDate = null) => {
+  const collectionDateFilter = endDate
+    ? { $gte: startDate, $lt: endDate }
+    : { $gte: startDate };
+  const createdAtFilter = endDate
+    ? { $gte: startDate, $lt: endDate }
+    : { $gte: startDate };
+
+  const [collectionAgg, externalAgg, loadingAgg, expenseAgg, discountAgg] = await Promise.all([
+    CollectionInvoice.aggregate([
+      { $match: { collectionDate: collectionDateFilter } },
+      { $group: { _id: null, total: { $sum: '$amountPaid' } } },
+    ]),
+    TreasuryMovement.aggregate([
+      { $match: { type: 'external_revenue', createdAt: createdAtFilter } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+    EmployeeLedger.aggregate([
+      { $match: { type: 'debt', createdAt: createdAtFilter } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+    EmployeeLedger.aggregate([
+      { $match: { type: 'expense', createdAt: createdAtFilter } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+    CollectionInvoice.aggregate([
+      { $match: { collectionDate: collectionDateFilter } },
+      { $group: { _id: null, total: { $sum: '$amountDeducted' } } },
+    ]),
+  ]);
+
+  const collectionRevenue = collectionAgg[0]?.total || 0;
+  const externalRevenue = externalAgg[0]?.total || 0;
+  const revenue = collectionRevenue + externalRevenue;
+  const loading = loadingAgg[0]?.total || 0;
+  const expenses = expenseAgg[0]?.total || 0;
+  const discount = discountAgg[0]?.total || 0;
+  const profit = revenue - loading - expenses - discount;
+
+  return { revenue, loading, expenses, discount, profit };
+};
 
 const getOpeningBalance = (treasury) => treasury.openingBalance ?? treasury.balance ?? 0;
 
@@ -180,6 +227,7 @@ const resetMainTreasury = async (user) => {
   await treasury.save();
 
   await TreasuryMovement.deleteMany({});
+  await CollectionInvoice.deleteMany({});
 
   await logAction(user._id, user.name, 'ZERO_MAIN_TREASURY', MAIN_KEY, {
     from: oldOpening,
@@ -199,4 +247,5 @@ module.exports = {
   withdrawFromTreasury,
   resetMainTreasury,
   computeTreasuryBalance,
+  computeProfitForPeriod,
 };

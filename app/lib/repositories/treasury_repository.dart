@@ -63,6 +63,60 @@ class TreasuryRepository {
     return (data['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
+  Future<TreasurySummaryModel> createCollectionEntry({
+    required String clientId,
+    required String employeeId,
+    required DateTime collectionDate,
+    required double amountPaid,
+    required double amountDeducted,
+    required double balanceBefore,
+    required double balanceAfter,
+  }) async {
+    final response = await _api.post(
+      '${ApiConstants.treasury}/entries',
+      data: {
+        'category': 'collection',
+        'clientId': clientId,
+        'employeeId': employeeId,
+        'collectionDate': collectionDate.toIso8601String(),
+        'amountPaid': amountPaid,
+        'amountDeducted': amountDeducted,
+        'balanceBefore': balanceBefore,
+        'balanceAfter': balanceAfter,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    final payload = data['data'] as Map<String, dynamic>;
+    return TreasurySummaryModel.fromJson(payload['summary'] as Map<String, dynamic>);
+  }
+
+  Future<TreasurySummaryModel> updateCollectionEntry({
+    required String id,
+    required String clientId,
+    required String employeeId,
+    required DateTime collectionDate,
+    required double amountPaid,
+    required double amountDeducted,
+    required double balanceBefore,
+    required double balanceAfter,
+  }) async {
+    final response = await _api.patch(
+      '${ApiConstants.treasury}/entries/$id',
+      queryParameters: {'category': 'collection'},
+      data: {
+        'clientId': clientId,
+        'employeeId': employeeId,
+        'collectionDate': collectionDate.toIso8601String(),
+        'amountPaid': amountPaid,
+        'amountDeducted': amountDeducted,
+        'balanceBefore': balanceBefore,
+        'balanceAfter': balanceAfter,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return TreasurySummaryModel.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
   Future<TreasurySummaryModel> createEntry({
     required TreasuryCategory category,
     required double amount,

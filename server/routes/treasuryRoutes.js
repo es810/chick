@@ -52,9 +52,15 @@ router.post(
   '/entries',
   [
     body('category').isIn(['collection', 'external_revenue', 'withdrawal', 'loading', 'expense']),
-    body('amount').isFloat({ min: 0.01 }),
+    body('amount').optional().isFloat({ min: 0.01 }),
     body('description').optional().isString(),
     body('employeeId').optional().isMongoId(),
+    body('clientId').optional().isMongoId(),
+    body('collectionDate').optional().isISO8601(),
+    body('amountPaid').optional().isFloat({ min: 0.01 }),
+    body('amountDeducted').optional().isFloat({ min: 0.01 }),
+    body('balanceBefore').optional().isFloat({ min: 0 }),
+    body('balanceAfter').optional().isFloat({ min: 0 }),
   ],
   validate,
   createTreasuryEntryHandler
@@ -64,6 +70,13 @@ router.patch(
   [
     body('amount').optional().isFloat({ min: 0.01 }),
     body('description').optional().isString(),
+    body('clientId').optional().isMongoId(),
+    body('employeeId').optional().isMongoId(),
+    body('collectionDate').optional().isISO8601(),
+    body('amountPaid').optional().isFloat({ min: 0.01 }),
+    body('amountDeducted').optional().isFloat({ min: 0.01 }),
+    body('balanceBefore').optional().isFloat({ min: 0 }),
+    body('balanceAfter').optional().isFloat({ min: 0 }),
   ],
   validate,
   updateTreasuryEntryHandler

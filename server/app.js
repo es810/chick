@@ -11,6 +11,7 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const treasuryRoutes = require('./routes/treasuryRoutes');
+const collectionRoutes = require('./routes/collectionRoutes');
 const meRoutes = require('./routes/meRoutes');
 
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/stock', stockRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/treasury', treasuryRoutes);
+app.use('/api/collections', collectionRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/employees', employeeRoutes);
 

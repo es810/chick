@@ -28,17 +28,24 @@ const getEmployees = asyncHandler(async (req, res) => {
 });
 
 const createEmployee = asyncHandler(async (req, res) => {
-  const { name, phone, email, password } = req.body;
+  const { name, phone, email, password, salary = 0 } = req.body;
   const exists = await User.findOne({ email });
   if (exists) throw new ApiError(400, 'Email already exists');
 
-  const employee = await User.create({ name, phone, email, password, role: 'employee' });
+  const employee = await User.create({
+    name,
+    phone,
+    email,
+    password,
+    role: 'employee',
+    salary,
+  });
   await logAction(req.user._id, req.user.name, 'CREATE_EMPLOYEE', employee.name);
   res.status(201).json({ success: true, data: employee });
 });
 
 const updateEmployee = asyncHandler(async (req, res) => {
-  const { name, phone, email, password, isActive } = req.body;
+  const { name, phone, email, password, isActive, salary } = req.body;
   const employee = await User.findOne({ _id: req.params.id, role: 'employee' });
   if (!employee) throw new ApiError(404, 'Employee not found');
 
@@ -50,6 +57,7 @@ const updateEmployee = asyncHandler(async (req, res) => {
   if (name !== undefined) employee.name = name;
   if (phone !== undefined) employee.phone = phone;
   if (isActive !== undefined) employee.isActive = isActive;
+  if (salary !== undefined) employee.salary = salary;
   if (password) employee.password = password;
 
   await employee.save();

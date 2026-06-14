@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:intl/intl.dart';
+
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../models/treasury_entry_item.dart';
+import 'collection_invoice_form.dart';
 
 Future<void> showTreasuryCategorySheet({
   required BuildContext context,
@@ -81,9 +84,50 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
 
   String _addButtonLabel(AppLocalizations l10n) {
     if (widget.category == TreasuryCategory.collection) {
-      return l10n.addCollection;
+      return l10n.collectionInvoice;
     }
     return l10n.addEntry;
+  }
+
+  String _entrySubtitle(TreasuryEntryItem entry) {
+    if (entry.isCollectionInvoice) {
+      final parts = <String>[
+        if (entry.clientName != null && entry.clientName!.isNotEmpty) entry.clientName!,
+        if (entry.employeeName != null && entry.employeeName!.isNotEmpty) entry.employeeName!,
+        if (entry.collectionDate != null)
+          DateFormat.yMMMd().format(entry.collectionDate!),
+        '${context.l10n.balanceBeforePayment}: ${entry.balanceBefore?.toStringAsFixed(2) ?? '0'}',
+        '${context.l10n.balanceAfterPayment}: ${entry.balanceAfter?.toStringAsFixed(2) ?? '0'}',
+      ];
+      return parts.join(' · ');
+    }
+    return [
+      if (entry.description.isNotEmpty) entry.description,
+      if (entry.subtitle.isNotEmpty) entry.subtitle,
+    ].join(' · ');
+  }
+
+  Future<void> _openEntryForm({TreasuryEntryItem? existing}) async {
+    if (widget.category == TreasuryCategory.collection) {
+      final l10n = context.l10n;
+      final ok = await showCollectionInvoiceDialog(
+        context: context,
+        ref: ref,
+        existing: existing,
+      );
+      if (ok == true && mounted) {
+        await _afterMutation();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(existing == null ? l10n.entryAdded : l10n.entryUpdated),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+      return;
+    }
+    await _showSimpleEntryDialog(existing: existing);
   }
 
   Future<void> _load() async {
@@ -165,7 +209,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
     }
   }
 
-  Future<void> _showEntryDialog({TreasuryEntryItem? existing}) async {
+  Future<void> _showSimpleEntryDialog({TreasuryEntryItem? existing}) async {
     final l10n = context.l10n;
     final amountController = TextEditingController(
       text: existing != null ? existing.amount.toStringAsFixed(2) : '',
@@ -345,26 +389,27 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
                               color: Colors.white.withValues(alpha: 0.08),
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
-                                onTap: _submitting ? null : () => _showEntryDialog(existing: entry),
+                                onTap: _submitting ? null : () => _openEntryForm(existing: entry),
                                 title: Text(
-                                  context.formatCurrency(entry.amount),
+                                  entry.isCollectionInvoice
+                                      ? '${entry.clientName ?? entry.description} — ${context.formatCurrency(entry.amountPaid ?? entry.amount)}'
+                                      : context.formatCurrency(entry.amount),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 subtitle: Text(
-                                  [
-                                    if (entry.description.isNotEmpty) entry.description,
-                                    if (entry.subtitle.isNotEmpty) entry.subtitle,
-                                  ].join(' · '),
+                                  _entrySubtitle(entry),
                                   style: const TextStyle(color: Colors.white60),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 trailing: PopupMenuButton<String>(
                                   icon: const Icon(Icons.more_vert, color: Colors.white70),
                                   onSelected: (action) {
                                     if (action == 'edit') {
-                                      _showEntryDialog(existing: entry);
+                                      _openEntryForm(existing: entry);
                                     } else if (action == 'delete') {
                                       _confirmDelete(entry);
                                     }
@@ -394,7 +439,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _submitting ? null : () => _showEntryDialog(),
+                onPressed: _submitting ? null : () => _openEntryForm(),
                 icon: const Icon(Icons.add),
                 label: Text(_addButtonLabel(l10n)),
               ),

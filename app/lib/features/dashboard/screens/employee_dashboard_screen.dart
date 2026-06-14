@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../widgets/employee_ledger_section.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -15,18 +16,35 @@ class EmployeeDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final user = ref.watch(currentUserProvider);
     final invoicesAsync = ref.watch(invoicesProvider);
     final stockAsync = ref.watch(stockProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.employeeDashboard)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/employee/invoices/create'),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.newInvoice),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'collection',
+            onPressed: () => context.go('/employee/collection-invoices'),
+            backgroundColor: const Color(0xFF2E7D32),
+            icon: const Icon(Icons.payments),
+            label: Text(l10n.collectionInvoice),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'distribution',
+            onPressed: () => context.go('/employee/invoices/create'),
+            icon: const Icon(Icons.add),
+            label: Text(l10n.distributionReceipt),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
+          await ref.read(authProvider.notifier).refreshUser();
           ref.invalidate(invoicesProvider);
           ref.invalidate(stockProvider);
           ref.invalidate(myLedgerProvider);
@@ -35,6 +53,13 @@ class EmployeeDashboardScreen extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
+            StatCard(
+              title: l10n.mySalary,
+              value: context.formatCurrency(user?.salary ?? 0),
+              icon: Icons.account_balance_wallet_outlined,
+              color: AppColors.primaryGreen,
+            ),
+            const SizedBox(height: 16),
             const EmployeeLedgerSection(),
             const SizedBox(height: 24),
             Text(l10n.stock, style: Theme.of(context).textTheme.titleLarge),
@@ -70,6 +95,18 @@ class EmployeeDashboardScreen extends ConsumerWidget {
                   ],
                 );
               },
+            ),
+            const SizedBox(height: 24),
+            Text(l10n.collectionInvoices, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.payments, color: Color(0xFF2E7D32)),
+                title: Text(l10n.collectionInvoice),
+                subtitle: Text(l10n.manageCollectionInvoices),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.go('/employee/collection-invoices'),
+              ),
             ),
             const SizedBox(height: 24),
             Text(l10n.myInvoices, style: Theme.of(context).textTheme.titleLarge),

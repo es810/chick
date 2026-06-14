@@ -6,6 +6,15 @@ class TreasuryEntryItem {
     required this.description,
     this.subtitle = '',
     this.createdAt,
+    this.clientId,
+    this.clientName,
+    this.employeeId,
+    this.employeeName,
+    this.collectionDate,
+    this.amountPaid,
+    this.amountDeducted,
+    this.balanceBefore,
+    this.balanceAfter,
   });
 
   final String id;
@@ -14,6 +23,17 @@ class TreasuryEntryItem {
   final String description;
   final String subtitle;
   final DateTime? createdAt;
+  final String? clientId;
+  final String? clientName;
+  final String? employeeId;
+  final String? employeeName;
+  final DateTime? collectionDate;
+  final double? amountPaid;
+  final double? amountDeducted;
+  final double? balanceBefore;
+  final double? balanceAfter;
+
+  bool get isCollectionInvoice => category == 'collection' && clientId != null;
 
   factory TreasuryEntryItem.fromJson(Map<String, dynamic> json) {
     final rawId = json['id'] ?? json['_id'];
@@ -24,6 +44,17 @@ class TreasuryEntryItem {
       description: json['description'] as String? ?? '',
       subtitle: json['subtitle'] as String? ?? '',
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+      clientId: json['clientId']?.toString(),
+      clientName: json['clientName'] as String?,
+      employeeId: json['employeeId']?.toString(),
+      employeeName: json['employeeName'] as String?,
+      collectionDate: json['collectionDate'] != null
+          ? DateTime.parse(json['collectionDate'] as String)
+          : null,
+      amountPaid: (json['amountPaid'] as num?)?.toDouble(),
+      amountDeducted: (json['amountDeducted'] as num?)?.toDouble(),
+      balanceBefore: (json['balanceBefore'] as num?)?.toDouble(),
+      balanceAfter: (json['balanceAfter'] as num?)?.toDouble(),
     );
   }
 }

@@ -20,14 +20,34 @@ class ApiClient {
         }
         handler.next(options);
       },
-      onError: (error, handler) {
+      onError: (error, handler) async {
+        final status = error.response?.statusCode;
+        final path = error.requestOptions.path;
+
+        if (status == 401 && !_isAuthExemptPath(path) && !_sessionExpiryHandling) {
+          _sessionExpiryHandling = true;
+          try {
+            await _storage.clearAll();
+            await onSessionExpired?.call();
+          } finally {
+            _sessionExpiryHandling = false;
+          }
+        }
         handler.next(error);
       },
     ));
   }
 
+  /// Set from the app root to clear auth state when the token expires.
+  static Future<void> Function()? onSessionExpired;
+
+  static bool _sessionExpiryHandling = false;
+
   final StorageService _storage;
   late final Dio _dio;
+
+  static bool _isAuthExemptPath(String path) =>
+      path.contains('/auth/login') || path.contains('/auth/logout');
 
   Dio get dio => _dio;
 
