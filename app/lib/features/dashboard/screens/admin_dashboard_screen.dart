@@ -19,7 +19,6 @@ class AdminDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final dashboardAsync = ref.watch(dashboardProvider);
-    final salesAsync = ref.watch(salesReportProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -92,37 +91,7 @@ class AdminDashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               Text(l10n.salesTrend, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
-              SizedBox(
-                height: 200,
-                child: salesAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => Center(child: Text(l10n.chartUnavailable)),
-                  data: (sales) => sales.isEmpty
-                      ? Center(child: Text(l10n.noSalesData))
-                      : LineChart(
-                          LineChartData(
-                            gridData: const FlGridData(show: false),
-                            titlesData: const FlTitlesData(show: false),
-                            borderData: FlBorderData(show: false),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: sales.asMap().entries.map((e) {
-                                  return FlSpot(e.key.toDouble(), e.value.totalSales);
-                                }).toList(),
-                                isCurved: true,
-                                color: AppColors.primaryGreen,
-                                barWidth: 3,
-                                dotData: const FlDotData(show: false),
-                                belowBarData: BarAreaData(
-                                  show: true,
-                                  color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                ),
-              ),
+              const _SalesTrendChart(),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -288,6 +257,48 @@ class _TreasuryCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SalesTrendChart extends ConsumerWidget {
+  const _SalesTrendChart();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final salesAsync = ref.watch(salesReportProvider);
+
+    return SizedBox(
+      height: 200,
+      child: salesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => Center(child: Text(l10n.chartUnavailable)),
+        data: (sales) => sales.isEmpty
+            ? Center(child: Text(l10n.noSalesData))
+            : LineChart(
+                LineChartData(
+                  gridData: const FlGridData(show: false),
+                  titlesData: const FlTitlesData(show: false),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: sales.asMap().entries.map((e) {
+                        return FlSpot(e.key.toDouble(), e.value.totalSales);
+                      }).toList(),
+                      isCurved: true,
+                      color: AppColors.primaryGreen,
+                      barWidth: 3,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }

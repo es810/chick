@@ -121,7 +121,6 @@ const getDashboard = asyncHandler(async (req, res) => {
     invoiceStats,
     stockAlerts,
     recentInvoices,
-    topClients,
     treasurySummary,
     clientBalances,
     dailyProfit,
@@ -143,18 +142,8 @@ const getDashboard = asyncHandler(async (req, res) => {
     Invoice.find()
       .populate('clientId', 'name')
       .sort({ createdAt: -1 })
-      .limit(5),
-    Invoice.aggregate([
-      { $match: { createdAt: { $gte: startOfMonth } } },
-      { $group: { _id: '$clientId', total: { $sum: '$totalPrice' }, count: { $sum: 1 } } },
-      { $sort: { total: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: { from: 'clients', localField: '_id', foreignField: '_id', as: 'client' },
-      },
-      { $unwind: '$client' },
-      { $project: { name: '$client.name', total: 1, count: 1 } },
-    ]),
+      .limit(5)
+      .select('invoiceNumber totalPrice paymentStatus createdAt clientId'),
     getTreasurySummary(),
     Client.aggregate([{ $group: { _id: null, total: { $sum: '$balance' } } }]),
     computeProfitForPeriod(startOfDay),
@@ -182,7 +171,6 @@ const getDashboard = asyncHandler(async (req, res) => {
       receivables: clientBalances[0]?.total || 0,
       lowStockAlerts: stockAlerts,
       recentInvoices,
-      topClients,
     },
   });
 });

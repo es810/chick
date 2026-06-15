@@ -32,12 +32,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repo;
 
   Future<void> _init() async {
+    final cached = _repo.getCachedUser();
+    final hasToken = await _repo.hasToken();
+    if (cached != null && hasToken) {
+      state = AuthState(user: cached, isLoading: false);
+      _refreshUserInBackground();
+      return;
+    }
+
     state = state.copyWith(isLoading: true);
     try {
       final user = await _repo.getCurrentUser();
       state = AuthState(user: user, isLoading: false);
     } catch (_) {
       state = const AuthState(isLoading: false);
+    }
+  }
+
+  Future<void> _refreshUserInBackground() async {
+    try {
+      final user = await _repo.getCurrentUser();
+      if (user != null) {
+        state = AuthState(user: user, isLoading: false);
+      } else {
+        state = const AuthState(isLoading: false);
+      }
+    } catch (_) {
+      // keep cached user on network errors
     }
   }
 

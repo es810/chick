@@ -166,9 +166,6 @@ const getTreasurySummary = async () => {
     withdrawals,
   });
 
-  treasury.balance = balance;
-  await treasury.save();
-
   return {
     openingBalance,
     balance,

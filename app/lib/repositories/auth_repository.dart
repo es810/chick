@@ -28,6 +28,10 @@ class AuthRepository {
     return auth;
   }
 
+  UserModel? getCachedUser() => _storage.getUser();
+
+  Future<bool> hasToken() async => (await _storage.getToken()) != null;
+
   Future<UserModel?> getCurrentUser() async {
     final cached = _storage.getUser();
     final token = await _storage.getToken();

@@ -12,5 +12,6 @@ const employeeLedgerSchema = new mongoose.Schema(
 );
 
 employeeLedgerSchema.index({ employeeId: 1, createdAt: -1 });
+employeeLedgerSchema.index({ type: 1, createdAt: -1 });
 
 module.exports = mongoose.model('EmployeeLedger', employeeLedgerSchema);

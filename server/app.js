@@ -3,6 +3,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 const errorHandler = require('./middleware/errorHandler');
+const requireDb = require('./middleware/requireDb');
 
 const authRoutes = require('./routes/authRoutes');
 const clientRoutes = require('./routes/clientRoutes');
@@ -36,6 +37,8 @@ app.get('/api', (req, res) => {
     health: '/health',
   });
 });
+
+app.use('/api', requireDb);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);

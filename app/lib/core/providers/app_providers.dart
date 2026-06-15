@@ -38,31 +38,38 @@ final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
   return EmployeeRepository(ref.watch(apiClientProvider));
 });
 
-final clientsProvider = FutureProvider.autoDispose((ref) async {
+final clientsProvider = FutureProvider((ref) async {
+  ref.keepAlive();
   return ref.watch(clientRepositoryProvider).getClients();
 });
 
-final stockProvider = FutureProvider.autoDispose((ref) async {
+final stockProvider = FutureProvider((ref) async {
+  ref.keepAlive();
   return ref.watch(stockRepositoryProvider).getStock();
 });
 
-final invoicesProvider = FutureProvider.autoDispose((ref) async {
+final invoicesProvider = FutureProvider((ref) async {
+  ref.keepAlive();
   return ref.watch(invoiceRepositoryProvider).getInvoices();
 });
 
-final myLedgerProvider = FutureProvider.autoDispose((ref) async {
+final myLedgerProvider = FutureProvider((ref) async {
+  ref.keepAlive();
   return ref.watch(employeeRepositoryProvider).getMyLedger();
 });
 
-final dashboardProvider = FutureProvider.autoDispose((ref) async {
+final dashboardProvider = FutureProvider((ref) async {
+  ref.keepAlive();
   return ref.watch(reportRepositoryProvider).getDashboard();
 });
 
-final treasurySummaryProvider = FutureProvider.autoDispose((ref) async {
+final treasurySummaryProvider = FutureProvider((ref) async {
+  ref.keepAlive();
   return ref.watch(treasuryRepositoryProvider).getSummary();
 });
 
-final salesReportProvider = FutureProvider.autoDispose((ref) async {
+final salesReportProvider = FutureProvider((ref) async {
+  ref.keepAlive();
   return ref.watch(reportRepositoryProvider).getSalesReport();
 });
 

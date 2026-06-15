@@ -28,6 +28,11 @@ const errorHandler = (err, req, res, next) => {
     message = 'Session expired. Please login again.';
   }
 
+  if (err.name === 'MongooseError' && /buffering timed out/i.test(err.message)) {
+    statusCode = 503;
+    message = 'Database is not connected. Start MongoDB or check MONGODB_URI.';
+  }
+
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;
     message = 'Invalid token';
