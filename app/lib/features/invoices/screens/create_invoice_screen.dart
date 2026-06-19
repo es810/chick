@@ -22,7 +22,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   String? _chickenType;
   bool _isSubmitting = false;
 
-  final _countController = TextEditingController(text: '1');
+  final _countController = TextEditingController();
   final _grossController = TextEditingController();
   final _priceController = TextEditingController();
 
@@ -35,7 +35,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   }
 
   double get _gross => double.tryParse(_grossController.text) ?? 0;
-  int get _count => int.tryParse(_countController.text) ?? 1;
+  int get _count => int.tryParse(_countController.text) ?? 0;
   double get _tare => invoiceTareWeight(_count);
   double get _net => (_gross - _tare).clamp(0, double.infinity);
   double get _price => double.tryParse(_priceController.text) ?? 0;
@@ -188,6 +188,10 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     }
     if (_chickenType == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.selectStockType)));
+      return;
+    }
+    if (_count <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.fieldRequired)));
       return;
     }
     if (_net <= 0) {

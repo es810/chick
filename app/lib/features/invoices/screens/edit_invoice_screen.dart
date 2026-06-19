@@ -23,7 +23,7 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
   InvoiceModel? _invoice;
   ClientModel? _selectedClient;
   final _notesController = TextEditingController();
-  final _countController = TextEditingController(text: '1');
+  final _countController = TextEditingController();
   final _grossController = TextEditingController();
   bool _isSubmitting = false;
   bool _initialized = false;
@@ -148,7 +148,7 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
         const SizedBox(height: 12),
         Builder(
           builder: (context) {
-            final count = int.tryParse(_countController.text) ?? 1;
+            final count = int.tryParse(_countController.text) ?? 0;
             final tare = invoiceTareWeight(count);
             return InputDecorator(
               decoration: InputDecoration(
@@ -287,16 +287,20 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
       }
     }
 
-    setState(() => _isSubmitting = true);
-
     final gross = double.tryParse(_grossController.text) ?? 0;
-    final itemCount = int.tryParse(_countController.text) ?? 1;
+    final itemCount = int.tryParse(_countController.text) ?? 0;
+    if (itemCount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.fieldRequired)));
+      return;
+    }
     final tare = invoiceTareWeight(itemCount);
     final net = gross - tare;
     if (net <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.invalidWeights)));
       return;
     }
+
+    setState(() => _isSubmitting = true);
 
     try {
       final payload = {

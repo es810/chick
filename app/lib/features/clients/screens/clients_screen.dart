@@ -28,7 +28,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final phoneController = TextEditingController(text: client?.phone ?? '');
     final addressController = TextEditingController(text: client?.address ?? '');
     final balanceController = TextEditingController(
-      text: client != null ? client.balance.toStringAsFixed(0) : '0',
+      text: client != null ? client.balance.toStringAsFixed(0) : '',
     );
     final emailController = TextEditingController(text: client?.email ?? '');
     final passwordController = TextEditingController();
@@ -83,7 +83,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                     prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return l10n.fieldRequired;
+                    if (v == null || v.trim().isEmpty) return null;
                     if (double.tryParse(v.trim()) == null) return l10n.invalidAmount;
                     if (double.parse(v.trim()) < 0) return l10n.invalidAmount;
                     return null;
@@ -139,7 +139,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
     if (ok != true || !mounted) return;
 
-    final balance = double.parse(balanceController.text.trim());
+    final balance = double.tryParse(balanceController.text.trim()) ?? 0;
     final password = passwordController.text;
 
     try {

@@ -122,14 +122,7 @@ class StockScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: Text(l10n.addStockMovement),
         content: SingleChildScrollView(
-          child: StockEntryForm(
-            key: formKey,
-            initialGross: '0',
-            initialCount: '100',
-            initialTare: '0',
-            initialNet: '0',
-            initialPrice: '4.5',
-          ),
+          child: StockEntryForm(key: formKey),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),

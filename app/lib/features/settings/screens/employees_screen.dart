@@ -68,7 +68,7 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
     final emailController = TextEditingController(text: employee?['email'] as String? ?? '');
     final passwordController = TextEditingController();
     final salaryController = TextEditingController(
-      text: employee != null ? ((employee['salary'] as num?)?.toString() ?? '0') : '',
+      text: employee != null ? ((employee['salary'] as num?)?.toString() ?? '') : '',
     );
     var isActive = employee?['isActive'] as bool? ?? true;
     final formKey = GlobalKey<FormState>();
