@@ -6,7 +6,7 @@ const collectionInvoiceSchema = new mongoose.Schema(
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     collectionDate: { type: Date, required: true },
     amountPaid: { type: Number, required: true, min: 0.01 },
-    amountDeducted: { type: Number, required: true, min: 0.01 },
+    amountDeducted: { type: Number, required: true, min: 0, default: 0 },
     balanceBefore: { type: Number, required: true, min: 0 },
     balanceAfter: { type: Number, required: true, min: 0 },
     treasuryMovementId: {

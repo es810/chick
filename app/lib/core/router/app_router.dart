@@ -18,6 +18,7 @@ import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/employee_detail_screen.dart';
 import '../../features/settings/screens/employees_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/stock/screens/damaged_stock_screen.dart';
 import '../../features/stock/screens/stock_screen.dart';
 import '../../models/user_model.dart';
 import '../../shared/widgets/app_shell.dart';
@@ -128,6 +129,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => InvoiceDetailScreen(invoiceId: state.pathParameters['id']!, basePath: '/admin'),
           ),
           GoRoute(path: '/admin/stock', builder: (_, __) => const StockScreen()),
+          GoRoute(path: '/admin/damaged-stock', builder: (_, __) => const DamagedStockScreen()),
           GoRoute(path: '/admin/clients', builder: (_, __) => const ClientsScreen()),
           GoRoute(path: '/admin/reports', builder: (_, __) => const ReportsScreen()),
           GoRoute(path: '/admin/employees', builder: (_, __) => const EmployeesScreen()),

@@ -50,9 +50,6 @@ const createInvoice = async (data, employee) => {
       if (!stock) {
         throw new ApiError(404, `Stock not found for type: ${item.chickenType}`);
       }
-      if (stock.quantity < item.quantity) {
-        throw new ApiError(400, `Insufficient stock for ${item.chickenType}. Available: ${stock.quantity}`);
-      }
 
       const weight = item.weight || stock.averageWeight * item.quantity;
       const unitPrice = item.unitPrice || stock.pricePerKg;
@@ -69,23 +66,6 @@ const createInvoice = async (data, employee) => {
 
       totalWeight += weight;
       totalPrice += total;
-
-      stock.quantity -= item.quantity;
-      await stock.save({ session });
-
-      await StockMovement.create(
-        [
-          {
-            type: 'OUT',
-            stockId: stock._id,
-            chickenType: stock.chickenType,
-            quantity: item.quantity,
-            reason: `Invoice sale - pending`,
-            employeeId: employee._id,
-          },
-        ],
-        { session }
-      );
     }
 
     const invoiceNumber = await generateInvoiceNumber();
@@ -179,31 +159,6 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     const oldTotalPrice = invoice.totalPrice;
     const oldPaymentStatus = invoice.paymentStatus;
 
-    for (const item of invoice.items) {
-      const stock =
-        (item.stockId && (await Stock.findById(item.stockId).session(session))) ||
-        (await Stock.findOne({ chickenType: item.chickenType }).session(session));
-      if (!stock) continue;
-
-      stock.quantity += item.quantity;
-      await stock.save({ session });
-
-      await StockMovement.create(
-        [
-          {
-            type: 'IN',
-            stockId: stock._id,
-            chickenType: stock.chickenType,
-            quantity: item.quantity,
-            reason: `Invoice #${invoice.invoiceNumber} edit - stock restored`,
-            invoiceId: invoice._id,
-            employeeId: user._id,
-          },
-        ],
-        { session }
-      );
-    }
-
     if (oldPaymentStatus !== 'paid') {
       const oldClient = await Client.findById(oldClientId).session(session);
       if (oldClient) {
@@ -225,9 +180,6 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
       if (!stock) {
         throw new ApiError(404, `Stock not found for type: ${item.chickenType}`);
       }
-      if (stock.quantity < item.quantity) {
-        throw new ApiError(400, `Insufficient stock for ${item.chickenType}. Available: ${stock.quantity}`);
-      }
 
       const weight = item.weight || stock.averageWeight * item.quantity;
       const unitPrice = item.unitPrice || stock.pricePerKg;
@@ -244,24 +196,6 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
 
       totalWeight += weight;
       totalPrice += total;
-
-      stock.quantity -= item.quantity;
-      await stock.save({ session });
-
-      await StockMovement.create(
-        [
-          {
-            type: 'OUT',
-            stockId: stock._id,
-            chickenType: stock.chickenType,
-            quantity: item.quantity,
-            reason: `Invoice #${invoice.invoiceNumber} edit`,
-            invoiceId: invoice._id,
-            employeeId: user._id,
-          },
-        ],
-        { session }
-      );
     }
 
     const newPaymentStatus = paymentStatus ?? oldPaymentStatus;
@@ -339,31 +273,6 @@ const deleteInvoice = async (invoiceId, user) => {
   try {
     const invoice = await Invoice.findById(invoiceId).session(session);
     if (!invoice) throw new ApiError(404, 'Invoice not found');
-
-    for (const item of invoice.items) {
-      const stock =
-        (item.stockId && (await Stock.findById(item.stockId).session(session))) ||
-        (await Stock.findOne({ chickenType: item.chickenType }).session(session));
-      if (!stock) continue;
-
-      stock.quantity += item.quantity;
-      await stock.save({ session });
-
-      await StockMovement.create(
-        [
-          {
-            type: 'IN',
-            stockId: stock._id,
-            chickenType: stock.chickenType,
-            quantity: item.quantity,
-            reason: `Invoice #${invoice.invoiceNumber} deleted - stock restored`,
-            invoiceId: invoice._id,
-            employeeId: user._id,
-          },
-        ],
-        { session }
-      );
-    }
 
     if (invoice.paymentStatus !== 'paid') {
       const client = await Client.findById(invoice.clientId).session(session);

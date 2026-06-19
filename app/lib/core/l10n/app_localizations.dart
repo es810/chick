@@ -112,6 +112,12 @@ class AppLocalizations {
   'monthlyRevenue': {'en': 'Monthly Revenue', 'ar': 'إيرادات الشهر'},
   'dailyProfit': {'en': 'Daily Profit', 'ar': 'أرباح يومية'},
   'monthlyProfit': {'en': 'Monthly Profit', 'ar': 'أرباح شهرية'},
+  'selectMonth': {'en': 'Select month', 'ar': 'اختيار الشهر'},
+  'afterSalariesDeduction': {'en': 'After salaries', 'ar': 'بعد خصم المرتبات'},
+  'monthlyProfitFormula': {
+    'en': 'Sum of daily profits − salaries',
+    'ar': 'مجموع أرباح الأيام − المرتبات',
+  },
   'totalDiscount': {'en': 'Total Discount', 'ar': 'إجمالي الخصم'},
   'pendingPayments': {'en': 'Pending Payments', 'ar': 'مدفوعات معلّقة'},
   'lowStockAlerts': {'en': 'Low Stock Alerts', 'ar': 'تنبيهات نقص المخزون'},
@@ -192,6 +198,15 @@ class AppLocalizations {
   'balanceAfter': {'en': 'Balance After Invoice (EGP)', 'ar': 'المستحق الجديد بعد الفاتورة (ج.م)'},
   'receiptPreview': {'en': 'Receipt Summary', 'ar': 'ملخص الإيصال'},
   'invalidWeights': {'en': 'Net weight must be greater than zero', 'ar': 'الوزن الصافي يجب أن يكون أكبر من صفر'},
+  'damagedStock': {'en': 'Damaged Stock', 'ar': 'المخزون الهالك'},
+  'damagedStockTreasuryNote': {
+    'en': 'Not linked to main treasury',
+    'ar': 'لا يؤثر على الخزينة الأساسية',
+  },
+  'recordDamagedStock': {'en': 'Record damaged stock', 'ar': 'تسجيل مخزون هالك'},
+  'damagedStockReason': {'en': 'Reason (optional)', 'ar': 'السبب (اختياري)'},
+  'noDamagedStock': {'en': 'No damaged stock recorded', 'ar': 'لا يوجد مخزون هالك مسجّل'},
+  'damagedStockRecorded': {'en': 'Damaged stock recorded', 'ar': 'تم تسجيل المخزون الهالك'},
   'selectStockType': {'en': 'Please select stock type', 'ar': 'يرجى اختيار نوع المخزون'},
   'noStockAddFirst': {'en': 'No stock items. Admin must add stock first.', 'ar': 'لا يوجد مخزون. يجب على المدير إضافة مخزون أولاً.'},
 
@@ -300,13 +315,22 @@ class AppLocalizations {
   'distributionInvoices': {'en': 'Distribution invoices', 'ar': 'فواتير التوزيع'},
   'collectedAmount': {'en': 'Collected amount', 'ar': 'المبلغ المحصّل'},
   'amountPaid': {'en': 'Amount paid', 'ar': 'المبلغ الذي دفعه'},
-  'amountDeducted': {'en': 'Amount deducted', 'ar': 'المبلغ الذي تم خصمه'},
+  'amountDeducted': {'en': 'Discount amount (optional)', 'ar': 'مبلغ الخصم (اختياري)'},
+  'discountOptionalHint': {
+    'en': 'Extra discount only — not the payment amount',
+    'ar': 'خصم إضافي فقط — ليس مبلغ الدفع',
+  },
   'balanceBeforePayment': {'en': 'Total before payment', 'ar': 'الإجمالي قبل الدفع'},
   'balanceAfterPayment': {'en': 'Total after payment', 'ar': 'الإجمالي بعد الدفع'},
   'collectorEmployee': {'en': 'Collector employee', 'ar': 'الموظف الذي حصل'},
+  'selectCollector': {'en': 'Select collector', 'ar': 'اختر المحصّل'},
   'deductExceedsBalance': {
     'en': 'Deducted amount cannot exceed balance before payment',
     'ar': 'المبلغ المخصوم لا يمكن أن يتجاوز الإجمالي قبل الدفع',
+  },
+  'paymentExceedsBalance': {
+    'en': 'Payment and discount cannot exceed total before payment',
+    'ar': 'المبلغ المدفوع والخصم لا يمكن أن يتجاوزا الإجمالي قبل الدفع',
   },
   'addEmployee': {'en': 'Add Employee', 'ar': 'إضافة موظف'},
   'salary': {'en': 'Salary (EGP)', 'ar': 'الراتب (ج.م)'},
@@ -430,6 +454,9 @@ class AppLocalizations {
   String get monthlyRevenue => _get('monthlyRevenue');
   String get dailyProfit => _get('dailyProfit');
   String get monthlyProfit => _get('monthlyProfit');
+  String get selectMonth => _get('selectMonth');
+  String get afterSalariesDeduction => _get('afterSalariesDeduction');
+  String get monthlyProfitFormula => _get('monthlyProfitFormula');
   String get totalDiscount => _get('totalDiscount');
   String get pendingPayments => _get('pendingPayments');
   String get lowStockAlerts => _get('lowStockAlerts');
@@ -505,6 +532,12 @@ class AppLocalizations {
   String get receiptPreview => _get('receiptPreview');
   String get invalidWeights => _get('invalidWeights');
   String get selectStockType => _get('selectStockType');
+  String get damagedStock => _get('damagedStock');
+  String get damagedStockTreasuryNote => _get('damagedStockTreasuryNote');
+  String get recordDamagedStock => _get('recordDamagedStock');
+  String get damagedStockReason => _get('damagedStockReason');
+  String get noDamagedStock => _get('noDamagedStock');
+  String get damagedStockRecorded => _get('damagedStockRecorded');
   String get noStockAddFirst => _get('noStockAddFirst');
 
   String get stockManagement => _get('stockManagement');
@@ -592,11 +625,13 @@ class AppLocalizations {
   String get collectedAmount => _get('collectedAmount');
   String get amountPaid => _get('amountPaid');
   String get amountDeducted => _get('amountDeducted');
+  String get discountOptionalHint => _get('discountOptionalHint');
   String get balanceBeforePayment => _get('balanceBeforePayment');
   String get balanceAfterPayment => _get('balanceAfterPayment');
   String get collectorEmployee => _get('collectorEmployee');
   String get selectCollector => _get('selectCollector');
   String get deductExceedsBalance => _get('deductExceedsBalance');
+  String get paymentExceedsBalance => _get('paymentExceedsBalance');
   String get employeeAdded => _get('employeeAdded');
   String get employeeAddFailed => _get('employeeAddFailed');
   String get editEmployee => _get('editEmployee');

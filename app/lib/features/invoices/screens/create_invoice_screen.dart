@@ -89,7 +89,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
               .map(
                 (s) => DropdownMenuItem(
                   value: s.chickenType,
-                  child: Text('${s.chickenType} (${s.quantity} ${l10n.available})'),
+                  child: Text('${s.chickenType}'),
                 ),
               )
               .toList(),
@@ -196,14 +196,6 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     }
     if (_net <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.invalidWeights)));
-      return;
-    }
-
-    final s = stock.firstWhere((s) => s.chickenType == _chickenType);
-    if (_count > s.quantity) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.insufficientStock(_chickenType!))),
-      );
       return;
     }
 

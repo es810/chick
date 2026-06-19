@@ -2,6 +2,8 @@ const Treasury = require('../models/Treasury');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const CollectionInvoice = require('../models/CollectionInvoice');
 const EmployeeLedger = require('../models/EmployeeLedger');
+const Invoice = require('../models/Invoice');
+const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 
@@ -28,25 +30,24 @@ const computeTreasuryBalance = ({
   withdrawals;
 
 /**
- * أرباح الفترة = إجمالي الإيرادات − إجمالي التحميل − إجمالي المصروفات − إجمالي الخصم
- * الإيرادات = التحصيل + الإيرادات الخارجية
+ * أرباح الفترة = إجمالي التوزيعات − التحميل − المصروفات − الخصومات
+ * الإيرادات = مجموع فواتير التوزيع (totalPrice) في الفترة
  */
 const computeProfitForPeriod = async (startDate, endDate = null) => {
-  const collectionDateFilter = endDate
+  const invoiceDateFilter = endDate
     ? { $gte: startDate, $lt: endDate }
     : { $gte: startDate };
   const createdAtFilter = endDate
     ? { $gte: startDate, $lt: endDate }
     : { $gte: startDate };
+  const collectionDateFilter = endDate
+    ? { $gte: startDate, $lt: endDate }
+    : { $gte: startDate };
 
-  const [collectionAgg, externalAgg, loadingAgg, expenseAgg, discountAgg] = await Promise.all([
-    CollectionInvoice.aggregate([
-      { $match: { collectionDate: collectionDateFilter } },
-      { $group: { _id: null, total: { $sum: '$amountPaid' } } },
-    ]),
-    TreasuryMovement.aggregate([
-      { $match: { type: 'external_revenue', createdAt: createdAtFilter } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
+  const [salesAgg, loadingAgg, expenseAgg, discountAgg] = await Promise.all([
+    Invoice.aggregate([
+      { $match: { createdAt: invoiceDateFilter } },
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } },
     ]),
     EmployeeLedger.aggregate([
       { $match: { type: 'debt', createdAt: createdAtFilter } },
@@ -62,15 +63,41 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
     ]),
   ]);
 
-  const collectionRevenue = collectionAgg[0]?.total || 0;
-  const externalRevenue = externalAgg[0]?.total || 0;
-  const revenue = collectionRevenue + externalRevenue;
+  const revenue = salesAgg[0]?.total || 0;
   const loading = loadingAgg[0]?.total || 0;
   const expenses = expenseAgg[0]?.total || 0;
   const discount = discountAgg[0]?.total || 0;
   const profit = revenue - loading - expenses - discount;
 
   return { revenue, loading, expenses, discount, profit };
+};
+
+/**
+ * أرباح الشهر = مجموع أرباح كل أيام الشهر − إجمالي المرتبات فقط
+ */
+const computeMonthlyProfit = async (year, month) => {
+  const startOfMonth = new Date(year, month - 1, 1);
+  const startOfNextMonth = new Date(year, month, 1);
+
+  const [periodProfit, salaryAgg] = await Promise.all([
+    computeProfitForPeriod(startOfMonth, startOfNextMonth),
+    User.aggregate([
+      { $match: { role: 'employee', isActive: true } },
+      { $group: { _id: null, total: { $sum: '$salary' } } },
+    ]),
+  ]);
+
+  const dailyProfitsTotal = periodProfit.profit;
+  const salaries = salaryAgg[0]?.total || 0;
+
+  return {
+    year,
+    month,
+    dailyProfitsTotal,
+    salaries,
+    profit: dailyProfitsTotal - salaries,
+    breakdown: periodProfit,
+  };
 };
 
 const getOpeningBalance = (treasury) => treasury.openingBalance ?? treasury.balance ?? 0;
@@ -245,4 +272,5 @@ module.exports = {
   resetMainTreasury,
   computeTreasuryBalance,
   computeProfitForPeriod,
+  computeMonthlyProfit,
 };

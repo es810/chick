@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../models/dashboard_model.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
@@ -54,7 +55,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.3,
+                childAspectRatio: 1.05,
                 children: [
                   StatCard(
                     title: l10n.dailyProfit,
@@ -62,12 +63,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                     icon: Icons.today,
                     color: AppColors.primaryGreen,
                   ),
-                  StatCard(
-                    title: l10n.monthlyProfit,
-                    value: context.formatCurrencyCompact(dashboard.monthlyProfit),
-                    icon: Icons.calendar_month,
-                    color: AppColors.lightGreen,
-                  ),
+                  _MonthlyProfitCard(monthlyProfit: dashboard.monthlyProfit),
                   StatCard(
                     title: l10n.invoices,
                     value: '${dashboard.monthlyInvoices}',
@@ -81,10 +77,12 @@ class AdminDashboardScreen extends ConsumerWidget {
                     color: AppColors.warning,
                   ),
                   StatCard(
-                    title: l10n.lowStockAlerts,
-                    value: '${dashboard.lowStockCount}',
-                    icon: Icons.warning_amber,
+                    title: l10n.damagedStock,
+                    value: '${dashboard.damagedStockQuantity}',
+                    icon: Icons.delete_sweep_outlined,
                     color: AppColors.error,
+                    subtitle: l10n.damagedStockTreasuryNote,
+                    onTap: () => context.go('/admin/damaged-stock'),
                   ),
                 ],
               ),
@@ -151,6 +149,46 @@ class AdminDashboardScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MonthlyProfitCard extends ConsumerWidget {
+  const _MonthlyProfitCard({required this.monthlyProfit});
+
+  final MonthlyProfitSummary monthlyProfit;
+
+  Future<void> _pickMonth(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final selected = ref.read(dashboardMonthProvider);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selected,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      helpText: l10n.selectMonth,
+      initialDatePickerMode: DatePickerMode.year,
+    );
+    if (picked == null) return;
+    ref.read(dashboardMonthProvider.notifier).state = DateTime(picked.year, picked.month);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toString();
+    final monthLabel = DateFormat.yMMMM(locale).format(
+      DateTime(monthlyProfit.year, monthlyProfit.month),
+    );
+
+    return StatCard(
+      title: l10n.monthlyProfit,
+      value: context.formatCurrencyCompact(monthlyProfit.profit),
+      icon: Icons.calendar_month,
+      color: AppColors.lightGreen,
+      subtitle:
+          '$monthLabel · ${l10n.afterSalariesDeduction}: ${context.formatCurrencyCompact(monthlyProfit.salaries)}',
+      onTap: () => _pickMonth(context, ref),
     );
   }
 }

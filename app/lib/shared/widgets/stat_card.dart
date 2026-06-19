@@ -9,6 +9,7 @@ class StatCard extends StatelessWidget {
     required this.icon,
     this.color,
     this.subtitle,
+    this.onTap,
   });
 
   final String title;
@@ -16,47 +17,64 @@ class StatCard extends StatelessWidget {
   final IconData icon;
   final Color? color;
   final String? subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final cardColor = color ?? AppColors.primaryGreen;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: cardColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: cardColor, size: 24),
+    final content = Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: cardColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const Spacer(),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: cardColor,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(title, style: Theme.of(context).textTheme.bodyMedium),
-            if (subtitle != null)
-              Text(
-                subtitle!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                child: Icon(icon, color: cardColor, size: 24),
               ),
-          ],
-        ),
+              const Spacer(),
+              if (onTap != null)
+                Icon(Icons.edit_calendar, size: 18, color: Colors.grey.shade600),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: cardColor,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium),
+          if (subtitle != null)
+            Text(
+              subtitle!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
+        ],
+      ),
+    );
+
+    if (onTap == null) {
+      return Card(child: content);
+    }
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: content,
       ),
     );
   }

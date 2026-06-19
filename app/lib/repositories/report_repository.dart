@@ -7,8 +7,11 @@ class ReportRepository {
 
   final ApiClient _api;
 
-  Future<DashboardData> getDashboard() async {
-    final response = await _api.get(ApiConstants.dashboard);
+  Future<DashboardData> getDashboard({required int year, required int month}) async {
+    final response = await _api.get(
+      ApiConstants.dashboard,
+      queryParameters: {'year': year, 'month': month},
+    );
     final data = response.data as Map<String, dynamic>;
     return DashboardData.fromJson(data['data'] as Map<String, dynamic>);
   }

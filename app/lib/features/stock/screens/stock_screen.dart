@@ -69,7 +69,7 @@ class StockScreen extends ConsumerWidget {
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(stockProvider),
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, embedded && isAdmin ? 88 : 16),
                     itemCount: stock.length,
                     itemBuilder: (_, i) => _StockCard(
                       item: stock[i],
@@ -88,7 +88,29 @@ class StockScreen extends ConsumerWidget {
     if (embedded) {
       return ColoredBox(
         color: const Color(0xFF0D1B3E),
-        child: body,
+        child: Stack(
+          children: [
+            body,
+            if (isAdmin)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: SafeArea(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showAddStockDialog(context, ref),
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.addStock),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       );
     }
 

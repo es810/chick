@@ -44,7 +44,6 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
   bool _loadingData = true;
   String? _dataError;
   bool _submitting = false;
-  bool _deductedTouched = false;
 
   @override
   void initState() {
@@ -57,7 +56,6 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       _amountPaidController.text = existing.amountPaid?.toStringAsFixed(2) ?? '';
       _amountDeductedController.text = existing.amountDeducted?.toStringAsFixed(2) ?? '';
       _balanceBeforeController.text = existing.balanceBefore?.toStringAsFixed(2) ?? '';
-      _deductedTouched = true;
     } else {
       final user = ref.read(currentUserProvider);
       if (user?.role == UserRole.employee) {
@@ -111,25 +109,24 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
   double get _balanceBefore =>
       double.tryParse(_balanceBeforeController.text.trim().replaceAll(',', '')) ?? 0;
 
+  double get _amountPaid =>
+      double.tryParse(_amountPaidController.text.trim().replaceAll(',', '')) ?? 0;
+
   double get _amountDeducted =>
       double.tryParse(_amountDeductedController.text.trim().replaceAll(',', '')) ?? 0;
 
-  double get _balanceAfter => (_balanceBefore - _amountDeducted).clamp(0, double.infinity);
+  double get _balanceAfter =>
+      (_balanceBefore - _amountPaid - _amountDeducted).clamp(0, double.infinity);
 
   void _onClientSelected(ClientModel? client) {
     setState(() {
       _selectedClient = client;
       if (widget.existing == null && client != null) {
         _balanceBeforeController.text = client.balance.toStringAsFixed(2);
+        _amountPaidController.clear();
+        _amountDeductedController.clear();
       }
     });
-  }
-
-  void _onAmountPaidChanged(String value) {
-    if (!_deductedTouched) {
-      _amountDeductedController.text = value;
-    }
-    setState(() {});
   }
 
   Future<void> _pickDate() async {
@@ -158,12 +155,12 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       _showError(l10n.invalidAmount);
       return;
     }
-    if (_amountDeducted <= 0) {
+    if (_amountDeducted < 0) {
       _showError(l10n.invalidAmount);
       return;
     }
-    if (_amountDeducted > _balanceBefore) {
-      _showError(l10n.deductExceedsBalance);
+    if (amountPaid + _amountDeducted > _balanceBefore) {
+      _showError(l10n.paymentExceedsBalance);
       return;
     }
 
@@ -278,20 +275,28 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
         ),
         const SizedBox(height: 12),
         TextField(
+          key: const ValueKey('collection_amount_paid'),
           controller: _amountPaidController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          autofillHints: const [],
+          enableSuggestions: false,
+          autocorrect: false,
           decoration: InputDecoration(labelText: l10n.amountPaid),
-          onChanged: _onAmountPaidChanged,
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
         TextField(
+          key: const ValueKey('collection_amount_discount'),
           controller: _amountDeductedController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(labelText: l10n.amountDeducted),
-          onChanged: (_) {
-            _deductedTouched = true;
-            setState(() {});
-          },
+          autofillHints: const [],
+          enableSuggestions: false,
+          autocorrect: false,
+          decoration: InputDecoration(
+            labelText: l10n.amountDeducted,
+            helperText: l10n.discountOptionalHint,
+          ),
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
         InputDecorator(

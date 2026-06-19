@@ -57,19 +57,6 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
     if (_items.isEmpty) _items.add(_InvoiceLineItem());
   }
 
-  int _availableQty(String? chickenType, List<StockModel> stock) {
-    if (chickenType == null) return 0;
-    final s = stock.where((s) => s.chickenType == chickenType).firstOrNull;
-    if (s == null) return 0;
-    var avail = s.quantity;
-    if (_invoice != null) {
-      for (final item in _invoice!.items) {
-        if (item.chickenType == chickenType) avail += item.quantity;
-      }
-    }
-    return avail;
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -183,7 +170,6 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
         ..._items.asMap().entries.map((entry) {
           final index = entry.key;
           final item = entry.value;
-          final avail = _availableQty(item.chickenType, stock);
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
@@ -196,9 +182,7 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
                     items: stock
                         .map((s) => DropdownMenuItem(
                               value: s.chickenType,
-                              child: Text(
-                                '${s.chickenType} (${_availableQty(s.chickenType, stock)} ${l10n.available})',
-                              ),
+                              child: Text(s.chickenType),
                             ))
                         .toList(),
                     onChanged: (v) {
@@ -235,14 +219,6 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
                         ),
                     ],
                   ),
-                  if (item.chickenType != null && item.quantity > avail)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        '${l10n.insufficientStock} ${item.chickenType}',
-                        style: const TextStyle(color: AppColors.error, fontSize: 12),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -276,12 +252,6 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
       if (item.chickenType == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.selectChickenType)),
-        );
-        return;
-      }
-      if (item.quantity > _availableQty(item.chickenType, stock)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.insufficientStock} ${item.chickenType}')),
         );
         return;
       }

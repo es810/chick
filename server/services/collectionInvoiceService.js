@@ -42,13 +42,16 @@ const getCollectionInvoice = async (id) => {
 };
 
 const validateAmounts = ({ amountPaid, amountDeducted, balanceBefore, balanceAfter }) => {
-  if (amountPaid <= 0 || amountDeducted <= 0) {
-    throw new ApiError(400, 'Amounts must be greater than zero');
+  if (amountPaid <= 0) {
+    throw new ApiError(400, 'Amount paid must be greater than zero');
   }
-  if (amountDeducted > balanceBefore) {
-    throw new ApiError(400, 'Deducted amount cannot exceed balance before payment');
+  if (amountDeducted < 0) {
+    throw new ApiError(400, 'Deducted amount cannot be negative');
   }
-  const expectedAfter = Math.max(0, balanceBefore - amountDeducted);
+  if (amountPaid + amountDeducted > balanceBefore) {
+    throw new ApiError(400, 'Payment and discount cannot exceed balance before payment');
+  }
+  const expectedAfter = Math.max(0, balanceBefore - amountPaid - amountDeducted);
   if (Math.abs(balanceAfter - expectedAfter) > 0.01) {
     throw new ApiError(400, 'Balance after payment does not match');
   }
@@ -117,7 +120,7 @@ const updateCollectionInvoice = async (id, data, user) => {
 
   const oldClient = await Client.findById(invoice.clientId);
   if (oldClient) {
-    oldClient.balance += invoice.amountDeducted;
+    oldClient.balance += invoice.amountPaid + invoice.amountDeducted;
     await oldClient.save();
   }
 
@@ -179,7 +182,7 @@ const deleteCollectionInvoice = async (id, user) => {
 
   const client = await Client.findById(invoice.clientId);
   if (client) {
-    client.balance += invoice.amountDeducted;
+    client.balance += invoice.amountPaid + invoice.amountDeducted;
     await client.save();
   }
 

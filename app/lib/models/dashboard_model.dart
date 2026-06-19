@@ -29,13 +29,42 @@ class ProfitSummary extends Equatable {
   List<Object?> get props => [profit];
 }
 
+class MonthlyProfitSummary extends Equatable {
+  const MonthlyProfitSummary({
+    required this.profit,
+    required this.dailyProfitsTotal,
+    required this.salaries,
+    required this.year,
+    required this.month,
+  });
+
+  final double profit;
+  final double dailyProfitsTotal;
+  final double salaries;
+  final int year;
+  final int month;
+
+  factory MonthlyProfitSummary.fromJson(Map<String, dynamic> json) {
+    return MonthlyProfitSummary(
+      profit: (json['profit'] as num?)?.toDouble() ?? 0,
+      dailyProfitsTotal: (json['dailyProfitsTotal'] as num?)?.toDouble() ?? 0,
+      salaries: (json['salaries'] as num?)?.toDouble() ?? 0,
+      year: (json['year'] as num?)?.toInt() ?? DateTime.now().year,
+      month: (json['month'] as num?)?.toInt() ?? DateTime.now().month,
+    );
+  }
+
+  @override
+  List<Object?> get props => [profit, year, month];
+}
+
 class DashboardData extends Equatable {
   const DashboardData({
     required this.dailyProfit,
     required this.monthlyProfit,
     required this.monthlyInvoices,
     required this.pendingPayments,
-    required this.lowStockCount,
+    required this.damagedStockQuantity,
     required this.recentInvoices,
     required this.mainTreasuryBalance,
     this.mainTreasuryUpdatedAt,
@@ -44,10 +73,10 @@ class DashboardData extends Equatable {
   });
 
   final ProfitSummary dailyProfit;
-  final double monthlyProfit;
+  final MonthlyProfitSummary monthlyProfit;
   final int monthlyInvoices;
   final int pendingPayments;
-  final int lowStockCount;
+  final int damagedStockQuantity;
   final List<Map<String, dynamic>> recentInvoices;
   final double mainTreasuryBalance;
   final DateTime? mainTreasuryUpdatedAt;
@@ -56,7 +85,7 @@ class DashboardData extends Equatable {
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
     final stats = json['monthlyStats'] as Map<String, dynamic>? ?? {};
-    final alerts = json['lowStockAlerts'] as List? ?? [];
+    final damaged = json['damagedStock'] as Map<String, dynamic>? ?? {};
     final recent = json['recentInvoices'] as List? ?? [];
     final mainTreasury = json['mainTreasury'] as Map<String, dynamic>? ?? {};
     final daily = json['dailyProfit'] as Map<String, dynamic>? ?? {};
@@ -64,12 +93,10 @@ class DashboardData extends Equatable {
 
     return DashboardData(
       dailyProfit: ProfitSummary.fromJson(daily),
-      monthlyProfit: (monthly['profit'] as num?)?.toDouble() ??
-          (stats['revenue'] as num?)?.toDouble() ??
-          0,
+      monthlyProfit: MonthlyProfitSummary.fromJson(monthly),
       monthlyInvoices: (stats['count'] as num?)?.toInt() ?? 0,
       pendingPayments: (stats['pending'] as num?)?.toInt() ?? 0,
-      lowStockCount: alerts.length,
+      damagedStockQuantity: (damaged['totalQuantity'] as num?)?.toInt() ?? 0,
       recentInvoices: recent.map((e) => Map<String, dynamic>.from(e as Map)).toList(),
       mainTreasuryBalance: (mainTreasury['balance'] as num?)?.toDouble() ?? 0,
       mainTreasuryUpdatedAt: mainTreasury['updatedAt'] != null

@@ -20,7 +20,7 @@ const collectionBodyValidation = [
   body('employeeId').isMongoId(),
   body('collectionDate').isISO8601(),
   body('amountPaid').isFloat({ min: 0.01 }),
-  body('amountDeducted').isFloat({ min: 0.01 }),
+  body('amountDeducted').isFloat({ min: 0 }),
   body('balanceBefore').isFloat({ min: 0 }),
   body('balanceAfter').isFloat({ min: 0 }),
 ];

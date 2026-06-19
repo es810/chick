@@ -1,8 +1,8 @@
 const Invoice = require('../models/Invoice');
-const Stock = require('../models/Stock');
 const Client = require('../models/Client');
 const AuditLog = require('../models/AuditLog');
-const { getTreasurySummary, computeProfitForPeriod } = require('../services/treasuryService');
+const { getTreasurySummary, computeProfitForPeriod, computeMonthlyProfit } = require('../services/treasuryService');
+const { getDamagedStockSummary } = require('../services/damagedStockService');
 const asyncHandler = require('../utils/asyncHandler');
 
 const getSalesReport = asyncHandler(async (req, res) => {
@@ -117,13 +117,20 @@ const getDashboard = asyncHandler(async (req, res) => {
   startOfDay.setHours(0, 0, 0, 0);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  const profitYear = parseInt(req.query.year, 10) || now.getFullYear();
+  const profitMonth = parseInt(req.query.month, 10) || now.getMonth() + 1;
+  if (profitMonth < 1 || profitMonth > 12) {
+    return res.status(400).json({ success: false, message: 'Invalid month' });
+  }
+
   const [
     invoiceStats,
-    stockAlerts,
     recentInvoices,
     treasurySummary,
     clientBalances,
     dailyProfit,
+    monthlyProfit,
+    damagedStockSummary,
   ] = await Promise.all([
     Invoice.aggregate([
       { $match: { createdAt: { $gte: startOfMonth } } },
@@ -138,7 +145,6 @@ const getDashboard = asyncHandler(async (req, res) => {
         },
       },
     ]),
-    Stock.find({ $expr: { $lte: ['$quantity', '$lowStockThreshold'] } }),
     Invoice.find()
       .populate('clientId', 'name')
       .sort({ createdAt: -1 })
@@ -147,6 +153,8 @@ const getDashboard = asyncHandler(async (req, res) => {
     getTreasurySummary(),
     Client.aggregate([{ $group: { _id: null, total: { $sum: '$balance' } } }]),
     computeProfitForPeriod(startOfDay),
+    computeMonthlyProfit(profitYear, profitMonth),
+    getDamagedStockSummary(),
   ]);
 
   res.json({
@@ -154,9 +162,7 @@ const getDashboard = asyncHandler(async (req, res) => {
     data: {
       monthlyStats: invoiceStats[0] || { revenue: 0, count: 0, pending: 0 },
       dailyProfit,
-      monthlyProfit: {
-        profit: invoiceStats[0]?.revenue || 0,
-      },
+      monthlyProfit,
       mainTreasury: {
         balance: treasurySummary.balance,
         openingBalance: treasurySummary.openingBalance,
@@ -169,7 +175,7 @@ const getDashboard = asyncHandler(async (req, res) => {
         updatedByName: treasurySummary.updatedByName ?? null,
       },
       receivables: clientBalances[0]?.total || 0,
-      lowStockAlerts: stockAlerts,
+      damagedStock: damagedStockSummary,
       recentInvoices,
     },
   });
