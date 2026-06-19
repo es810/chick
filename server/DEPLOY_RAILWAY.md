@@ -23,18 +23,36 @@
 | `JWT_SECRET` | long random string (32+ chars) |
 | `JWT_EXPIRES_IN` | `7d` |
 | `BCRYPT_ROUNDS` | `12` |
+| `INITIAL_ADMIN_EMAIL` | your admin email (first deploy only, when DB is empty) |
+| `INITIAL_ADMIN_PASSWORD` | strong password for first admin |
+| `INITIAL_ADMIN_NAME` | optional display name |
+| `INITIAL_ADMIN_PHONE` | optional phone |
 
 5. In MongoDB Atlas → **Network Access** → add `0.0.0.0/0` (or Railway’s egress IPs) so the API can connect.
 6. Deploy. Copy your public URL, e.g. `https://chicken-farm-api-production.up.railway.app`.
 7. API base for the app: `https://YOUR-URL/api` (test: `https://YOUR-URL/health`).
 
+### First admin (no demo data)
+
+v1.3+ does **not** create demo users. On first startup with an **empty** database, the server creates one admin if `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` are set.
+
+To wipe existing test data and start fresh:
+
+```powershell
+cd c:\chick\server
+$env:MONGODB_URI = "your-atlas-uri"
+$env:INITIAL_ADMIN_EMAIL = "admin@yourfarm.com"
+$env:INITIAL_ADMIN_PASSWORD = "your-secure-password"
+npm run reset-db
+```
+
+Then sign in with that admin and add employees, clients, and stock from the app.
+
 ### Login: "Invalid email or password"
 
-The API **auto-creates** demo users on startup if `admin@chickenfarm.com` is missing (after you deploy the latest server code). **Redeploy** Railway once, wait ~1 minute, then try:
+Ensure `INITIAL_ADMIN_*` variables are set and the database was empty on first deploy, or run `npm run reset-db` as above.
 
-- `admin@chickenfarm.com` / `admin123`
-
-**Local `npm run ensure-users` fails with `querySrv ECONNREFUSED`?**  
+**Local `npm run reset-db` fails with `querySrv ECONNREFUSED`?**  
 Your PC DNS cannot resolve `mongodb+srv://`. That is normal on some networks. Use one of:
 
 1. **Redeploy Railway** (recommended) — users are created on the server.

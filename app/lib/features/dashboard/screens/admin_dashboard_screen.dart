@@ -82,7 +82,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                     icon: Icons.delete_sweep_outlined,
                     color: AppColors.error,
                     subtitle: l10n.damagedStockTreasuryNote,
-                    onTap: () => context.go('/admin/damaged-stock'),
+                    onTap: () => context.push('/admin/damaged-stock'),
                   ),
                 ],
               ),

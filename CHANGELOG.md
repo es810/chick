@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.3.0] — 2026-06-19
+
+### Clean production release (no demo data)
+- Removed auto-creation of demo users, clients, and test logins on server startup
+- Removed demo credentials hint from the login screen
+- Admin adds all data: stock, clients, employees, treasury via the app
+- `npm run reset-db` wipes all collections for a fresh start
+- First admin is created only when `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` are set and the database has no users
+
+### Profits & treasury
+- Daily/monthly profit from distribution invoices; monthly profit with month picker minus salaries
+- Collection invoice balance: paid amount + discount deducted correctly
+- Damaged stock (separate from main treasury) with back navigation
+
+### Distribution
+- Invoices no longer blocked by stock cage count
+
 ## [1.2.0] — 2026-06-14
 
 ### Collection invoices

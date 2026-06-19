@@ -142,12 +142,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             )
                           : Text(l10n.signIn),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      l10n.demoCredentials,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
                   ],
                 ),
               ),

@@ -29,7 +29,6 @@ class AppLocalizations {
   'password': {'en': 'Password', 'ar': 'كلمة المرور'},
   'rememberSession': {'en': 'Remember session', 'ar': 'تذكر الجلسة'},
   'signIn': {'en': 'Sign In', 'ar': 'تسجيل الدخول'},
-  'demoCredentials': {'en': 'Demo: admin@chickenfarm.com / admin123', 'ar': 'تجريبي: admin@chickenfarm.com / admin123'},
   'invalidEmail': {'en': 'Enter valid email', 'ar': 'أدخل بريداً إلكترونياً صالحاً'},
   'minPassword': {'en': 'Min 6 characters', 'ar': '6 أحرف على الأقل'},
   'fieldRequired': {'en': 'Required', 'ar': 'مطلوب'},
@@ -390,7 +389,6 @@ class AppLocalizations {
   String get password => _get('password');
   String get rememberSession => _get('rememberSession');
   String get signIn => _get('signIn');
-  String get demoCredentials => _get('demoCredentials');
   String get invalidEmail => _get('invalidEmail');
   String get minPassword => _get('minPassword');
   String get fieldRequired => _get('fieldRequired');

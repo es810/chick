@@ -3,26 +3,20 @@ const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const { port, nodeEnv } = require('./config/env');
 const logger = require('./utils/logger');
-const User = require('./models/User');
-const { ensureDemoUsers } = require('./utils/ensureUsers');
+const { bootstrapInitialAdmin } = require('./utils/bootstrapAdmin');
 
 const MAX_DB_ATTEMPTS = nodeEnv === 'production' ? 12 : 6;
 const DB_RETRY_MS = 5000;
 
-async function ensureDemoUsersIfNeeded() {
-  const adminExists = await User.exists({ email: 'admin@chickenfarm.com' });
-  if (!adminExists) {
-    logger.info('No admin user in database — creating demo logins...');
-    await ensureDemoUsers();
-    logger.info('Demo users ready: admin@chickenfarm.com / admin123');
-  }
+async function bootstrapIfEmpty() {
+  await bootstrapInitialAdmin();
 }
 
 async function startMongoWithRetry() {
   for (let attempt = 1; attempt <= MAX_DB_ATTEMPTS; attempt += 1) {
     try {
       await connectDB();
-      await ensureDemoUsersIfNeeded();
+      await bootstrapIfEmpty();
       return true;
     } catch (error) {
       logger.error(`MongoDB attempt ${attempt}/${MAX_DB_ATTEMPTS}: ${error.message}`);
@@ -45,7 +39,7 @@ function scheduleMongoReconnect() {
     }
     try {
       await connectDB();
-      await ensureDemoUsersIfNeeded();
+      await bootstrapIfEmpty();
       logger.info('MongoDB reconnected');
       clearInterval(timer);
     } catch (_) {

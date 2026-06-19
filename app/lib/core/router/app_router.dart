@@ -99,6 +99,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const CollectionInvoicesScreen(),
       ),
 
+      GoRoute(
+        path: '/admin/damaged-stock',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, __) => const DamagedStockScreen(),
+      ),
+
       ShellRoute(
         navigatorKey: _adminShellNavigatorKey,
         builder: (context, state, child) => AppShell(
@@ -129,7 +135,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => InvoiceDetailScreen(invoiceId: state.pathParameters['id']!, basePath: '/admin'),
           ),
           GoRoute(path: '/admin/stock', builder: (_, __) => const StockScreen()),
-          GoRoute(path: '/admin/damaged-stock', builder: (_, __) => const DamagedStockScreen()),
           GoRoute(path: '/admin/clients', builder: (_, __) => const ClientsScreen()),
           GoRoute(path: '/admin/reports', builder: (_, __) => const ReportsScreen()),
           GoRoute(path: '/admin/employees', builder: (_, __) => const EmployeesScreen()),

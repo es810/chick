@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/l10n/app_localizations.dart';
@@ -133,7 +134,19 @@ class DamagedStockScreen extends ConsumerWidget {
     final damagedAsync = ref.watch(damagedStockProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.damagedStock)),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/admin/dashboard');
+            }
+          },
+        ),
+        title: Text(l10n.damagedStock),
+      ),
       body: damagedAsync.when(
         loading: () => const LoadingShimmer(),
         error: (e, _) => ErrorStateWidget(
