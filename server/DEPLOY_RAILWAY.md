@@ -28,6 +28,7 @@
 | `INITIAL_ADMIN_NAME` | optional display name |
 | `INITIAL_ADMIN_PHONE` | optional phone |
 | `RESET_DB_ON_START` | set to `true` **once** to wipe all data on next deploy, then remove |
+| `SETUP_SECRET` | optional secret for `POST /api/setup/reset` (see below) |
 | `INITIAL_ADMIN_ENSURE` | set to `true` to sync admin email/password from env on each startup (optional) |
 
 5. In MongoDB Atlas → **Network Access** → add `0.0.0.0/0` (or Railway’s egress IPs) so the API can connect.
@@ -71,6 +72,20 @@ railway run npm run reset-db
 ```
 
 Ensure `INITIAL_ADMIN_*` variables are set before `reset-db`.
+
+### One-time wipe via HTTP (after deploy)
+
+1. Set on Railway: `SETUP_SECRET` (any long random string), `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`
+2. Wait for deploy, then run once:
+
+```powershell
+$secret = "YOUR_SETUP_SECRET"
+Invoke-RestMethod -Uri "https://chick-production.up.railway.app/api/setup/reset" -Method POST -Headers @{ "x-setup-secret" = $secret }
+```
+
+3. Remove `SETUP_SECRET` from Railway when done.
+
+**Important:** `MONGODB_URI` on Railway must be the same Atlas database you use locally (`server/.env`). If login still fails, copy `MONGODB_URI` from `server/.env` into Railway Variables and redeploy.
 
 **Local `npm run reset-db` fails with `querySrv ECONNREFUSED`?**  
 Your PC DNS cannot resolve `mongodb+srv://`. That is normal on some networks. Use one of:

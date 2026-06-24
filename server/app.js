@@ -16,6 +16,7 @@ const treasuryRoutes = require('./routes/treasuryRoutes');
 const collectionRoutes = require('./routes/collectionRoutes');
 const damagedStockRoutes = require('./routes/damagedStockRoutes');
 const meRoutes = require('./routes/meRoutes');
+const setupRoutes = require('./routes/setupRoutes');
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.get('/api', (req, res) => {
   });
 });
 
+app.use('/api/setup', requireDb, setupRoutes);
 app.use('/api', requireDb);
 
 app.use('/api/auth', authRoutes);
