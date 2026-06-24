@@ -27,6 +27,8 @@
 | `INITIAL_ADMIN_PASSWORD` | strong password for first admin |
 | `INITIAL_ADMIN_NAME` | optional display name |
 | `INITIAL_ADMIN_PHONE` | optional phone |
+| `RESET_DB_ON_START` | set to `true` **once** to wipe all data on next deploy, then remove |
+| `INITIAL_ADMIN_ENSURE` | set to `true` to sync admin email/password from env on each startup (optional) |
 
 5. In MongoDB Atlas → **Network Access** → add `0.0.0.0/0` (or Railway’s egress IPs) so the API can connect.
 6. Deploy. Copy your public URL, e.g. `https://chicken-farm-api-production.up.railway.app`.

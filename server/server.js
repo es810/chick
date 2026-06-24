@@ -3,13 +3,25 @@ const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const { port, nodeEnv } = require('./config/env');
 const logger = require('./utils/logger');
-const { bootstrapInitialAdmin } = require('./utils/bootstrapAdmin');
+const { bootstrapInitialAdmin, ensureAdminFromEnv } = require('./utils/bootstrapAdmin');
+const { resetDatabase } = require('./utils/resetDatabase');
 
 const MAX_DB_ATTEMPTS = nodeEnv === 'production' ? 12 : 6;
 const DB_RETRY_MS = 5000;
 
 async function bootstrapIfEmpty() {
-  await bootstrapInitialAdmin();
+  if (process.env.RESET_DB_ON_START === 'true') {
+    logger.warn('RESET_DB_ON_START is set — wiping all application data...');
+    await resetDatabase({ bootstrap: true });
+    logger.warn('Database wiped. Remove RESET_DB_ON_START from environment variables.');
+    return;
+  }
+
+  const created = await bootstrapInitialAdmin();
+  if (!created && process.env.INITIAL_ADMIN_ENSURE === 'true') {
+    await ensureAdminFromEnv();
+    logger.info('INITIAL_ADMIN_ENSURE: admin credentials synced from environment.');
+  }
 }
 
 async function startMongoWithRetry() {
