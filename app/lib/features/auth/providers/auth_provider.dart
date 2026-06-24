@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../models/user_model.dart';
 import '../../../repositories/auth_repository.dart';
@@ -25,11 +26,12 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._repo) : super(const AuthState()) {
+  AuthNotifier(this._repo, this._ref) : super(const AuthState()) {
     _init();
   }
 
   final AuthRepository _repo;
+  final Ref _ref;
 
   Future<void> _init() async {
     final cached = _repo.getCachedUser();
@@ -66,6 +68,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final auth = await _repo.login(email, password, remember: remember);
+      invalidateAllAppData(_ref);
       state = AuthState(user: auth.user, isLoading: false);
       return true;
     } on DioException catch (e) {
@@ -86,11 +89,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logoutLocal() async {
     await _repo.clearSession();
+    invalidateAllAppData(_ref);
     state = const AuthState();
   }
 
   Future<void> logout() async {
     await _repo.logout();
+    invalidateAllAppData(_ref);
     state = const AuthState();
   }
 }
@@ -100,7 +105,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(authRepositoryProvider));
+  return AuthNotifier(ref.watch(authRepositoryProvider), ref);
 });
 
 final currentUserProvider = Provider<UserModel?>((ref) => ref.watch(authProvider).user);

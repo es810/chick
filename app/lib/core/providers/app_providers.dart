@@ -124,3 +124,19 @@ final auditLogsProvider = FutureProvider.autoDispose((ref) async {
 final themeModeProvider = StateProvider<String>((ref) {
   return ref.watch(storageServiceProvider).getThemeMode();
 });
+
+/// Clears offline cache and refreshes all server-backed providers (e.g. after login or wipe).
+void invalidateAllAppData(Ref ref) {
+  ref.read(cacheServiceProvider).clearCache();
+  ref.invalidate(clientsProvider);
+  ref.invalidate(suppliersProvider);
+  ref.invalidate(stockProvider);
+  ref.invalidate(invoicesProvider);
+  ref.invalidate(myLedgerProvider);
+  ref.invalidate(damagedStockProvider);
+  ref.invalidate(dashboardProvider);
+  ref.invalidate(treasurySummaryProvider);
+  ref.invalidate(salesReportProvider);
+  ref.invalidate(revenueProvider);
+  ref.invalidate(auditLogsProvider);
+}
