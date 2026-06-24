@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Client = require('../models/Client');
+const Supplier = require('../models/Supplier');
+const SupplierStock = require('../models/SupplierStock');
 const Stock = require('../models/Stock');
 const StockMovement = require('../models/StockMovement');
 const Invoice = require('../models/Invoice');
@@ -21,6 +23,8 @@ const COLLECTIONS = [
   StockMovement,
   Invoice,
   Stock,
+  SupplierStock,
+  Supplier,
   Client,
   User,
   Treasury,

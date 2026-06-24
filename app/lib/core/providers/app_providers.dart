@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/stock_model.dart';
 import '../../repositories/client_repository.dart';
+import '../../repositories/supplier_repository.dart';
+import '../../repositories/supplier_stock_repository.dart';
 import '../../repositories/invoice_repository.dart';
 import '../../repositories/report_repository.dart';
 import '../../repositories/stock_repository.dart';
@@ -13,6 +16,14 @@ import '../../services/storage_service.dart';
 
 final clientRepositoryProvider = Provider<ClientRepository>((ref) {
   return ClientRepository(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider));
+});
+
+final supplierRepositoryProvider = Provider<SupplierRepository>((ref) {
+  return SupplierRepository(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider));
+});
+
+final supplierStockRepositoryProvider = Provider<SupplierStockRepository>((ref) {
+  return SupplierStockRepository(ref.watch(apiClientProvider));
 });
 
 final stockRepositoryProvider = Provider<StockRepository>((ref) {
@@ -46,6 +57,16 @@ final damagedStockRepositoryProvider = Provider<DamagedStockRepository>((ref) {
 final clientsProvider = FutureProvider((ref) async {
   ref.keepAlive();
   return ref.watch(clientRepositoryProvider).getClients();
+});
+
+final suppliersProvider = FutureProvider((ref) async {
+  ref.keepAlive();
+  return ref.watch(supplierRepositoryProvider).getSuppliers();
+});
+
+final supplierStockProvider = FutureProvider.family<List<StockModel>, String>((ref, supplierId) async {
+  ref.keepAlive();
+  return ref.watch(supplierStockRepositoryProvider).getStock(supplierId);
 });
 
 final stockProvider = FutureProvider((ref) async {

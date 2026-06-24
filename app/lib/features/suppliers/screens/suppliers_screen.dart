@@ -1,0 +1,255 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/l10n/app_localizations.dart';
+import '../../../core/providers/app_providers.dart';
+import '../../../core/utils/api_error.dart';
+import '../../../features/auth/providers/auth_provider.dart';
+import '../../../models/supplier_model.dart';
+import '../../../models/user_model.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/role_hint_banner.dart';
+
+class SuppliersScreen extends ConsumerStatefulWidget {
+  const SuppliersScreen({super.key});
+
+  @override
+  ConsumerState<SuppliersScreen> createState() => _SuppliersScreenState();
+}
+
+class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
+  bool _isAdmin() => ref.read(currentUserProvider)?.role == UserRole.admin;
+
+  void _openSupplierStock(SupplierModel supplier) {
+    context.push(
+      '/admin/suppliers/${supplier.id}/stock?name=${Uri.encodeComponent(supplier.name)}',
+    );
+  }
+
+  Future<void> _showSupplierDialog({SupplierModel? supplier}) async {
+    final l10n = context.l10n;
+    final isEdit = supplier != null;
+    final nameController = TextEditingController(text: supplier?.name ?? '');
+    final locationController = TextEditingController(text: supplier?.location ?? '');
+    final phoneController = TextEditingController(text: supplier?.phone ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isEdit ? l10n.editSupplier : l10n.addSupplier),
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  textDirection: TextDirection.rtl,
+                  decoration: InputDecoration(
+                    labelText: l10n.name,
+                    prefixIcon: const Icon(Icons.person_outline),
+                  ),
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? l10n.fieldRequired : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: locationController,
+                  textDirection: TextDirection.rtl,
+                  decoration: InputDecoration(
+                    labelText: l10n.stockLocation,
+                    prefixIcon: const Icon(Icons.location_on_outlined),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: l10n.phone,
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                  ),
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? l10n.fieldRequired : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.pop(ctx, true);
+              }
+            },
+            child: Text(isEdit ? l10n.save : l10n.add),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true || !mounted) return;
+
+    try {
+      final repo = ref.read(supplierRepositoryProvider);
+      if (isEdit) {
+        await repo.updateSupplier(supplier.id, {
+          'name': nameController.text.trim(),
+          'location': locationController.text.trim(),
+          'phone': phoneController.text.trim(),
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.supplierUpdated)));
+        }
+      } else {
+        final created = await repo.createSupplier(
+          SupplierModel(
+            id: '',
+            name: nameController.text.trim(),
+            location: locationController.text.trim(),
+            phone: phoneController.text.trim(),
+          ),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.supplierAdded)));
+          _openSupplierStock(created);
+        }
+      }
+      ref.invalidate(suppliersProvider);
+    } on DioException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e))),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDelete(SupplierModel supplier) async {
+    final l10n = context.l10n;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.delete),
+        content: Text(l10n.confirmDeleteSupplier),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    try {
+      await ref.read(supplierRepositoryProvider).deleteSupplier(supplier.id);
+      ref.invalidate(suppliersProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.supplierDeleted)));
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e))),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final suppliersAsync = ref.watch(suppliersProvider);
+    final isAdmin = _isAdmin();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.suppliers),
+        actions: [
+          if (isAdmin)
+            IconButton(
+              icon: const Icon(Icons.add_business),
+              tooltip: l10n.addSupplier,
+              onPressed: () => _showSupplierDialog(),
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          RoleHintBanner(text: l10n.suppliersRoleHint),
+          Expanded(
+            child: suppliersAsync.when(
+              loading: () => const LoadingShimmer(),
+              error: (e, _) => ErrorStateWidget(
+                message: apiErrorMessage(
+                  e,
+                  fallback: e is DioException && e.response?.statusCode == 401
+                      ? l10n.sessionExpired
+                      : l10n.serverError,
+                ),
+                onRetry: () => ref.invalidate(suppliersProvider),
+              ),
+              data: (suppliers) {
+                if (suppliers.isEmpty) {
+                  return EmptyStateWidget(icon: Icons.local_shipping, title: l10n.noSuppliersYet);
+                }
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(suppliersProvider),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: suppliers.length,
+                    itemBuilder: (_, i) {
+                      final supplier = suppliers[i];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(child: Text(supplier.name[0].toUpperCase())),
+                          title: Text(supplier.name),
+                          subtitle: Text(
+                            '${supplier.phone}\n${supplier.location.isNotEmpty ? supplier.location : '—'}',
+                          ),
+                          isThreeLine: true,
+                          trailing: isAdmin
+                              ? PopupMenuButton<String>(
+                                  onSelected: (action) {
+                                    if (action == 'stock') {
+                                      _openSupplierStock(supplier);
+                                    } else if (action == 'edit') {
+                                      _showSupplierDialog(supplier: supplier);
+                                    } else if (action == 'delete') {
+                                      _confirmDelete(supplier);
+                                    }
+                                  },
+                                  itemBuilder: (ctx) => [
+                                    PopupMenuItem(value: 'stock', child: Text(l10n.supplierStock)),
+                                    PopupMenuItem(value: 'edit', child: Text(l10n.editSupplier)),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                )
+                              : const Icon(Icons.chevron_right),
+                          onTap: () => _openSupplierStock(supplier),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

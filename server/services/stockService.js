@@ -4,88 +4,242 @@ const StockMovement = require('../models/StockMovement');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 
-const addStock = async (data, employee) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+const normalizeBatch = (data) => {
+  const {
+    chickenType,
+    quantity,
+    location = '',
+    grossWeight = 0,
+    tareWeight = 0,
+    netWeight = 0,
+    averageWeight,
+    pricePerKg,
+    totalAmount,
+  } = data;
 
-  try {
-    const {
-      chickenType,
-      quantity,
-      location = '',
-      grossWeight = 0,
-      tareWeight = 0,
-      netWeight = 0,
-      averageWeight,
-      pricePerKg,
-      totalAmount,
-      reason = 'Stock replenishment',
-    } = data;
+  const avgWeight =
+    averageWeight != null
+      ? averageWeight
+      : quantity > 0 && netWeight > 0
+        ? netWeight / quantity
+        : 0;
+  const total =
+    totalAmount != null ? totalAmount : (pricePerKg || 0) * (netWeight || 0);
 
-    const avgWeight =
-      averageWeight != null
-        ? averageWeight
-        : quantity > 0 && netWeight > 0
-          ? netWeight / quantity
-          : 0;
-    const total =
-      totalAmount != null ? totalAmount : (pricePerKg || 0) * (netWeight || 0);
+  return {
+    chickenType,
+    quantity,
+    location,
+    grossWeight,
+    tareWeight,
+    netWeight,
+    averageWeight: avgWeight,
+    pricePerKg,
+    totalAmount: total,
+  };
+};
 
-    let stock = await Stock.findOne({ chickenType }).session(session);
+const applyStockIn = async (session, data, user, reason) => {
+  const batch = normalizeBatch(data);
+  const {
+    chickenType,
+    quantity,
+    location,
+    grossWeight,
+    tareWeight,
+    netWeight,
+    averageWeight,
+    pricePerKg,
+    totalAmount,
+  } = batch;
 
-    if (stock) {
-      stock.quantity += quantity;
-      stock.location = location || stock.location;
-      stock.grossWeight = grossWeight;
-      stock.tareWeight = tareWeight;
-      stock.netWeight = netWeight;
-      stock.averageWeight = avgWeight;
-      stock.pricePerKg = pricePerKg ?? stock.pricePerKg;
-      stock.totalAmount = total;
-      await stock.save({ session });
-    } else {
-      [stock] = await Stock.create(
-        [
-          {
-            location,
-            chickenType,
-            quantity,
-            grossWeight,
-            tareWeight,
-            netWeight,
-            averageWeight: avgWeight,
-            pricePerKg,
-            totalAmount: total,
-          },
-        ],
-        { session }
-      );
+  let stock = await Stock.findOne({ chickenType }).session(session);
+
+  if (stock) {
+    stock.quantity += quantity;
+    stock.location = location || stock.location;
+    stock.grossWeight = grossWeight;
+    stock.tareWeight = tareWeight;
+    stock.netWeight = netWeight;
+    stock.averageWeight = averageWeight;
+    stock.pricePerKg = pricePerKg ?? stock.pricePerKg;
+    stock.totalAmount = totalAmount;
+    await stock.save({ session });
+  } else {
+    [stock] = await Stock.create(
+      [
+        {
+          location,
+          chickenType,
+          quantity,
+          grossWeight,
+          tareWeight,
+          netWeight,
+          averageWeight,
+          pricePerKg,
+          totalAmount,
+        },
+      ],
+      { session }
+    );
+  }
+
+  await StockMovement.create(
+    [
+      {
+        type: 'IN',
+        stockId: stock._id,
+        chickenType: stock.chickenType,
+        quantity,
+        location,
+        grossWeight,
+        tareWeight,
+        netWeight,
+        unitPrice: pricePerKg,
+        totalAmount,
+        reason,
+        employeeId: user._id,
+      },
+    ],
+    { session }
+  );
+
+  return stock;
+};
+
+const stockSnapshotDelta = (after, before = {}) => ({
+  quantity: (after.quantity || 0) - (before.quantity || 0),
+  grossWeight: (after.grossWeight || 0) - (before.grossWeight || 0),
+  tareWeight: (after.tareWeight || 0) - (before.tareWeight || 0),
+  netWeight: (after.netWeight || 0) - (before.netWeight || 0),
+  totalAmount: (after.totalAmount || 0) - (before.totalAmount || 0),
+  averageWeight: after.averageWeight,
+  pricePerKg: after.pricePerKg,
+  location: after.location,
+});
+
+const applyStockIncrement = async (session, chickenType, delta, user, reason) => {
+  let stock = await Stock.findOne({ chickenType }).session(session);
+
+  if (!stock) {
+    [stock] = await Stock.create(
+      [
+        {
+          chickenType,
+          quantity: Math.max(0, delta.quantity || 0),
+          location: delta.location || '',
+          grossWeight: Math.max(0, delta.grossWeight || 0),
+          tareWeight: Math.max(0, delta.tareWeight || 0),
+          netWeight: Math.max(0, delta.netWeight || 0),
+          averageWeight: delta.averageWeight || 0,
+          pricePerKg: delta.pricePerKg || 0,
+          totalAmount: Math.max(0, delta.totalAmount || 0),
+        },
+      ],
+      { session }
+    );
+  } else {
+    stock.quantity += delta.quantity || 0;
+    stock.grossWeight = Math.max(0, stock.grossWeight + (delta.grossWeight || 0));
+    stock.tareWeight = Math.max(0, stock.tareWeight + (delta.tareWeight || 0));
+    stock.netWeight = Math.max(0, stock.netWeight + (delta.netWeight || 0));
+    stock.totalAmount = Math.max(0, stock.totalAmount + (delta.totalAmount || 0));
+    if (delta.pricePerKg != null) stock.pricePerKg = delta.pricePerKg;
+    if (delta.location) stock.location = delta.location;
+    if (stock.quantity > 0) {
+      stock.averageWeight = stock.netWeight / stock.quantity;
     }
+    await stock.save({ session });
+  }
 
+  if ((delta.quantity || 0) > 0) {
     await StockMovement.create(
       [
         {
           type: 'IN',
           stockId: stock._id,
-          chickenType: stock.chickenType,
-          quantity,
-          location,
-          grossWeight,
-          tareWeight,
-          netWeight,
-          unitPrice: pricePerKg,
-          totalAmount: total,
+          chickenType,
+          quantity: delta.quantity,
+          grossWeight: Math.max(0, delta.grossWeight || 0),
+          tareWeight: Math.max(0, delta.tareWeight || 0),
+          netWeight: Math.max(0, delta.netWeight || 0),
+          unitPrice: delta.pricePerKg,
+          totalAmount: Math.max(0, delta.totalAmount || 0),
           reason,
-          employeeId: employee._id,
+          employeeId: user._id,
         },
       ],
       { session }
     );
+  }
 
+  return stock;
+};
+
+const applyStockDelta = async (session, chickenType, delta, user, reason) => {
+  if (
+    !delta.quantity &&
+    !delta.grossWeight &&
+    !delta.tareWeight &&
+    !delta.netWeight &&
+    !delta.totalAmount
+  ) {
+    return null;
+  }
+
+  if ((delta.quantity || 0) > 0) {
+    return applyStockIncrement(session, chickenType, delta, user, reason);
+  }
+
+  const stock = await Stock.findOne({ chickenType }).session(session);
+  if (!stock) return null;
+
+  const outQty = Math.min(stock.quantity, Math.abs(delta.quantity || 0));
+  stock.quantity = Math.max(0, stock.quantity + (delta.quantity || 0));
+  stock.grossWeight = Math.max(0, stock.grossWeight + (delta.grossWeight || 0));
+  stock.tareWeight = Math.max(0, stock.tareWeight + (delta.tareWeight || 0));
+  stock.netWeight = Math.max(0, stock.netWeight + (delta.netWeight || 0));
+  stock.totalAmount = Math.max(0, stock.totalAmount + (delta.totalAmount || 0));
+  if (delta.pricePerKg != null) stock.pricePerKg = delta.pricePerKg;
+  if (stock.quantity > 0 && delta.averageWeight != null) {
+    stock.averageWeight = delta.averageWeight;
+  }
+  await stock.save({ session });
+
+  if (outQty > 0) {
+    await StockMovement.create(
+      [
+        {
+          type: 'OUT',
+          stockId: stock._id,
+          chickenType,
+          quantity: outQty,
+          reason,
+          employeeId: user._id,
+        },
+      ],
+      { session }
+    );
+  }
+
+  return stock;
+};
+
+const addStock = async (data, employee) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const stock = await applyStockIn(
+      session,
+      data,
+      employee,
+      data.reason || 'Stock replenishment'
+    );
     await session.commitTransaction();
-
-    await logAction(employee._id, employee.name, 'STOCK_IN', chickenType, { quantity });
-
+    await logAction(employee._id, employee.name, 'STOCK_IN', data.chickenType, {
+      quantity: data.quantity,
+    });
     return stock;
   } catch (error) {
     await session.abortTransaction();
@@ -159,4 +313,13 @@ const deleteStockType = async (stockId, user) => {
   }
 };
 
-module.exports = { addStock, getLowStockAlerts, getMovements, deleteStockType };
+module.exports = {
+  addStock,
+  applyStockIn,
+  applyStockIncrement,
+  applyStockDelta,
+  stockSnapshotDelta,
+  getLowStockAlerts,
+  getMovements,
+  deleteStockType,
+};

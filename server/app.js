@@ -7,6 +7,7 @@ const requireDb = require('./middleware/requireDb');
 
 const authRoutes = require('./routes/authRoutes');
 const clientRoutes = require('./routes/clientRoutes');
+const supplierRoutes = require('./routes/supplierRoutes');
 const stockRoutes = require('./routes/stockRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const reportRoutes = require('./routes/reportRoutes');
@@ -43,6 +44,7 @@ app.use('/api', requireDb);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
+app.use('/api/suppliers', supplierRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/reports', reportRoutes);

@@ -5,6 +5,8 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/clients/screens/clients_screen.dart';
+import '../../features/suppliers/screens/suppliers_screen.dart';
+import '../../features/suppliers/screens/supplier_stock_screen.dart';
 import '../../features/dashboard/screens/admin_dashboard_screen.dart';
 import '../../features/treasury/screens/collection_invoices_screen.dart';
 import '../../features/treasury/screens/admin_treasury_screen.dart';
@@ -105,6 +107,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const DamagedStockScreen(),
       ),
 
+      GoRoute(
+        path: '/admin/suppliers/:id/stock',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => SupplierStockScreen(
+          supplierId: state.pathParameters['id']!,
+          supplierName: state.uri.queryParameters['name'] ?? '',
+        ),
+      ),
+
       ShellRoute(
         navigatorKey: _adminShellNavigatorKey,
         builder: (context, state, child) => AppShell(
@@ -114,6 +125,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             (icon: Icons.receipt_long, path: '/admin/invoices'),
             (icon: Icons.account_balance_wallet, path: '/admin/treasury'),
             (icon: Icons.people, path: '/admin/clients'),
+            (icon: Icons.local_shipping, path: '/admin/suppliers'),
             (icon: Icons.settings, path: '/admin/settings'),
           ],
           child: child,
@@ -136,6 +148,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: '/admin/stock', builder: (_, __) => const StockScreen()),
           GoRoute(path: '/admin/clients', builder: (_, __) => const ClientsScreen()),
+          GoRoute(path: '/admin/suppliers', builder: (_, __) => const SuppliersScreen()),
           GoRoute(path: '/admin/reports', builder: (_, __) => const ReportsScreen()),
           GoRoute(path: '/admin/employees', builder: (_, __) => const EmployeesScreen()),
           GoRoute(path: '/admin/settings', builder: (_, __) => const SettingsScreen()),

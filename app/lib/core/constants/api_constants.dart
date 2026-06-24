@@ -8,6 +8,7 @@ class ApiConstants {
   static const String me = '/auth/me';
   static const String logout = '/auth/logout';
   static const String clients = '/clients';
+  static const String suppliers = '/suppliers';
   static const String stock = '/stock';
   static const String stockAlerts = '/stock/alerts';
   static const String invoices = '/invoices';

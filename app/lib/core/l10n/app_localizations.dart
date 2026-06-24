@@ -41,8 +41,18 @@ class AppLocalizations {
   'dashboard': {'en': 'Dashboard', 'ar': 'لوحة التحكم'},
   'home': {'en': 'Home', 'ar': 'الرئيسية'},
   'invoices': {'en': 'Invoices', 'ar': 'الفواتير'},
+  'navDistribution': {'en': 'Distribution', 'ar': 'التوزيع'},
   'stock': {'en': 'Stock', 'ar': 'المخزون'},
   'clients': {'en': 'Clients', 'ar': 'العملاء'},
+  'clientsRoleHint': {
+    'en': 'Clients are the recipients of distribution.',
+    'ar': 'العميل هو الذي يتم التوزيع له',
+  },
+  'suppliers': {'en': 'Suppliers', 'ar': 'الموردين'},
+  'suppliersRoleHint': {
+    'en': 'Suppliers are where we receive goods from. Received goods sync to distribution stock.',
+    'ar': 'المورد هو من نأخذ منه البضاعة — تُضاف تلقائياً لمخزون التوزيع',
+  },
   'settings': {'en': 'Settings', 'ar': 'الإعدادات'},
   'appVersion': {'en': 'App version', 'ar': 'إصدار التطبيق'},
   'reports': {'en': 'Reports', 'ar': 'التقارير'},
@@ -235,6 +245,26 @@ class AppLocalizations {
     'en': 'Delete this client? Their login account will also be removed.',
     'ar': 'حذف هذا العميل؟ سيتم حذف حساب الدخول أيضاً.',
   },
+  'noSuppliersYet': {'en': 'No suppliers yet', 'ar': 'لا يوجد موردين بعد'},
+  'addSupplier': {'en': 'Add Supplier', 'ar': 'إضافة مورد'},
+  'editSupplier': {'en': 'Edit Supplier', 'ar': 'تعديل المورد'},
+  'supplierAdded': {'en': 'Supplier added', 'ar': 'تمت إضافة المورد'},
+  'supplierUpdated': {'en': 'Supplier updated', 'ar': 'تم تحديث المورد'},
+  'supplierDeleted': {'en': 'Supplier deleted', 'ar': 'تم حذف المورد'},
+  'confirmDeleteSupplier': {
+    'en': 'Delete this supplier?',
+    'ar': 'حذف هذا المورد؟',
+  },
+  'supplierStock': {'en': 'Supplier Goods', 'ar': 'بضاعة المورد'},
+  'addSupplierStock': {'en': 'Add Goods from Supplier', 'ar': 'إضافة بضاعة من المورد'},
+  'noSupplierStockYet': {
+    'en': 'No goods received from this supplier yet',
+    'ar': 'لم تُستلم بضاعة من هذا المورد بعد',
+  },
+  'supplierStockSynced': {
+    'en': 'Goods added to distribution stock automatically.',
+    'ar': 'تمت إضافة البضاعة لمخزون التوزيع تلقائياً',
+  },
   'name': {'en': 'Name', 'ar': 'الاسم'},
   'phone': {'en': 'Phone', 'ar': 'رقم الهاتف'},
   'address': {'en': 'Address', 'ar': 'العنوان'},
@@ -398,8 +428,12 @@ class AppLocalizations {
   String get dashboard => _get('dashboard');
   String get home => _get('home');
   String get invoices => _get('invoices');
+  String get navDistribution => _get('navDistribution');
   String get stock => _get('stock');
   String get clients => _get('clients');
+  String get clientsRoleHint => _get('clientsRoleHint');
+  String get suppliers => _get('suppliers');
+  String get suppliersRoleHint => _get('suppliersRoleHint');
   String get settings => _get('settings');
   String get appVersion => _get('appVersion');
   String get reports => _get('reports');
@@ -561,6 +595,17 @@ class AppLocalizations {
   String get clientUpdated => _get('clientUpdated');
   String get clientDeleted => _get('clientDeleted');
   String get confirmDeleteClient => _get('confirmDeleteClient');
+  String get noSuppliersYet => _get('noSuppliersYet');
+  String get addSupplier => _get('addSupplier');
+  String get editSupplier => _get('editSupplier');
+  String get supplierAdded => _get('supplierAdded');
+  String get supplierUpdated => _get('supplierUpdated');
+  String get supplierDeleted => _get('supplierDeleted');
+  String get confirmDeleteSupplier => _get('confirmDeleteSupplier');
+  String get supplierStock => _get('supplierStock');
+  String get addSupplierStock => _get('addSupplierStock');
+  String get noSupplierStockYet => _get('noSupplierStockYet');
+  String get supplierStockSynced => _get('supplierStockSynced');
   String get name => _get('name');
   String get phone => _get('phone');
   String get address => _get('address');
@@ -681,11 +726,12 @@ class AppLocalizations {
 
   String navLabelForPath(String path) {
     if (path.contains('dashboard')) return path.contains('/client') ? home : dashboard;
-    if (path.contains('invoices')) return invoices;
+    if (path.contains('invoices')) return navDistribution;
     if (path.contains('collection-invoices')) return collectionInvoices;
     if (path.contains('treasury')) return treasury;
     if (path.contains('stock')) return stock;
     if (path.contains('clients')) return clients;
+    if (path.contains('suppliers')) return suppliers;
     if (path.contains('settings')) return settings;
     return dashboard;
   }

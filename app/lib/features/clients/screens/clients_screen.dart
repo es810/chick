@@ -10,6 +10,7 @@ import '../../../models/client_model.dart';
 import '../../../models/user_model.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/role_hint_banner.dart';
 
 class ClientsScreen extends ConsumerStatefulWidget {
   const ClientsScreen({super.key});
@@ -234,80 +235,87 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
             ),
         ],
       ),
-      body: clientsAsync.when(
-        loading: () => const LoadingShimmer(),
-        error: (e, _) => ErrorStateWidget(
-          message: apiErrorMessage(
-            e,
-            fallback: e is DioException && e.response?.statusCode == 401
-                ? l10n.sessionExpired
-                : l10n.serverError,
-          ),
-          onRetry: () => ref.invalidate(clientsProvider),
-        ),
-        data: (clients) {
-          if (clients.isEmpty) {
-            return EmptyStateWidget(icon: Icons.people, title: l10n.noClientsYet);
-          }
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(clientsProvider),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: clients.length,
-              itemBuilder: (_, i) {
-                final client = clients[i];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: CircleAvatar(child: Text(client.name[0].toUpperCase())),
-                    title: Text(client.name),
-                    subtitle: Text(
-                      '${client.phone}\n${client.address.isNotEmpty ? client.address : '—'}'
-                      '${client.email.isNotEmpty ? '\n${client.email}' : ''}',
-                    ),
-                    isThreeLine: true,
-                    trailing: isAdmin
-                        ? PopupMenuButton<String>(
-                            onSelected: (action) {
-                              if (action == 'edit') {
-                                _showClientDialog(client: client);
-                              } else if (action == 'delete') {
-                                _confirmDelete(client);
-                              }
-                            },
-                            itemBuilder: (ctx) => [
-                              PopupMenuItem(value: 'edit', child: Text(l10n.editClient)),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
-                              ),
-                            ],
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    context.formatCurrency(client.balance),
-                                    style: const TextStyle(fontWeight: FontWeight.w600),
-                                  ),
-                                  const Icon(Icons.more_vert, size: 18),
-                                ],
-                              ),
-                            ),
-                          )
-                        : Text(
-                            context.formatCurrency(client.balance),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+      body: Column(
+        children: [
+          RoleHintBanner(text: l10n.clientsRoleHint),
+          Expanded(
+            child: clientsAsync.when(
+              loading: () => const LoadingShimmer(),
+              error: (e, _) => ErrorStateWidget(
+                message: apiErrorMessage(
+                  e,
+                  fallback: e is DioException && e.response?.statusCode == 401
+                      ? l10n.sessionExpired
+                      : l10n.serverError,
+                ),
+                onRetry: () => ref.invalidate(clientsProvider),
+              ),
+              data: (clients) {
+                if (clients.isEmpty) {
+                  return EmptyStateWidget(icon: Icons.people, title: l10n.noClientsYet);
+                }
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(clientsProvider),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: clients.length,
+                    itemBuilder: (_, i) {
+                      final client = clients[i];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(child: Text(client.name[0].toUpperCase())),
+                          title: Text(client.name),
+                          subtitle: Text(
+                            '${client.phone}\n${client.address.isNotEmpty ? client.address : '—'}'
+                            '${client.email.isNotEmpty ? '\n${client.email}' : ''}',
                           ),
-                    onTap: isAdmin ? () => _showClientDialog(client: client) : null,
+                          isThreeLine: true,
+                          trailing: isAdmin
+                              ? PopupMenuButton<String>(
+                                  onSelected: (action) {
+                                    if (action == 'edit') {
+                                      _showClientDialog(client: client);
+                                    } else if (action == 'delete') {
+                                      _confirmDelete(client);
+                                    }
+                                  },
+                                  itemBuilder: (ctx) => [
+                                    PopupMenuItem(value: 'edit', child: Text(l10n.editClient)),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          context.formatCurrency(client.balance),
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                        const Icon(Icons.more_vert, size: 18),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  context.formatCurrency(client.balance),
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                          onTap: isAdmin ? () => _showClientDialog(client: client) : null,
+                        ),
+                      );
+                    },
                   ),
                 );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

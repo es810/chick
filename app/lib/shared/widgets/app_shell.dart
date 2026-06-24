@@ -28,6 +28,9 @@ class AppShell extends StatelessWidget {
       if (item.path.endsWith('/treasury') && location.startsWith(item.path)) {
         return true;
       }
+      if (item.path.endsWith('/suppliers') && location.startsWith(item.path)) {
+        return true;
+      }
     }
     return false;
   }
@@ -39,6 +42,7 @@ class AppShell extends StatelessWidget {
       if (path.endsWith('/invoices') && location.startsWith('$path/')) return i;
       if (path.endsWith('/collection-invoices') && location.startsWith(path)) return i;
       if (path.endsWith('/treasury') && location.startsWith(path)) return i;
+      if (path.endsWith('/suppliers') && location.startsWith(path)) return i;
     }
     return 0;
   }
