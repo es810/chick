@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.0] — 2026-06-24
+
+### Suppliers & clean production
+- **Suppliers** (الموردين): add suppliers with name, location, phone
+- **Supplier goods** sync automatically to distribution stock (الخزينة)
+- Client vs supplier roles clarified in UI (client = distribution recipient, supplier = goods source)
+- Nav label **التوزيع** for distribution invoices
+- Clean release: no demo or test data; only initial admin via `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`
+
 ## [1.3.0] — 2026-06-19
 
 ### Clean production release (no demo data)

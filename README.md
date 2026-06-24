@@ -40,10 +40,18 @@ chick/
 ```bash
 cd server
 cp .env.example .env
-# Edit .env with your MongoDB Atlas URI and JWT secret
+# Edit .env: MONGODB_URI, JWT_SECRET, INITIAL_ADMIN_EMAIL, INITIAL_ADMIN_PASSWORD
 npm install
-npm run seed    # Seed users & clients (stock is added via admin UI)
 npm run dev     # Start on http://localhost:3000
+```
+
+On first run with an **empty** database, the server creates one admin from `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD`. No demo users, clients, or stock are seeded.
+
+To wipe all data and keep only the initial admin:
+
+```bash
+cd server
+npm run reset-db
 ```
 
 ### Flutter App
@@ -56,21 +64,16 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api
 
 > Use `http://localhost:3000/api` for iOS simulator or physical device on same network (replace with your machine IP).
 
-## Demo Credentials
+## First admin (production)
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@chickenfarm.com | admin123 |
-| Employee | employee@chickenfarm.com | employee123 |
-| Client | client@chickenfarm.com | client123 |
+| Setting | Description |
+|---------|-------------|
+| `INITIAL_ADMIN_EMAIL` | Admin login email (required when DB is empty) |
+| `INITIAL_ADMIN_PASSWORD` | Admin password (required when DB is empty) |
+| `INITIAL_ADMIN_NAME` | Optional display name |
+| `INITIAL_ADMIN_PHONE` | Optional phone |
 
-After seeding, sign in as **admin** and add stock from **Stock** (demo stock types are not seeded).
-
-To remove existing demo stock from the database without re-seeding users:
-
-```bash
-cd server && npm run clear-stock
-```
+Sign in as admin and add suppliers, clients, employees, and stock from the app. There is **no** demo or test data.
 
 ## API Endpoints
 

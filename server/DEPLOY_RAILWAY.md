@@ -34,7 +34,7 @@
 
 ### First admin (no demo data)
 
-v1.3+ does **not** create demo users. On first startup with an **empty** database, the server creates one admin if `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` are set.
+v1.4+ does **not** create demo users. On first startup with an **empty** database, the server creates one admin if `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` are set.
 
 To wipe existing test data and start fresh:
 
