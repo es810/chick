@@ -1,3 +1,4 @@
+require('./mongoDns');
 const mongoose = require('mongoose');
 const { mongoUri, nodeEnv } = require('./env');
 const logger = require('../utils/logger');

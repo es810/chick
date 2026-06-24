@@ -41,6 +41,7 @@ const resetDatabase = async ({ bootstrap = true } = {}) => {
 };
 
 const runCli = async () => {
+  require('../config/mongoDns');
   require('dotenv').config();
   const { mongoUri } = require('../config/env');
   await mongoose.connect(mongoUri);
