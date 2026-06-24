@@ -50,7 +50,25 @@ Then sign in with that admin and add employees, clients, and stock from the app.
 
 ### Login: "Invalid email or password"
 
-Ensure `INITIAL_ADMIN_*` variables are set and the database was empty on first deploy, or run `npm run reset-db` as above.
+1. In Railway **Variables**, set `INITIAL_ADMIN_EMAIL` (e.g. `admin@chick.com`) and `INITIAL_ADMIN_PASSWORD`.
+2. Create or reset that admin on the server:
+
+```powershell
+cd c:\chick\server
+railway login
+railway link
+railway run npm run ensure-admin
+```
+
+This updates the password if the email exists, or creates the admin if missing. It does **not** wipe clients, stock, or invoices.
+
+To wipe **all** data and keep only the admin:
+
+```powershell
+railway run npm run reset-db
+```
+
+Ensure `INITIAL_ADMIN_*` variables are set before `reset-db`.
 
 **Local `npm run reset-db` fails with `querySrv ECONNREFUSED`?**  
 Your PC DNS cannot resolve `mongodb+srv://`. That is normal on some networks. Use one of:

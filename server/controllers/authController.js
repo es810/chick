@@ -8,7 +8,8 @@ const { logAction } = require('../services/auditService');
 const signToken = (id) => jwt.sign({ id }, jwtSecret, { expiresIn: jwtExpiresIn });
 
 const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const email = req.body.email?.trim().toLowerCase();
+  const { password } = req.body;
 
   const user = await User.findOne({ email }).select('+password');
   if (!user || !(await user.comparePassword(password))) {
