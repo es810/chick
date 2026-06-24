@@ -7,9 +7,13 @@ const { ensureAdminFromEnv } = require('../utils/bootstrapAdmin');
 const router = express.Router();
 
 const requireSetupSecret = (req, res, next) => {
+  if (process.env.ALLOW_OPEN_BOOTSTRAP === 'true') {
+    return next();
+  }
+
   const expected = process.env.SETUP_SECRET?.trim();
   if (!expected) {
-    throw new ApiError(503, 'Setup is disabled. Set SETUP_SECRET on the server.');
+    throw new ApiError(503, 'Setup is disabled. Set SETUP_SECRET or ALLOW_OPEN_BOOTSTRAP on the server.');
   }
   const provided = req.header('x-setup-secret')?.trim();
   if (!provided || provided !== expected) {
