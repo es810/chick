@@ -7,6 +7,7 @@ import '../../features/auth/screens/splash_screen.dart';
 import '../../features/clients/screens/clients_screen.dart';
 import '../../features/suppliers/screens/suppliers_screen.dart';
 import '../../features/suppliers/screens/supplier_stock_screen.dart';
+import '../../features/account_statement/screens/account_statement_screen.dart';
 import '../../features/dashboard/screens/admin_dashboard_screen.dart';
 import '../../features/treasury/screens/collection_invoices_screen.dart';
 import '../../features/treasury/screens/admin_treasury_screen.dart';
@@ -113,6 +114,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => SupplierStockScreen(
           supplierId: state.pathParameters['id']!,
           supplierName: state.uri.queryParameters['name'] ?? '',
+        ),
+      ),
+
+      GoRoute(
+        path: '/admin/clients/:id/statement',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => AccountStatementScreen(
+          entityId: state.pathParameters['id']!,
+          entityName: state.uri.queryParameters['name'] ?? '',
+          kind: AccountStatementKind.client,
+        ),
+      ),
+
+      GoRoute(
+        path: '/admin/suppliers/:id/statement',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => AccountStatementScreen(
+          entityId: state.pathParameters['id']!,
+          entityName: state.uri.queryParameters['name'] ?? '',
+          kind: AccountStatementKind.supplier,
         ),
       ),
 

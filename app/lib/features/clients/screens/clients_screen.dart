@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
@@ -21,6 +22,12 @@ class ClientsScreen extends ConsumerStatefulWidget {
 
 class _ClientsScreenState extends ConsumerState<ClientsScreen> {
   bool _isAdmin() => ref.read(currentUserProvider)?.role == UserRole.admin;
+
+  void _openClientStatement(ClientModel client) {
+    context.push(
+      '/admin/clients/${client.id}/statement?name=${Uri.encodeComponent(client.name)}',
+    );
+  }
 
   Future<void> _showClientDialog({ClientModel? client}) async {
     final l10n = context.l10n;
@@ -274,13 +281,16 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                           trailing: isAdmin
                               ? PopupMenuButton<String>(
                                   onSelected: (action) {
-                                    if (action == 'edit') {
+                                    if (action == 'statement') {
+                                      _openClientStatement(client);
+                                    } else if (action == 'edit') {
                                       _showClientDialog(client: client);
                                     } else if (action == 'delete') {
                                       _confirmDelete(client);
                                     }
                                   },
                                   itemBuilder: (ctx) => [
+                                    PopupMenuItem(value: 'statement', child: Text(l10n.accountStatement)),
                                     PopupMenuItem(value: 'edit', child: Text(l10n.editClient)),
                                     PopupMenuItem(
                                       value: 'delete',
@@ -306,7 +316,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                                   context.formatCurrency(client.balance),
                                   style: const TextStyle(fontWeight: FontWeight.w600),
                                 ),
-                          onTap: isAdmin ? () => _showClientDialog(client: client) : null,
+                          onTap: () => _openClientStatement(client),
                         ),
                       );
                     },

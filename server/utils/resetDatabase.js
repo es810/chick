@@ -11,11 +11,15 @@ const DamagedStock = require('../models/DamagedStock');
 const Treasury = require('../models/Treasury');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const EmployeeLedger = require('../models/EmployeeLedger');
+const SalaryAdvance = require('../models/SalaryAdvance');
+const SupplierPayment = require('../models/SupplierPayment');
 const AuditLog = require('../models/AuditLog');
 const { bootstrapInitialAdmin } = require('./bootstrapAdmin');
 
 const COLLECTIONS = [
   AuditLog,
+  SalaryAdvance,
+  SupplierPayment,
   EmployeeLedger,
   TreasuryMovement,
   CollectionInvoice,

@@ -6,12 +6,14 @@ class SupplierModel extends Equatable {
     required this.name,
     required this.phone,
     this.location = '',
+    this.balance = 0,
   });
 
   final String id;
   final String name;
   final String phone;
   final String location;
+  final double balance;
 
   factory SupplierModel.fromJson(Map<String, dynamic> json) {
     return SupplierModel(
@@ -19,6 +21,7 @@ class SupplierModel extends Equatable {
       name: json['name'] as String,
       phone: json['phone'] as String,
       location: json['location'] as String? ?? '',
+      balance: (json['balance'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -26,6 +29,7 @@ class SupplierModel extends Equatable {
         'name': name,
         'phone': phone,
         'location': location,
+        'balance': balance,
       };
 
   @override

@@ -160,6 +160,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
   }
 
   Future<void> _afterMutation() async {
+    ref.invalidate(clientsProvider);
     await widget.onRefresh();
     await _load();
   }

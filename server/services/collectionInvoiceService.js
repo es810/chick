@@ -41,7 +41,7 @@ const getCollectionInvoice = async (id) => {
   return toEntry(invoice);
 };
 
-const validateAmounts = ({ amountPaid, amountDeducted, balanceBefore, balanceAfter }) => {
+const validateAmounts = ({ amountPaid, amountDeducted, balanceBefore }) => {
   if (amountPaid <= 0) {
     throw new ApiError(400, 'Amount paid must be greater than zero');
   }
@@ -51,11 +51,7 @@ const validateAmounts = ({ amountPaid, amountDeducted, balanceBefore, balanceAft
   if (amountPaid + amountDeducted > balanceBefore) {
     throw new ApiError(400, 'Payment and discount cannot exceed balance before payment');
   }
-  const expectedAfter = Math.max(0, balanceBefore - amountPaid - amountDeducted);
-  if (Math.abs(balanceAfter - expectedAfter) > 0.01) {
-    throw new ApiError(400, 'Balance after payment does not match');
-  }
-  return expectedAfter;
+  return Math.max(0, balanceBefore - amountPaid - amountDeducted);
 };
 
 const createCollectionInvoice = async (data, user) => {
@@ -65,8 +61,6 @@ const createCollectionInvoice = async (data, user) => {
     collectionDate,
     amountPaid,
     amountDeducted,
-    balanceBefore,
-    balanceAfter,
   } = data;
 
   const client = await Client.findById(clientId);
@@ -75,11 +69,11 @@ const createCollectionInvoice = async (data, user) => {
   const employee = await User.findOne({ _id: employeeId, role: 'employee' });
   if (!employee) throw new ApiError(404, 'Employee not found');
 
-  const expectedAfter = validateAmounts({
+  const balanceBefore = client.balance;
+  const balanceAfter = validateAmounts({
     amountPaid,
     amountDeducted,
     balanceBefore,
-    balanceAfter,
   });
 
   const movement = await TreasuryMovement.create({
@@ -96,12 +90,12 @@ const createCollectionInvoice = async (data, user) => {
     amountPaid,
     amountDeducted,
     balanceBefore,
-    balanceAfter: expectedAfter,
+    balanceAfter,
     treasuryMovementId: movement._id,
     createdBy: user._id,
   });
 
-  client.balance = expectedAfter;
+  client.balance = balanceAfter;
   await client.save();
 
   await logAction(user._id, user.name, 'CREATE_COLLECTION_INVOICE', client.name, {
@@ -130,8 +124,6 @@ const updateCollectionInvoice = async (id, data, user) => {
     collectionDate,
     amountPaid,
     amountDeducted,
-    balanceBefore,
-    balanceAfter,
   } = data;
 
   const client = await Client.findById(clientId);
@@ -140,11 +132,11 @@ const updateCollectionInvoice = async (id, data, user) => {
   const employee = await User.findOne({ _id: employeeId, role: 'employee' });
   if (!employee) throw new ApiError(404, 'Employee not found');
 
-  const expectedAfter = validateAmounts({
+  const balanceBefore = client.balance;
+  const balanceAfter = validateAmounts({
     amountPaid,
     amountDeducted,
     balanceBefore,
-    balanceAfter,
   });
 
   const movement = await TreasuryMovement.findById(invoice.treasuryMovementId);
@@ -160,10 +152,10 @@ const updateCollectionInvoice = async (id, data, user) => {
   invoice.amountPaid = amountPaid;
   invoice.amountDeducted = amountDeducted;
   invoice.balanceBefore = balanceBefore;
-  invoice.balanceAfter = expectedAfter;
+  invoice.balanceAfter = balanceAfter;
   await invoice.save();
 
-  client.balance = expectedAfter;
+  client.balance = balanceAfter;
   await client.save();
 
   await logAction(user._id, user.name, 'UPDATE_COLLECTION_INVOICE', client.name, {

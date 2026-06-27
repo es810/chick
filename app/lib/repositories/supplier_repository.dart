@@ -1,5 +1,6 @@
 import '../core/constants/api_constants.dart';
 import '../models/supplier_model.dart';
+import '../models/account_statement_model.dart';
 import '../services/api_client.dart';
 import '../services/cache_service.dart';
 
@@ -46,5 +47,27 @@ class SupplierRepository {
 
   Future<void> deleteSupplier(String id) async {
     await _api.delete('${ApiConstants.suppliers}/$id');
+  }
+
+  Future<AccountStatement> getAccountStatement(String id) async {
+    final response = await _api.get('${ApiConstants.suppliers}/$id/statement');
+    final data = response.data as Map<String, dynamic>;
+    return AccountStatement.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
+  Future<void> payDebt({
+    required String supplierId,
+    required DateTime paymentDate,
+    required double amount,
+    String notes = '',
+  }) async {
+    await _api.post(
+      '${ApiConstants.suppliers}/$supplierId/payments',
+      data: {
+        'paymentDate': paymentDate.toIso8601String(),
+        'amount': amount,
+        if (notes.isNotEmpty) 'notes': notes,
+      },
+    );
   }
 }

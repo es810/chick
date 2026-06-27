@@ -3,6 +3,7 @@ const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { logAction } = require('../services/auditService');
+const { getClientStatement } = require('../services/accountStatementService');
 
 const formatClient = (client) => {
   const obj = client.toObject ? client.toObject() : client;
@@ -44,6 +45,11 @@ const getClient = asyncHandler(async (req, res) => {
   const client = await Client.findById(req.params.id).populate('userId', 'email');
   if (!client) throw new ApiError(404, 'Client not found');
   res.json({ success: true, data: formatClient(client) });
+});
+
+const getClientAccountStatement = asyncHandler(async (req, res) => {
+  const data = await getClientStatement(req.params.id);
+  res.json({ success: true, data });
 });
 
 const createClient = asyncHandler(async (req, res) => {
@@ -134,4 +140,11 @@ const deleteClient = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Client deleted' });
 });
 
-module.exports = { getClients, getClient, createClient, updateClient, deleteClient };
+module.exports = {
+  getClients,
+  getClient,
+  getClientAccountStatement,
+  createClient,
+  updateClient,
+  deleteClient,
+};

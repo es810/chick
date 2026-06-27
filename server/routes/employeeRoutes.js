@@ -6,7 +6,7 @@ const {
   updateEmployee,
   deleteEmployee,
 } = require('../controllers/employeeController');
-const { getLedger, addExpense, addDebt } = require('../controllers/employeeLedgerController');
+const { getLedger, addExpense, addDebt, addSalaryAdvance } = require('../controllers/employeeLedgerController');
 const { protect, authorize } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 
@@ -24,6 +24,16 @@ const ledgerValidation = [
 router.get('/:id/ledger', getLedger);
 router.post('/:id/ledger/expense', ledgerValidation, validate, addExpense);
 router.post('/:id/ledger/debt', ledgerValidation, validate, addDebt);
+router.post(
+  '/:id/advances',
+  [
+    body('advanceDate').isISO8601(),
+    body('amount').isFloat({ min: 0.01 }),
+    body('notes').optional().trim(),
+  ],
+  validate,
+  addSalaryAdvance
+);
 
 router.post(
   '/',

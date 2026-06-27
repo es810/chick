@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const {
   getClients,
   getClient,
+  getClientAccountStatement,
   createClient,
   updateClient,
   deleteClient,
@@ -15,6 +16,7 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/', authorize('admin', 'employee'), getClients);
+router.get('/:id/statement', authorize('admin', 'employee'), getClientAccountStatement);
 router.get('/:id', authorize('admin', 'employee'), getClient);
 
 router.post(

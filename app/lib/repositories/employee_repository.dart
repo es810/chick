@@ -31,6 +31,24 @@ class EmployeeRepository {
     return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
   }
 
+  Future<SalaryAdvanceEntry> addSalaryAdvance({
+    required String employeeId,
+    required DateTime advanceDate,
+    required double amount,
+    String notes = '',
+  }) async {
+    final response = await _api.post(
+      '${ApiConstants.employees}/$employeeId/advances',
+      data: {
+        'advanceDate': advanceDate.toIso8601String(),
+        'amount': amount,
+        if (notes.isNotEmpty) 'notes': notes,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return SalaryAdvanceEntry.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
   Future<({double totalExpenses, double totalDebt, List<EmployeeLedgerEntry> entries})> getMyLedger() async {
     final response = await _api.get('${ApiConstants.myAccount}/ledger');
     final data = response.data as Map<String, dynamic>;

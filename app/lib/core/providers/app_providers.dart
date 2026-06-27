@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/stock_model.dart';
+import '../../models/account_statement_model.dart';
 import '../../repositories/client_repository.dart';
 import '../../repositories/supplier_repository.dart';
 import '../../repositories/supplier_stock_repository.dart';
@@ -62,6 +63,14 @@ final clientsProvider = FutureProvider((ref) async {
 final suppliersProvider = FutureProvider((ref) async {
   ref.keepAlive();
   return ref.watch(supplierRepositoryProvider).getSuppliers();
+});
+
+final clientStatementProvider = FutureProvider.family<AccountStatement, String>((ref, clientId) async {
+  return ref.watch(clientRepositoryProvider).getAccountStatement(clientId);
+});
+
+final supplierStatementProvider = FutureProvider.family<AccountStatement, String>((ref, supplierId) async {
+  return ref.watch(supplierRepositoryProvider).getAccountStatement(supplierId);
 });
 
 final supplierStockProvider = FutureProvider.family<List<StockModel>, String>((ref, supplierId) async {

@@ -89,7 +89,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
               .map(
                 (s) => DropdownMenuItem(
                   value: s.chickenType,
-                  child: Text('${s.chickenType}'),
+                  child: Text(s.chickenType),
                 ),
               )
               .toList(),

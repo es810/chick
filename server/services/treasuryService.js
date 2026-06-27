@@ -2,6 +2,7 @@ const Treasury = require('../models/Treasury');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const CollectionInvoice = require('../models/CollectionInvoice');
 const EmployeeLedger = require('../models/EmployeeLedger');
+const SalaryAdvance = require('../models/SalaryAdvance');
 const Invoice = require('../models/Invoice');
 const User = require('../models/User');
 const ApiError = require('../utils/apiError');
@@ -73,29 +74,30 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
 };
 
 /**
- * أرباح الشهر = مجموع أرباح كل أيام الشهر − إجمالي المرتبات فقط
+ * أرباح الشهر = مجموع أرباح كل أيام الشهر − إجمالي السلف المأخوذة فقط
  */
 const computeMonthlyProfit = async (year, month) => {
   const startOfMonth = new Date(year, month - 1, 1);
   const startOfNextMonth = new Date(year, month, 1);
 
-  const [periodProfit, salaryAgg] = await Promise.all([
+  const [periodProfit, advancesAgg] = await Promise.all([
     computeProfitForPeriod(startOfMonth, startOfNextMonth),
-    User.aggregate([
-      { $match: { role: 'employee', isActive: true } },
-      { $group: { _id: null, total: { $sum: '$salary' } } },
+    SalaryAdvance.aggregate([
+      { $match: { advanceDate: { $gte: startOfMonth, $lt: startOfNextMonth } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
   ]);
 
   const dailyProfitsTotal = periodProfit.profit;
-  const salaries = salaryAgg[0]?.total || 0;
+  const salaryAdvances = advancesAgg[0]?.total || 0;
 
   return {
     year,
     month,
     dailyProfitsTotal,
-    salaries,
-    profit: dailyProfitsTotal - salaries,
+    salaries: salaryAdvances,
+    salaryAdvances,
+    profit: dailyProfitsTotal - salaryAdvances,
     breakdown: periodProfit,
   };
 };
@@ -133,7 +135,7 @@ const deductFromMainTreasury = async (amount, user, details = {}) => {
     throw new ApiError(400, 'Insufficient main treasury balance');
   }
 
-  await TreasuryMovement.create({
+  const movement = await TreasuryMovement.create({
     type: 'withdrawal',
     amount,
     description: details.reason || 'خصم من الخزينة',
@@ -145,7 +147,7 @@ const deductFromMainTreasury = async (amount, user, details = {}) => {
     ...details,
   });
 
-  return getTreasurySummary();
+  return movement;
 };
 
 const ensureMainTreasuryInSession = async (session) => {

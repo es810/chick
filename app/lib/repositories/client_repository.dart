@@ -1,5 +1,6 @@
 import '../core/constants/api_constants.dart';
 import '../models/client_model.dart';
+import '../models/account_statement_model.dart';
 import '../services/api_client.dart';
 import '../services/cache_service.dart';
 
@@ -49,5 +50,11 @@ class ClientRepository {
 
   Future<void> deleteClient(String id) async {
     await _api.delete('${ApiConstants.clients}/$id');
+  }
+
+  Future<AccountStatement> getAccountStatement(String id) async {
+    final response = await _api.get('${ApiConstants.clients}/$id/statement');
+    final data = response.data as Map<String, dynamic>;
+    return AccountStatement.fromJson(data['data'] as Map<String, dynamic>);
   }
 }

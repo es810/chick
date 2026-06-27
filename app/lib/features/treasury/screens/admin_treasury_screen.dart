@@ -40,6 +40,7 @@ class _AdminTreasuryScreenState extends ConsumerState<AdminTreasuryScreen>
   Future<void> _refresh() async {
     ref.invalidate(treasurySummaryProvider);
     ref.invalidate(dashboardProvider);
+    ref.invalidate(clientsProvider);
   }
 
   Future<void> _showAmountDialog({

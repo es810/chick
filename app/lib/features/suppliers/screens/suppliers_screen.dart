@@ -29,12 +29,21 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
     );
   }
 
+  void _openSupplierStatement(SupplierModel supplier) {
+    context.push(
+      '/admin/suppliers/${supplier.id}/statement?name=${Uri.encodeComponent(supplier.name)}',
+    );
+  }
+
   Future<void> _showSupplierDialog({SupplierModel? supplier}) async {
     final l10n = context.l10n;
     final isEdit = supplier != null;
     final nameController = TextEditingController(text: supplier?.name ?? '');
     final locationController = TextEditingController(text: supplier?.location ?? '');
     final phoneController = TextEditingController(text: supplier?.phone ?? '');
+    final balanceController = TextEditingController(
+      text: supplier != null ? supplier.balance.toStringAsFixed(0) : '',
+    );
     final formKey = GlobalKey<FormState>();
 
     final ok = await showDialog<bool>(
@@ -77,6 +86,21 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? l10n.fieldRequired : null,
                 ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: balanceController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: l10n.supplierDebt,
+                    prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    if (double.tryParse(v.trim()) == null) return l10n.invalidAmount;
+                    if (double.parse(v.trim()) < 0) return l10n.invalidAmount;
+                    return null;
+                  },
+                ),
               ],
             ),
           ),
@@ -97,6 +121,8 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
 
     if (ok != true || !mounted) return;
 
+    final balance = double.tryParse(balanceController.text.trim()) ?? 0;
+
     try {
       final repo = ref.read(supplierRepositoryProvider);
       if (isEdit) {
@@ -104,6 +130,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
           'name': nameController.text.trim(),
           'location': locationController.text.trim(),
           'phone': phoneController.text.trim(),
+          'balance': balance,
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.supplierUpdated)));
@@ -115,6 +142,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
             name: nameController.text.trim(),
             location: locationController.text.trim(),
             phone: phoneController.text.trim(),
+            balance: balance,
           ),
         );
         if (mounted) {
@@ -223,6 +251,8 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                                   onSelected: (action) {
                                     if (action == 'stock') {
                                       _openSupplierStock(supplier);
+                                    } else if (action == 'statement') {
+                                      _openSupplierStatement(supplier);
                                     } else if (action == 'edit') {
                                       _showSupplierDialog(supplier: supplier);
                                     } else if (action == 'delete') {
@@ -231,15 +261,45 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                                   },
                                   itemBuilder: (ctx) => [
                                     PopupMenuItem(value: 'stock', child: Text(l10n.supplierStock)),
+                                    PopupMenuItem(value: 'statement', child: Text(l10n.accountStatement)),
                                     PopupMenuItem(value: 'edit', child: Text(l10n.editSupplier)),
                                     PopupMenuItem(
                                       value: 'delete',
                                       child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
                                     ),
                                   ],
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          context.formatCurrency(supplier.balance),
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                        const Icon(Icons.more_vert, size: 18),
+                                      ],
+                                    ),
+                                  ),
                                 )
-                              : const Icon(Icons.chevron_right),
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      context.formatCurrency(supplier.balance),
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.receipt_long, size: 20),
+                                      tooltip: l10n.accountStatement,
+                                      onPressed: () => _openSupplierStatement(supplier),
+                                    ),
+                                  ],
+                                ),
                           onTap: () => _openSupplierStock(supplier),
+                          onLongPress: () => _openSupplierStatement(supplier),
                         ),
                       );
                     },

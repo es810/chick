@@ -25,7 +25,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   Future<void> _load() async {
@@ -149,6 +149,151 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
     }
   }
 
+  double _remainingAdvanceThisMonth() {
+    if (_ledger == null) return 0;
+    final now = DateTime.now();
+    final taken = _ledger!.advances
+        .where(
+          (a) =>
+              a.advanceDate.year == now.year && a.advanceDate.month == now.month,
+        )
+        .fold<double>(0, (sum, a) => sum + a.amount);
+    return (_ledger!.employeeSalary - taken).clamp(0, double.infinity);
+  }
+
+  Future<void> _showAddAdvanceDialog() async {
+    final l10n = context.l10n;
+    final amountController = TextEditingController();
+    final notesController = TextEditingController();
+    var advanceDate = DateTime.now();
+    final remaining = _remainingAdvanceThisMonth();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: Text(l10n.addSalaryAdvance),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.salaryAdvanceHint,
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                if (_ledger!.employeeSalary > 0) ...[
+                  Text('${l10n.employeeSalary}: ${context.formatCurrency(_ledger!.employeeSalary)}'),
+                  Text(
+                    '${l10n.remainingSalaryAdvance}: ${context.formatCurrency(remaining)}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.paymentDate),
+                  subtitle: Text(DateFormat.yMMMd().format(advanceDate)),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: advanceDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) setState(() => advanceDate = picked);
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: l10n.paymentAmount),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  decoration: InputDecoration(labelText: l10n.notesOptional),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.deductedFromSalary,
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.add)),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      amountController.dispose();
+      notesController.dispose();
+      return;
+    }
+
+    final amount = double.tryParse(amountController.text.trim().replaceAll(',', ''));
+    final notes = notesController.text.trim();
+    amountController.dispose();
+    notesController.dispose();
+
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.invalidAmount), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    if (_ledger!.employeeSalary > 0 && amount > remaining) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.advanceExceedsSalary), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(employeeRepositoryProvider).addSalaryAdvance(
+            employeeId: widget.employeeId,
+            advanceDate: advanceDate,
+            amount: amount,
+            notes: notes,
+          );
+      ref.invalidate(dashboardProvider);
+      ref.invalidate(treasurySummaryProvider);
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.salaryAdvanceRecorded),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final msg = e.toString().contains('Insufficient')
+            ? l10n.insufficientTreasury
+            : e.toString().contains('remaining salary')
+                ? l10n.advanceExceedsSalary
+                : '$e';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -191,6 +336,50 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                       Row(
                         children: [
                           Expanded(
+                            child: _SummaryCard(
+                              title: l10n.salaryAdvance,
+                              amount: _ledger!.totalAdvances,
+                              icon: Icons.payments_outlined,
+                              color: AppColors.primaryGreen,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _SummaryCard(
+                              title: l10n.employeeSalary,
+                              amount: _ledger!.employeeSalary,
+                              icon: Icons.account_balance_wallet_outlined,
+                              color: AppColors.darkGreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _showAddAdvanceDialog,
+                          icon: const Icon(Icons.payments_outlined),
+                          label: Text(l10n.addSalaryAdvance),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.salaryAdvanceHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(l10n.salaryAdvance, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      ..._buildAdvanceEntries(_ledger!.advances, l10n),
+                      const SizedBox(height: 24),
+                      Text(l10n.expenses, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      ..._buildEntries(_ledger!.entries.where((e) => e.isExpense).toList(), l10n),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () => _showAddDialog(isExpense: true),
                               icon: const Icon(Icons.add),
@@ -207,10 +396,6 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      Text(l10n.expenses, style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      ..._buildEntries(_ledger!.entries.where((e) => e.isExpense).toList(), l10n),
                       const SizedBox(height: 20),
                       Text(l10n.employeeDebt, style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 4),
@@ -224,6 +409,39 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                   ),
                 ),
     );
+  }
+
+  List<Widget> _buildAdvanceEntries(List<SalaryAdvanceEntry> entries, AppLocalizations l10n) {
+    if (entries.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(l10n.noLedgerEntries, style: const TextStyle(color: Colors.grey)),
+        ),
+      ];
+    }
+    return entries.map((entry) {
+      return Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.15),
+            child: const Icon(Icons.payments_outlined, color: AppColors.primaryGreen),
+          ),
+          title: Text(l10n.salaryAdvance),
+          subtitle: Text(
+            [
+              DateFormat.yMMMd().format(entry.advanceDate),
+              if (entry.notes.isNotEmpty) entry.notes,
+            ].join(' · '),
+          ),
+          trailing: Text(
+            context.formatCurrency(entry.amount),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }).toList();
   }
 
   List<Widget> _buildEntries(List<EmployeeLedgerEntry> entries, AppLocalizations l10n) {

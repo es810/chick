@@ -3,6 +3,8 @@ const { body } = require('express-validator');
 const {
   getSuppliers,
   getSupplier,
+  getSupplierAccountStatement,
+  paySupplierDebt,
   createSupplier,
   updateSupplier,
   deleteSupplier,
@@ -17,7 +19,20 @@ router.use(protect);
 
 router.get('/', authorize('admin', 'employee'), getSuppliers);
 router.use('/:supplierId/stock', supplierStockRoutes);
+router.get('/:id/statement', authorize('admin', 'employee'), getSupplierAccountStatement);
 router.get('/:id', authorize('admin', 'employee'), getSupplier);
+
+router.post(
+  '/:id/payments',
+  authorize('admin'),
+  [
+    body('paymentDate').isISO8601(),
+    body('amount').isFloat({ min: 0.01 }),
+    body('notes').optional().trim(),
+  ],
+  validate,
+  paySupplierDebt
+);
 
 router.post(
   '/',
@@ -26,6 +41,7 @@ router.post(
     body('name').trim().notEmpty(),
     body('phone').trim().notEmpty(),
     body('location').optional().trim(),
+    body('balance').optional().isFloat({ min: 0 }),
   ],
   validate,
   createSupplier
@@ -38,6 +54,7 @@ router.put(
     body('name').optional().trim().notEmpty(),
     body('phone').optional().trim().notEmpty(),
     body('location').optional().trim(),
+    body('balance').optional().isFloat({ min: 0 }),
   ],
   validate,
   updateSupplier

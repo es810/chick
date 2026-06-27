@@ -122,10 +122,27 @@ class AppLocalizations {
   'dailyProfit': {'en': 'Daily Profit', 'ar': 'أرباح يومية'},
   'monthlyProfit': {'en': 'Monthly Profit', 'ar': 'أرباح شهرية'},
   'selectMonth': {'en': 'Select month', 'ar': 'اختيار الشهر'},
-  'afterSalariesDeduction': {'en': 'After salaries', 'ar': 'بعد خصم المرتبات'},
+  'afterSalariesDeduction': {'en': 'After salary advances', 'ar': 'بعد خصم السلف'},
   'monthlyProfitFormula': {
-    'en': 'Sum of daily profits − salaries',
-    'ar': 'مجموع أرباح الأيام − المرتبات',
+    'en': 'Sum of daily profits − salary advances taken',
+    'ar': 'مجموع أرباح الأيام − السلف المأخوذة فقط',
+  },
+  'salaryAdvance': {'en': 'Salary advance', 'ar': 'طلب سلفة'},
+  'addSalaryAdvance': {'en': 'Add salary advance', 'ar': 'إضافة سلفة'},
+  'salaryAdvanceHint': {
+    'en': 'Deducted from employee salary and monthly profit (amount taken only)',
+    'ar': 'تُخصم من راتب الموظف وتُحسب في الأرباح الشهرية (المبلغ المأخوذ فقط)',
+  },
+  'salaryAdvanceRecorded': {'en': 'Salary advance recorded', 'ar': 'تم تسجيل السلفة'},
+  'employeeSalary': {'en': 'Monthly salary', 'ar': 'الراتب الشهري'},
+  'remainingSalaryAdvance': {'en': 'Remaining advance allowance', 'ar': 'المتبقي من السلفة لهذا الشهر'},
+  'advanceExceedsSalary': {
+    'en': 'Advance exceeds remaining salary for this month',
+    'ar': 'مبلغ السلفة يتجاوز المتبقي من الراتب لهذا الشهر',
+  },
+  'deductedFromSalary': {
+    'en': 'Deducted from salary and paid from treasury',
+    'ar': 'تُخصم من الراتب وتُصرف من الخزينة',
   },
   'totalDiscount': {'en': 'Total Discount', 'ar': 'إجمالي الخصم'},
   'pendingPayments': {'en': 'Pending Payments', 'ar': 'مدفوعات معلّقة'},
@@ -269,6 +286,21 @@ class AppLocalizations {
   'phone': {'en': 'Phone', 'ar': 'رقم الهاتف'},
   'address': {'en': 'Address', 'ar': 'العنوان'},
   'clientDebt': {'en': 'Debt (EGP)', 'ar': 'المديونية (ج.م)'},
+  'supplierDebt': {'en': 'Supplier debt (EGP)', 'ar': 'مديونية المورد (ج.م)'},
+  'accountStatement': {'en': 'Account statement', 'ar': 'كشف حساب'},
+  'debit': {'en': 'Debit', 'ar': 'مدين'},
+  'credit': {'en': 'Credit', 'ar': 'دائن'},
+  'statementBalanceAfter': {'en': 'Balance after', 'ar': 'الرصيد بعد'},
+  'noStatementEntries': {'en': 'No transactions yet', 'ar': 'لا توجد حركات بعد'},
+  'paySupplierDebt': {'en': 'Pay debt', 'ar': 'دفع الدين'},
+  'supplierPaymentRecorded': {'en': 'Supplier payment recorded', 'ar': 'تم تسجيل دفع الدين'},
+  'paymentAmount': {'en': 'Payment amount', 'ar': 'مبلغ الدفع'},
+  'paymentDate': {'en': 'Payment date', 'ar': 'تاريخ الدفع'},
+  'paymentExceedsSupplierDebt': {
+    'en': 'Payment cannot exceed supplier debt',
+    'ar': 'المبلغ يتجاوز مديونية المورد',
+  },
+  'notesOptional': {'en': 'Notes (optional)', 'ar': 'ملاحظات (اختياري)'},
   'loginId': {'en': 'Login ID (email)', 'ar': 'معرّف الدخول (البريد)'},
   'sessionExpired': {
     'en': 'Session expired. Please login again.',
@@ -489,6 +521,14 @@ class AppLocalizations {
   String get selectMonth => _get('selectMonth');
   String get afterSalariesDeduction => _get('afterSalariesDeduction');
   String get monthlyProfitFormula => _get('monthlyProfitFormula');
+  String get salaryAdvance => _get('salaryAdvance');
+  String get addSalaryAdvance => _get('addSalaryAdvance');
+  String get salaryAdvanceHint => _get('salaryAdvanceHint');
+  String get salaryAdvanceRecorded => _get('salaryAdvanceRecorded');
+  String get employeeSalary => _get('employeeSalary');
+  String get remainingSalaryAdvance => _get('remainingSalaryAdvance');
+  String get advanceExceedsSalary => _get('advanceExceedsSalary');
+  String get deductedFromSalary => _get('deductedFromSalary');
   String get totalDiscount => _get('totalDiscount');
   String get pendingPayments => _get('pendingPayments');
   String get lowStockAlerts => _get('lowStockAlerts');
@@ -610,6 +650,18 @@ class AppLocalizations {
   String get phone => _get('phone');
   String get address => _get('address');
   String get clientDebt => _get('clientDebt');
+  String get supplierDebt => _get('supplierDebt');
+  String get accountStatement => _get('accountStatement');
+  String get debit => _get('debit');
+  String get credit => _get('credit');
+  String get statementBalanceAfter => _get('statementBalanceAfter');
+  String get noStatementEntries => _get('noStatementEntries');
+  String get paySupplierDebt => _get('paySupplierDebt');
+  String get supplierPaymentRecorded => _get('supplierPaymentRecorded');
+  String get paymentAmount => _get('paymentAmount');
+  String get paymentDate => _get('paymentDate');
+  String get paymentExceedsSupplierDebt => _get('paymentExceedsSupplierDebt');
+  String get notesOptional => _get('notesOptional');
   String get loginId => _get('loginId');
   String get sessionExpired => _get('sessionExpired');
   String get serverError => _get('serverError');

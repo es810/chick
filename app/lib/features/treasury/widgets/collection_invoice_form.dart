@@ -56,10 +56,18 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       _amountPaidController.text = existing.amountPaid?.toStringAsFixed(2) ?? '';
       _amountDeductedController.text = existing.amountDeducted?.toStringAsFixed(2) ?? '';
       _balanceBeforeController.text = existing.balanceBefore?.toStringAsFixed(2) ?? '';
-    } else {
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
+  }
+
+  void _bootstrap() {
+    if (!mounted) return;
+
+    if (widget.existing == null) {
       final user = ref.read(currentUserProvider);
       if (user?.role == UserRole.employee) {
-        _selectedEmployeeId = user!.id;
+        setState(() => _selectedEmployeeId = user!.id);
       }
     }
 
@@ -68,6 +76,7 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
 
   Future<void> _loadFormData() async {
     try {
+      ref.invalidate(clientsProvider);
       final results = await Future.wait([
         ref.read(clientsProvider.future),
         ref.read(collectionRepositoryProvider).listEmployees(),
@@ -166,6 +175,11 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
 
     setState(() => _submitting = true);
     try {
+      final clients = await ref.read(clientRepositoryProvider).getClients();
+      final freshClient = clients.firstWhere((c) => c.id == _selectedClient!.id);
+      _selectedClient = freshClient;
+      _balanceBeforeController.text = freshClient.balance.toStringAsFixed(2);
+
       final repo = ref.read(collectionRepositoryProvider);
       final body = {
         'clientId': _selectedClient!.id,
@@ -199,6 +213,10 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
           balanceAfter: body['balanceAfter'] as double,
         );
       }
+
+      ref.invalidate(clientsProvider);
+      ref.invalidate(dashboardProvider);
+      ref.invalidate(treasurySummaryProvider);
 
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -269,9 +287,13 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
         const SizedBox(height: 12),
         TextField(
           controller: _balanceBeforeController,
+          readOnly: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(labelText: l10n.balanceBeforePayment),
-          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(
+            labelText: l10n.balanceBeforePayment,
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          ),
         ),
         const SizedBox(height: 12),
         TextField(

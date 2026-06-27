@@ -3,6 +3,8 @@ const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { logAction } = require('../services/auditService');
 const { deleteAllForSupplier } = require('../services/supplierStockService');
+const { getSupplierStatement } = require('../services/accountStatementService');
+const { createSupplierPayment } = require('../services/supplierPaymentService');
 
 const getSuppliers = asyncHandler(async (req, res) => {
   const { search, page = 1, limit = 50 } = req.query;
@@ -35,19 +37,30 @@ const getSupplier = asyncHandler(async (req, res) => {
   res.json({ success: true, data: supplier });
 });
 
+const getSupplierAccountStatement = asyncHandler(async (req, res) => {
+  const data = await getSupplierStatement(req.params.id);
+  res.json({ success: true, data });
+});
+
+const paySupplierDebt = asyncHandler(async (req, res) => {
+  const payment = await createSupplierPayment(req.params.id, req.body, req.user);
+  res.status(201).json({ success: true, data: payment });
+});
+
 const createSupplier = asyncHandler(async (req, res) => {
-  const { name, location = '', phone } = req.body;
-  const supplier = await Supplier.create({ name, location, phone });
+  const { name, location = '', phone, balance = 0 } = req.body;
+  const supplier = await Supplier.create({ name, location, phone, balance });
   await logAction(req.user._id, req.user.name, 'CREATE_SUPPLIER', supplier.name);
   res.status(201).json({ success: true, data: supplier });
 });
 
 const updateSupplier = asyncHandler(async (req, res) => {
-  const { name, location, phone } = req.body;
+  const { name, location, phone, balance } = req.body;
   const updates = {};
   if (name != null) updates.name = name;
   if (location != null) updates.location = location;
   if (phone != null) updates.phone = phone;
+  if (balance != null) updates.balance = balance;
 
   const supplier = await Supplier.findByIdAndUpdate(req.params.id, updates, {
     new: true,
@@ -66,4 +79,12 @@ const deleteSupplier = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Supplier deleted' });
 });
 
-module.exports = { getSuppliers, getSupplier, createSupplier, updateSupplier, deleteSupplier };
+module.exports = {
+  getSuppliers,
+  getSupplier,
+  getSupplierAccountStatement,
+  paySupplierDebt,
+  createSupplier,
+  updateSupplier,
+  deleteSupplier,
+};
