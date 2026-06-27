@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.5.0] — 2026-06-27
+
+### Account statements
+- **كشف حساب** for each client (distribution + collection invoices)
+- **كشف حساب** for each supplier (goods + debt payments)
+- Supplier **دفع الدين** from statement (treasury withdrawal)
+
+### Employees
+- **طلب سلفة** (salary advance) on employee detail — paid from treasury, deducted from salary allowance
+- Monthly profit deducts **only salary advances taken** in the month (not full payroll)
+
+### Fixes
+- Collection invoice dialog: fix Riverpod `initState` crash
+- `reset-db` clears salary advances and supplier payments
+- Client collection balance uses live DB balance
+
 ## [1.4.0] — 2026-06-24
 
 ### Suppliers & clean production
