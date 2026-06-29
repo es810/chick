@@ -10,6 +10,7 @@ import '../../features/suppliers/screens/supplier_stock_screen.dart';
 import '../../features/account_statement/screens/account_statement_screen.dart';
 import '../../features/dashboard/screens/admin_dashboard_screen.dart';
 import '../../features/treasury/screens/collection_invoices_screen.dart';
+import '../../features/treasury/screens/employee_treasury_statement_screen.dart';
 import '../../features/treasury/screens/admin_treasury_screen.dart';
 import '../../features/dashboard/screens/client_dashboard_screen.dart';
 import '../../features/dashboard/screens/employee_dashboard_screen.dart';
@@ -193,6 +194,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/admin/employees', builder: (_, __) => const EmployeesScreen()),
           GoRoute(path: '/admin/settings', builder: (_, __) => const SettingsScreen()),
         ],
+      ),
+
+      GoRoute(
+        path: '/employee/treasury/statement',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, __) => const EmployeeTreasuryStatementScreen(),
       ),
 
       ShellRoute(

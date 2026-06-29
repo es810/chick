@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_localizations.dart';
+import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../services/api_client.dart';
@@ -253,6 +254,162 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
     }
   }
 
+  Future<void> _showTreasuryTransferDialog() async {
+    final l10n = context.l10n;
+    if (_employees.isEmpty) return;
+
+    final activeEmployees = _employees.where((e) => e['isActive'] as bool? ?? true).toList();
+    if (activeEmployees.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.noEmployees), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    String? fromEmployeeId;
+    String? toEmployeeId;
+    final amountController = TextEditingController();
+    final notesController = TextEditingController();
+
+    double balanceFor(String? id) {
+      if (id == null) return 0;
+      final emp = activeEmployees.firstWhere(
+        (e) => (e['_id'] ?? e['id']).toString() == id,
+        orElse: () => <String, dynamic>{},
+      );
+      return ((emp['treasuryBalance'] as num?) ?? 0).toDouble();
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.employeeTreasuryTransfer),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  key: ValueKey('from-$fromEmployeeId'),
+                  initialValue: fromEmployeeId,
+                  decoration: InputDecoration(labelText: l10n.transferFromEmployee),
+                  items: activeEmployees
+                      .map(
+                        (e) => DropdownMenuItem<String>(
+                          value: (e['_id'] ?? e['id']).toString(),
+                          child: Text(e['name'] as String? ?? ''),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setDialogState(() {
+                    fromEmployeeId = value;
+                    if (toEmployeeId == fromEmployeeId) toEmployeeId = null;
+                  }),
+                ),
+                if (fromEmployeeId != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${l10n.employeeTreasuryBalance}: ${context.formatCurrency(balanceFor(fromEmployeeId))}',
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                ],
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  key: ValueKey('to-$toEmployeeId-$fromEmployeeId'),
+                  initialValue: toEmployeeId,
+                  decoration: InputDecoration(labelText: l10n.transferToEmployee),
+                  items: activeEmployees
+                      .where((e) => (e['_id'] ?? e['id']).toString() != fromEmployeeId)
+                      .map(
+                        (e) => DropdownMenuItem<String>(
+                          value: (e['_id'] ?? e['id']).toString(),
+                          child: Text(e['name'] as String? ?? ''),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setDialogState(() => toEmployeeId = value),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: l10n.transferAmount),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  decoration: InputDecoration(labelText: l10n.descriptionOptional),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.save)),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true || !mounted) {
+      amountController.dispose();
+      notesController.dispose();
+      return;
+    }
+
+    final amount = double.tryParse(amountController.text.trim().replaceAll(',', ''));
+    final notes = notesController.text.trim();
+    amountController.dispose();
+    notesController.dispose();
+
+    if (fromEmployeeId == null || toEmployeeId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.selectEmployee), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    if (fromEmployeeId == toEmployeeId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.sameEmployeeTransfer), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.invalidAmount), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(employeeRepositoryProvider).transferTreasury(
+            fromEmployeeId: fromEmployeeId!,
+            toEmployeeId: toEmployeeId!,
+            amount: amount,
+            notes: notes.isEmpty ? null : notes,
+          );
+      await _loadEmployees();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.transferRecorded), backgroundColor: AppColors.success),
+        );
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        final message = apiErrorMessage(e);
+        final localized = message.contains('Insufficient')
+            ? l10n.insufficientEmployeeTreasury
+            : message;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(localized), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   Future<void> _confirmDeleteEmployee(Map<String, dynamic> emp) async {
     final l10n = context.l10n;
     final name = emp['name'] as String;
@@ -347,9 +504,11 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                 ),
               ),
               subtitle: Text(
-                '${emp['email']}\n${emp['phone']}\n${l10n.salary}: ${context.formatCurrency(((emp['salary'] as num?) ?? 0).toDouble())}',
+                '${emp['email']}\n${emp['phone']}\n'
+                '${l10n.salary}: ${context.formatCurrency(((emp['salary'] as num?) ?? 0).toDouble())}\n'
+                '${l10n.employeeTreasuryBalance}: ${context.formatCurrency(((emp['treasuryBalance'] as num?) ?? 0).toDouble())}',
               ),
-              isThreeLine: true,
+              isThreeLine: false,
               trailing: PopupMenuButton<String>(
                 onSelected: (action) {
                   switch (action) {
@@ -419,6 +578,11 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                     ),
+                  ),
+                  IconButton(
+                    onPressed: _showTreasuryTransferDialog,
+                    icon: const Icon(Icons.swap_horiz, color: Colors.white),
+                    tooltip: l10n.employeeTreasuryTransfer,
                   ),
                   IconButton(
                     onPressed: () => _showEmployeeFormDialog(),

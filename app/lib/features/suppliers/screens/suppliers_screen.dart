@@ -300,30 +300,36 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                                     ),
                                   ),
                                 )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      context.formatCurrency(supplier.balance),
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
-                                    ),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.inventory_2_outlined, size: 20),
-                                          tooltip: l10n.supplierStock,
-                                          onPressed: () => _openSupplierStock(supplier),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.receipt_long, size: 20),
-                                          tooltip: l10n.accountStatement,
-                                          onPressed: () => _openSupplierStatement(supplier),
-                                        ),
-                                      ],
+                              : PopupMenuButton<String>(
+                                  onSelected: (action) {
+                                    if (action == 'stock') {
+                                      _openSupplierStock(supplier);
+                                    } else if (action == 'statement') {
+                                      _openSupplierStatement(supplier);
+                                    }
+                                  },
+                                  itemBuilder: (ctx) => [
+                                    PopupMenuItem(value: 'stock', child: Text(l10n.supplierStock)),
+                                    PopupMenuItem(
+                                      value: 'statement',
+                                      child: Text(l10n.accountStatement),
                                     ),
                                   ],
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          context.formatCurrency(supplier.balance),
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                        const Icon(Icons.more_vert, size: 18),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                           onTap: () => _openSupplierStock(supplier),
                           onLongPress: () => _openSupplierStatement(supplier),

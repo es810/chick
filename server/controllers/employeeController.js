@@ -2,6 +2,7 @@ const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { logAction } = require('../services/auditService');
+const { attachTreasuryBalances } = require('../services/employeeTreasuryService');
 
 const getEmployees = asyncHandler(async (req, res) => {
   const { search, page = 1, limit = 20 } = req.query;
@@ -20,9 +21,11 @@ const getEmployees = asyncHandler(async (req, res) => {
     User.countDocuments(query),
   ]);
 
+  const data = await attachTreasuryBalances(employees);
+
   res.json({
     success: true,
-    data: employees,
+    data,
     pagination: { total, page: parseInt(page), pages: Math.ceil(total / limit) },
   });
 });

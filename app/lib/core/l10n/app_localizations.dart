@@ -96,6 +96,22 @@ class AppLocalizations {
   'withdrawFromTreasury': {'en': 'Withdraw from Treasury', 'ar': 'سحب من الخزنة'},
   'addExternalRevenue': {'en': 'Add External Revenue', 'ar': 'إضافة إيراد خارجي'},
   'employeesTreasury': {'en': 'Employees Treasury', 'ar': 'خزنة الموظفين'},
+  'employeeTreasuryBalance': {'en': 'Treasury balance', 'ar': 'رصيد الخزنة'},
+  'employeeTreasuryTransfer': {'en': 'Transfer between employees', 'ar': 'تحويل بين الموظفين'},
+  'transferFromEmployee': {'en': 'From employee', 'ar': 'من موظف'},
+  'transferToEmployee': {'en': 'To employee', 'ar': 'إلى موظف'},
+  'transferAmount': {'en': 'Transfer amount', 'ar': 'مبلغ التحويل'},
+  'transferRecorded': {'en': 'Transfer completed', 'ar': 'تم التحويل'},
+  'insufficientEmployeeTreasury': {
+    'en': 'Insufficient employee treasury balance',
+    'ar': 'رصيد خزنة الموظف غير كافٍ',
+  },
+  'sameEmployeeTransfer': {
+    'en': 'Cannot transfer to the same employee',
+    'ar': 'لا يمكن التحويل لنفس الموظف',
+  },
+  'selectFromEmployee': {'en': 'Select source employee', 'ar': 'اختر الموظف المرسل'},
+  'selectToEmployee': {'en': 'Select destination employee', 'ar': 'اختر الموظف المستلم'},
   'amountEgp': {'en': 'Amount (EGP)', 'ar': 'المبلغ (ج.م)'},
   'descriptionOptional': {'en': 'Description (optional)', 'ar': 'الوصف (اختياري)'},
   'revenueAdded': {'en': 'External revenue added', 'ar': 'تمت إضافة الإيراد الخارجي'},
@@ -430,7 +446,13 @@ class AppLocalizations {
     'ar': 'حذف نوع المخزون؟ يجب أن تكون الكمية صفراً.',
   },
   'viewOnlyStock': {'en': 'View only — contact admin to modify stock', 'ar': 'عرض فقط — تواصل مع المدير لتعديل المخزون'},
+  'myEmployeeTreasury': {'en': 'My Treasury', 'ar': 'خزينة الموظف'},
   'myDebt': {'en': 'My Debt (Goods)', 'ar': 'مديونيتي (البضاعة)'},
+  'employeeTreasuryFormula': {
+    'en': 'Collection + incoming transfer − expenses − advances − debts − outgoing transfer',
+    'ar': 'تحصيل + تحويل وارد − مصروفات − سلف − مديونيات − تحويل صادر',
+  },
+  'viewAccountStatement': {'en': 'View account statement', 'ar': 'عرض كشف الحساب'},
   'myExpenses': {'en': 'My Expenses', 'ar': 'مصروفاتي'},
   'recordExpense': {'en': 'Record Expense', 'ar': 'تسجيل مصروف'},
   'expenseRecorded': {'en': 'Expense recorded', 'ar': 'تم تسجيل المصروف'},
@@ -506,6 +528,16 @@ class AppLocalizations {
   String get withdrawFromTreasury => _get('withdrawFromTreasury');
   String get addExternalRevenue => _get('addExternalRevenue');
   String get employeesTreasury => _get('employeesTreasury');
+  String get employeeTreasuryBalance => _get('employeeTreasuryBalance');
+  String get employeeTreasuryTransfer => _get('employeeTreasuryTransfer');
+  String get transferFromEmployee => _get('transferFromEmployee');
+  String get transferToEmployee => _get('transferToEmployee');
+  String get transferAmount => _get('transferAmount');
+  String get transferRecorded => _get('transferRecorded');
+  String get insufficientEmployeeTreasury => _get('insufficientEmployeeTreasury');
+  String get sameEmployeeTransfer => _get('sameEmployeeTransfer');
+  String get selectFromEmployee => _get('selectFromEmployee');
+  String get selectToEmployee => _get('selectToEmployee');
   String get amountEgp => _get('amountEgp');
   String get descriptionOptional => _get('descriptionOptional');
   String get revenueAdded => _get('revenueAdded');
@@ -756,6 +788,9 @@ class AppLocalizations {
   String get confirmDeleteStock => _get('confirmDeleteStock');
   String get confirmDeleteStockWithQty => _get('confirmDeleteStockWithQty');
   String get viewOnlyStock => _get('viewOnlyStock');
+  String get myEmployeeTreasury => _get('myEmployeeTreasury');
+  String get employeeTreasuryFormula => _get('employeeTreasuryFormula');
+  String get viewAccountStatement => _get('viewAccountStatement');
   String get myDebt => _get('myDebt');
   String get myExpenses => _get('myExpenses');
   String get recordExpense => _get('recordExpense');
@@ -795,8 +830,8 @@ class AppLocalizations {
 
   String navLabelForPath(String path) {
     if (path.contains('dashboard')) return path.contains('/client') ? home : dashboard;
-    if (path.contains('invoices')) return navDistribution;
     if (path.contains('collection-invoices')) return collectionInvoices;
+    if (path.contains('invoices')) return navDistribution;
     if (path.contains('treasury')) return treasury;
     if (path.contains('stock')) return stock;
     if (path.contains('clients')) return clients;

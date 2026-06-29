@@ -11,6 +11,7 @@ const DamagedStock = require('../models/DamagedStock');
 const Treasury = require('../models/Treasury');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const EmployeeLedger = require('../models/EmployeeLedger');
+const EmployeeTreasuryTransfer = require('../models/EmployeeTreasuryTransfer');
 const SalaryAdvance = require('../models/SalaryAdvance');
 const SupplierPayment = require('../models/SupplierPayment');
 const AuditLog = require('../models/AuditLog');
@@ -21,6 +22,7 @@ const COLLECTIONS = [
   SalaryAdvance,
   SupplierPayment,
   EmployeeLedger,
+  EmployeeTreasuryTransfer,
   TreasuryMovement,
   CollectionInvoice,
   DamagedStock,

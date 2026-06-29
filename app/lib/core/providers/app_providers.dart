@@ -92,6 +92,15 @@ final myLedgerProvider = FutureProvider((ref) async {
   return ref.watch(employeeRepositoryProvider).getMyLedger();
 });
 
+final myTreasuryProvider = FutureProvider((ref) async {
+  ref.keepAlive();
+  return ref.watch(employeeRepositoryProvider).getMyTreasury();
+});
+
+final myTreasuryStatementProvider = FutureProvider((ref) async {
+  return ref.watch(employeeRepositoryProvider).getMyTreasuryStatement();
+});
+
 final damagedStockProvider = FutureProvider((ref) async {
   ref.keepAlive();
   return ref.watch(damagedStockRepositoryProvider).list();
@@ -141,6 +150,7 @@ void invalidateAllAppData(Ref ref) {
   ref.invalidate(stockProvider);
   ref.invalidate(invoicesProvider);
   ref.invalidate(myLedgerProvider);
+  ref.invalidate(myTreasuryProvider);
   ref.invalidate(damagedStockProvider);
   ref.invalidate(dashboardProvider);
   ref.invalidate(treasurySummaryProvider);

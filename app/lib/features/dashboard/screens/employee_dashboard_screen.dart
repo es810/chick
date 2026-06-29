@@ -48,6 +48,7 @@ class EmployeeDashboardScreen extends ConsumerWidget {
           ref.invalidate(invoicesProvider);
           ref.invalidate(stockProvider);
           ref.invalidate(myLedgerProvider);
+          ref.invalidate(myTreasuryProvider);
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),

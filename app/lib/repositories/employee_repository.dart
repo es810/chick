@@ -1,5 +1,7 @@
 import '../core/constants/api_constants.dart';
 import '../models/employee_ledger_model.dart';
+import '../models/employee_treasury_model.dart';
+import '../models/account_statement_model.dart';
 import '../services/api_client.dart';
 
 class EmployeeRepository {
@@ -96,5 +98,34 @@ class EmployeeRepository {
     );
     final data = response.data as Map<String, dynamic>;
     return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
+  Future<void> transferTreasury({
+    required String fromEmployeeId,
+    required String toEmployeeId,
+    required double amount,
+    String? notes,
+  }) async {
+    await _api.post(
+      '${ApiConstants.employees}/treasury-transfers',
+      data: {
+        'fromEmployeeId': fromEmployeeId,
+        'toEmployeeId': toEmployeeId,
+        'amount': amount,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    );
+  }
+
+  Future<EmployeeTreasurySummary> getMyTreasury() async {
+    final response = await _api.get('${ApiConstants.myAccount}/treasury');
+    final data = response.data as Map<String, dynamic>;
+    return EmployeeTreasurySummary.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
+  Future<AccountStatement> getMyTreasuryStatement() async {
+    final response = await _api.get('${ApiConstants.myAccount}/treasury/statement');
+    final data = response.data as Map<String, dynamic>;
+    return AccountStatement.fromJson(data['data'] as Map<String, dynamic>);
   }
 }

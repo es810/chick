@@ -6,6 +6,7 @@ const {
   updateEmployee,
   deleteEmployee,
 } = require('../controllers/employeeController');
+const { createEmployeeTreasuryTransfer } = require('../controllers/employeeTreasuryController');
 const { getLedger, addExpense, addDebt, addSalaryAdvance } = require('../controllers/employeeLedgerController');
 const { protect, authorize } = require('../middleware/auth');
 const validate = require('../middleware/validate');
@@ -15,6 +16,18 @@ const router = express.Router();
 router.use(protect, authorize('admin'));
 
 router.get('/', getEmployees);
+
+router.post(
+  '/treasury-transfers',
+  [
+    body('fromEmployeeId').isMongoId().withMessage('Source employee is required'),
+    body('toEmployeeId').isMongoId().withMessage('Destination employee is required'),
+    body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
+    body('notes').optional().trim(),
+  ],
+  validate,
+  createEmployeeTreasuryTransfer
+);
 
 const ledgerValidation = [
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),

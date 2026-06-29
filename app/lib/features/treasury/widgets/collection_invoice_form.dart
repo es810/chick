@@ -217,6 +217,8 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       ref.invalidate(clientsProvider);
       ref.invalidate(dashboardProvider);
       ref.invalidate(treasurySummaryProvider);
+      ref.invalidate(myTreasuryProvider);
+      ref.invalidate(myTreasuryStatementProvider);
 
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
