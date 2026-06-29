@@ -5,6 +5,7 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/employee_ledger_model.dart';
+import '../../../models/supplier_model.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
 class EmployeeDetailScreen extends ConsumerStatefulWidget {
@@ -55,52 +56,92 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
     final l10n = context.l10n;
     final amountController = TextEditingController();
     final descController = TextEditingController();
+    String? selectedSupplierId;
+    List<SupplierModel> suppliers = [];
+
+    if (!isExpense) {
+      try {
+        suppliers = await ref.read(suppliersProvider.future);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$e'), backgroundColor: AppColors.error),
+          );
+        }
+        amountController.dispose();
+        descController.dispose();
+        return;
+      }
+    }
+
+    if (!mounted) {
+      amountController.dispose();
+      descController.dispose();
+      return;
+    }
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isExpense ? l10n.addExpense : l10n.addDebt),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isExpense)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    l10n.employeeDebtHint,
-                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                  ),
-                ),
-              TextField(
-                controller: amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(labelText: l10n.amount),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descController,
-                decoration: InputDecoration(
-                  labelText: l10n.description,
-                  hintText: isExpense ? l10n.expenseDescriptionHint : l10n.debtDescriptionHint,
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.deductedFromMainTreasury,
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                      color: AppColors.warning,
-                      fontWeight: FontWeight.w500,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(isExpense ? l10n.addExpense : l10n.addDebt),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isExpense) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      l10n.employeeDebtHint,
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey),
                     ),
-              ),
-            ],
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: selectedSupplierId,
+                    decoration: InputDecoration(labelText: l10n.selectSupplier),
+                    items: suppliers
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setDialogState(() => selectedSupplierId = value),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TextField(
+                  controller: amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: l10n.amount),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  decoration: InputDecoration(
+                    labelText: l10n.description,
+                    hintText: isExpense ? l10n.expenseDescriptionHint : l10n.debtDescriptionHint,
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.deductedFromMainTreasury,
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.add)),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.add)),
-        ],
       ),
     );
 
@@ -122,12 +163,19 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
       return;
     }
 
+    if (!isExpense && (selectedSupplierId == null || selectedSupplierId!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.supplierRequired), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
     try {
       final repo = ref.read(employeeRepositoryProvider);
       if (isExpense) {
         await repo.addExpense(widget.employeeId, amount, description);
       } else {
-        await repo.addDebt(widget.employeeId, amount, description);
+        await repo.addDebt(widget.employeeId, amount, description, selectedSupplierId!);
       }
       ref.invalidate(dashboardProvider);
       await _load();
@@ -466,10 +514,14 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
             ),
           ),
           title: Text(entry.description),
-          subtitle: Text(
-            entry.createdAt != null
-                ? DateFormat.yMMMd().add_jm().format(entry.createdAt!)
-                : '',
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (entry.isDebt && entry.supplierName != null && entry.supplierName!.isNotEmpty)
+                Text('${l10n.suppliers}: ${entry.supplierName}'),
+              if (entry.createdAt != null)
+                Text(DateFormat.yMMMd().add_jm().format(entry.createdAt!)),
+            ],
           ),
           trailing: Text(
             context.formatCurrency(entry.amount),

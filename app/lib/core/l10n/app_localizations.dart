@@ -435,6 +435,11 @@ class AppLocalizations {
   'recordExpense': {'en': 'Record Expense', 'ar': 'تسجيل مصروف'},
   'expenseRecorded': {'en': 'Expense recorded', 'ar': 'تم تسجيل المصروف'},
   'recentExpenses': {'en': 'Recent expenses', 'ar': 'آخر المصروفات'},
+  'recordGoodsDebt': {'en': 'Record Goods Debt', 'ar': 'تسجيل مديونية بضاعة'},
+  'goodsDebtRecorded': {'en': 'Goods debt recorded', 'ar': 'تم تسجيل مديونية البضاعة'},
+  'selectSupplier': {'en': 'Select supplier', 'ar': 'اختر المورد'},
+  'supplierRequired': {'en': 'Please select a supplier', 'ar': 'يرجى اختيار المورد'},
+  'goodsFromSupplier': {'en': 'Goods taken from supplier', 'ar': 'البضاعة المسحوبة من المورد'},
 
   'roleAdmin': {'en': 'ADMIN', 'ar': 'مدير'},
   'roleEmployee': {'en': 'EMPLOYEE', 'ar': 'موظف'},
@@ -756,6 +761,11 @@ class AppLocalizations {
   String get recordExpense => _get('recordExpense');
   String get expenseRecorded => _get('expenseRecorded');
   String get recentExpenses => _get('recentExpenses');
+  String get recordGoodsDebt => _get('recordGoodsDebt');
+  String get goodsDebtRecorded => _get('goodsDebtRecorded');
+  String get selectSupplier => _get('selectSupplier');
+  String get supplierRequired => _get('supplierRequired');
+  String get goodsFromSupplier => _get('goodsFromSupplier');
 
   String roleLabel(String role) {
     switch (role.toLowerCase()) {

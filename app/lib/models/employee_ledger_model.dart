@@ -6,6 +6,8 @@ class EmployeeLedgerEntry extends Equatable {
     required this.type,
     required this.amount,
     required this.description,
+    this.supplierId,
+    this.supplierName,
     this.createdByName,
     this.createdAt,
   });
@@ -14,6 +16,8 @@ class EmployeeLedgerEntry extends Equatable {
   final String type;
   final double amount;
   final String description;
+  final String? supplierId;
+  final String? supplierName;
   final String? createdByName;
   final DateTime? createdAt;
 
@@ -22,18 +26,23 @@ class EmployeeLedgerEntry extends Equatable {
 
   factory EmployeeLedgerEntry.fromJson(Map<String, dynamic> json) {
     final createdBy = json['createdBy'];
+    final supplier = json['supplierId'];
     return EmployeeLedgerEntry(
       id: json['_id'] as String? ?? json['id'] as String,
       type: json['type'] as String,
       amount: (json['amount'] as num).toDouble(),
       description: json['description'] as String,
+      supplierId: supplier is Map
+          ? supplier['_id']?.toString() ?? supplier['id']?.toString()
+          : supplier?.toString(),
+      supplierName: supplier is Map ? supplier['name'] as String? : null,
       createdByName: createdBy is Map ? createdBy['name'] as String? : null,
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
     );
   }
 
   @override
-  List<Object?> get props => [id, type, amount];
+  List<Object?> get props => [id, type, amount, supplierId];
 }
 
 class SalaryAdvanceEntry extends Equatable {

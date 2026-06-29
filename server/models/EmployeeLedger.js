@@ -6,6 +6,7 @@ const employeeLedgerSchema = new mongoose.Schema(
     type: { type: String, enum: ['expense', 'debt'], required: true },
     amount: { type: Number, required: true, min: 0 },
     description: { type: String, required: true, trim: true },
+    supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', default: null },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

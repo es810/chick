@@ -21,9 +21,14 @@ const ledgerValidation = [
   body('description').trim().notEmpty().withMessage('Description is required'),
 ];
 
+const debtValidation = [
+  ...ledgerValidation,
+  body('supplierId').isMongoId().withMessage('Supplier is required'),
+];
+
 router.get('/:id/ledger', getLedger);
 router.post('/:id/ledger/expense', ledgerValidation, validate, addExpense);
-router.post('/:id/ledger/debt', ledgerValidation, validate, addDebt);
+router.post('/:id/ledger/debt', debtValidation, validate, addDebt);
 router.post(
   '/:id/advances',
   [

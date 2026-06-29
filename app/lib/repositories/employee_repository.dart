@@ -22,10 +22,19 @@ class EmployeeRepository {
     return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
   }
 
-  Future<EmployeeLedgerEntry> addDebt(String employeeId, double amount, String description) async {
+  Future<EmployeeLedgerEntry> addDebt(
+    String employeeId,
+    double amount,
+    String description,
+    String supplierId,
+  ) async {
     final response = await _api.post(
       '${ApiConstants.employees}/$employeeId/ledger/debt',
-      data: {'amount': amount, 'description': description},
+      data: {
+        'amount': amount,
+        'description': description,
+        'supplierId': supplierId,
+      },
     );
     final data = response.data as Map<String, dynamic>;
     return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
@@ -67,6 +76,23 @@ class EmployeeRepository {
     final response = await _api.post(
       '${ApiConstants.myAccount}/ledger/expense',
       data: {'amount': amount, 'description': description},
+    );
+    final data = response.data as Map<String, dynamic>;
+    return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
+  Future<EmployeeLedgerEntry> addMyDebt(
+    double amount,
+    String description,
+    String supplierId,
+  ) async {
+    final response = await _api.post(
+      '${ApiConstants.myAccount}/ledger/debt',
+      data: {
+        'amount': amount,
+        'description': description,
+        'supplierId': supplierId,
+      },
     );
     final data = response.data as Map<String, dynamic>;
     return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);

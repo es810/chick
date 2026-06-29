@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const Supplier = require('../models/Supplier');
 const EmployeeLedger = require('../models/EmployeeLedger');
 const { getTreasurySummary } = require('./treasuryService');
 const ApiError = require('../utils/apiError');
@@ -12,6 +13,7 @@ const getEmployeeLedger = async (employeeId) => {
   const [entries, totals] = await Promise.all([
     EmployeeLedger.find({ employeeId })
       .populate('createdBy', 'name')
+      .populate('supplierId', 'name')
       .sort({ createdAt: -1 })
       .limit(100),
     EmployeeLedger.aggregate([
@@ -36,13 +38,20 @@ const getEmployeeLedger = async (employeeId) => {
   return { employee, entries, totalExpenses, totalDebt };
 };
 
-const addLedgerEntry = async (employeeId, type, amount, description, user) => {
+const addLedgerEntry = async (employeeId, type, amount, description, user, supplierId = null) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const employee = await User.findOne({ _id: employeeId, role: 'employee' }).session(session);
     if (!employee) throw new ApiError(404, 'Employee not found');
+
+    let supplier = null;
+    if (type === 'debt') {
+      if (!supplierId) throw new ApiError(400, 'Supplier is required for goods debt');
+      supplier = await Supplier.findById(supplierId).session(session);
+      if (!supplier) throw new ApiError(404, 'Supplier not found');
+    }
 
     const summary = await getTreasurySummary();
     if (summary.balance < amount) {
@@ -56,6 +65,7 @@ const addLedgerEntry = async (employeeId, type, amount, description, user) => {
           type,
           amount,
           description,
+          supplierId: supplier?._id ?? null,
           createdBy: user._id,
         },
       ],
@@ -65,9 +75,16 @@ const addLedgerEntry = async (employeeId, type, amount, description, user) => {
     await session.commitTransaction();
 
     const action = type === 'expense' ? 'ADD_EMPLOYEE_EXPENSE' : 'ADD_EMPLOYEE_DEBT';
-    await logAction(user._id, user.name, action, employee.name, { amount, description });
+    await logAction(user._id, user.name, action, employee.name, {
+      amount,
+      description,
+      supplierId: supplier?._id?.toString(),
+      supplierName: supplier?.name,
+    });
 
-    return EmployeeLedger.findById(entry._id).populate('createdBy', 'name');
+    return EmployeeLedger.findById(entry._id)
+      .populate('createdBy', 'name')
+      .populate('supplierId', 'name');
   } catch (error) {
     await session.abortTransaction();
     throw error;

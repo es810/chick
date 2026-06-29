@@ -19,4 +19,17 @@ const addMyExpense = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: entry });
 });
 
-module.exports = { getMyLedger, addMyExpense };
+const addMyDebt = asyncHandler(async (req, res) => {
+  const { amount, description, supplierId } = req.body;
+  const entry = await addLedgerEntry(
+    req.user._id,
+    'debt',
+    amount,
+    description,
+    req.user,
+    supplierId
+  );
+  res.status(201).json({ success: true, data: entry });
+});
+
+module.exports = { getMyLedger, addMyExpense, addMyDebt };
