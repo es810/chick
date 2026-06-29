@@ -88,7 +88,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
               ),
             ),
             if (low)
-              Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+              const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
           ],
         ),
       ),

@@ -14,7 +14,9 @@ import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/role_hint_banner.dart';
 
 class SuppliersScreen extends ConsumerStatefulWidget {
-  const SuppliersScreen({super.key});
+  const SuppliersScreen({super.key, this.basePath = '/admin'});
+
+  final String basePath;
 
   @override
   ConsumerState<SuppliersScreen> createState() => _SuppliersScreenState();
@@ -23,15 +25,20 @@ class SuppliersScreen extends ConsumerStatefulWidget {
 class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
   bool _isAdmin() => ref.read(currentUserProvider)?.role == UserRole.admin;
 
+  bool _canAddSupplier() {
+    final role = ref.read(currentUserProvider)?.role;
+    return role == UserRole.admin || role == UserRole.employee;
+  }
+
   void _openSupplierStock(SupplierModel supplier) {
     context.push(
-      '/admin/suppliers/${supplier.id}/stock?name=${Uri.encodeComponent(supplier.name)}',
+      '${widget.basePath}/suppliers/${supplier.id}/stock?name=${Uri.encodeComponent(supplier.name)}',
     );
   }
 
   void _openSupplierStatement(SupplierModel supplier) {
     context.push(
-      '/admin/suppliers/${supplier.id}/statement?name=${Uri.encodeComponent(supplier.name)}',
+      '${widget.basePath}/suppliers/${supplier.id}/statement?name=${Uri.encodeComponent(supplier.name)}',
     );
   }
 
@@ -203,7 +210,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
       appBar: AppBar(
         title: Text(l10n.suppliers),
         actions: [
-          if (isAdmin)
+          if (_canAddSupplier())
             IconButton(
               icon: const Icon(Icons.add_business),
               tooltip: l10n.addSupplier,
@@ -228,7 +235,17 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
               ),
               data: (suppliers) {
                 if (suppliers.isEmpty) {
-                  return EmptyStateWidget(icon: Icons.local_shipping, title: l10n.noSuppliersYet);
+                  return EmptyStateWidget(
+                    icon: Icons.local_shipping,
+                    title: l10n.noSuppliersYet,
+                    action: _canAddSupplier()
+                        ? ElevatedButton.icon(
+                            onPressed: () => _showSupplierDialog(),
+                            icon: const Icon(Icons.add_business),
+                            label: Text(l10n.addSupplier),
+                          )
+                        : null,
+                  );
                 }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(suppliersProvider),
@@ -291,10 +308,20 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                                       context.formatCurrency(supplier.balance),
                                       style: const TextStyle(fontWeight: FontWeight.w600),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.receipt_long, size: 20),
-                                      tooltip: l10n.accountStatement,
-                                      onPressed: () => _openSupplierStatement(supplier),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.inventory_2_outlined, size: 20),
+                                          tooltip: l10n.supplierStock,
+                                          onPressed: () => _openSupplierStock(supplier),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.receipt_long, size: 20),
+                                          tooltip: l10n.accountStatement,
+                                          onPressed: () => _openSupplierStatement(supplier),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

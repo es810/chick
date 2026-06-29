@@ -36,7 +36,7 @@ router.post(
 
 router.post(
   '/',
-  authorize('admin'),
+  authorize('admin', 'employee'),
   [
     body('name').trim().notEmpty(),
     body('phone').trim().notEmpty(),

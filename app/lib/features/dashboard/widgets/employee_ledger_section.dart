@@ -128,7 +128,8 @@ class _EmployeeLedgerSectionState extends ConsumerState<EmployeeLedgerSection> {
             Text(l10n.recordGoodsDebt, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _selectedSupplierId,
+              key: ValueKey(_selectedSupplierId ?? 'supplier'),
+              initialValue: _selectedSupplierId,
               decoration: InputDecoration(
                 labelText: l10n.selectSupplier,
                 prefixIcon: const Icon(Icons.local_shipping_outlined),

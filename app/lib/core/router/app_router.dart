@@ -137,6 +137,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      GoRoute(
+        path: '/employee/suppliers/:id/stock',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => SupplierStockScreen(
+          supplierId: state.pathParameters['id']!,
+          supplierName: state.uri.queryParameters['name'] ?? '',
+        ),
+      ),
+
+      GoRoute(
+        path: '/employee/suppliers/:id/statement',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => AccountStatementScreen(
+          entityId: state.pathParameters['id']!,
+          entityName: state.uri.queryParameters['name'] ?? '',
+          kind: AccountStatementKind.supplier,
+        ),
+      ),
+
       ShellRoute(
         navigatorKey: _adminShellNavigatorKey,
         builder: (context, state, child) => AppShell(
@@ -169,7 +188,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: '/admin/stock', builder: (_, __) => const StockScreen()),
           GoRoute(path: '/admin/clients', builder: (_, __) => const ClientsScreen()),
-          GoRoute(path: '/admin/suppliers', builder: (_, __) => const SuppliersScreen()),
+          GoRoute(path: '/admin/suppliers', builder: (_, __) => const SuppliersScreen(basePath: '/admin')),
           GoRoute(path: '/admin/reports', builder: (_, __) => const ReportsScreen()),
           GoRoute(path: '/admin/employees', builder: (_, __) => const EmployeesScreen()),
           GoRoute(path: '/admin/settings', builder: (_, __) => const SettingsScreen()),
@@ -185,6 +204,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             (icon: Icons.receipt_long, path: '/employee/invoices'),
             (icon: Icons.payments, path: '/employee/collection-invoices'),
             (icon: Icons.inventory, path: '/employee/stock'),
+            (icon: Icons.local_shipping, path: '/employee/suppliers'),
             (icon: Icons.settings, path: '/employee/settings'),
           ],
           child: child,
@@ -205,6 +225,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => InvoiceDetailScreen(invoiceId: state.pathParameters['id']!, basePath: '/employee'),
           ),
           GoRoute(path: '/employee/stock', builder: (_, __) => const StockScreen()),
+          GoRoute(
+            path: '/employee/suppliers',
+            builder: (_, __) => const SuppliersScreen(basePath: '/employee'),
+          ),
           GoRoute(path: '/employee/settings', builder: (_, __) => const SettingsScreen()),
         ],
       ),

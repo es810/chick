@@ -17,7 +17,7 @@ router.get('/', authorize('admin', 'employee'), getSupplierStock);
 
 router.post(
   '/',
-  authorize('admin'),
+  authorize('admin', 'employee'),
   [
     body('chickenType').trim().notEmpty(),
     body('quantity').isInt({ min: 1 }),

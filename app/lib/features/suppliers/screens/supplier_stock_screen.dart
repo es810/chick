@@ -26,17 +26,23 @@ class SupplierStockScreen extends ConsumerWidget {
 
   bool _isAdmin(WidgetRef ref) => ref.watch(currentUserProvider)?.role == UserRole.admin;
 
+  bool _canAddStock(WidgetRef ref) {
+    final role = ref.watch(currentUserProvider)?.role;
+    return role == UserRole.admin || role == UserRole.employee;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final isAdmin = _isAdmin(ref);
+    final canAddStock = _canAddStock(ref);
     final stockAsync = ref.watch(supplierStockProvider(supplierId));
 
     return Scaffold(
       appBar: AppBar(
         title: Text('${l10n.supplierStock} — $supplierName'),
         actions: [
-          if (isAdmin)
+          if (canAddStock)
             IconButton(
               icon: const Icon(Icons.add),
               tooltip: l10n.addSupplierStock,
@@ -59,7 +65,7 @@ class SupplierStockScreen extends ConsumerWidget {
             return EmptyStateWidget(
               icon: Icons.inventory_2,
               title: l10n.noSupplierStockYet,
-              action: isAdmin
+              action: canAddStock
                   ? ElevatedButton.icon(
                       onPressed: () => _showAddStockDialog(context, ref),
                       icon: const Icon(Icons.add),
@@ -87,7 +93,7 @@ class SupplierStockScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: isAdmin
+      floatingActionButton: canAddStock
           ? FloatingActionButton(
               onPressed: () => _showAddStockDialog(context, ref),
               child: const Icon(Icons.add),

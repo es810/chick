@@ -98,7 +98,8 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                     ),
                   ),
                   DropdownButtonFormField<String>(
-                    value: selectedSupplierId,
+                    key: ValueKey(selectedSupplierId ?? 'supplier'),
+                    initialValue: selectedSupplierId,
                     decoration: InputDecoration(labelText: l10n.selectSupplier),
                     items: suppliers
                         .map(
