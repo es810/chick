@@ -83,8 +83,7 @@ final stockProvider = FutureProvider((ref) async {
   return ref.watch(stockRepositoryProvider).getStock();
 });
 
-final invoicesProvider = FutureProvider((ref) async {
-  ref.keepAlive();
+final invoicesProvider = FutureProvider.autoDispose((ref) async {
   return ref.watch(invoiceRepositoryProvider).getInvoices();
 });
 

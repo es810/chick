@@ -111,6 +111,26 @@ const getSupplierStatement = async (supplierId) => {
 
   entries.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+  const stockTotal = stockItems.reduce(
+    (sum, item) => sum + lineTotal(item.totalAmount, item.pricePerKg, item.netWeight),
+    0
+  );
+  const paidTotal = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const ledgerDebt = Math.max(0, stockTotal - paidTotal);
+
+  if (ledgerDebt > (supplier.balance || 0)) {
+    supplier.balance = ledgerDebt;
+    await supplier.save();
+  }
+
+  let running = 0;
+  for (const entry of entries) {
+    running += entry.debit - entry.credit;
+    if (entry.balanceAfter == null) {
+      entry.balanceAfter = running;
+    }
+  }
+
   return {
     entity: {
       id: supplier._id.toString(),

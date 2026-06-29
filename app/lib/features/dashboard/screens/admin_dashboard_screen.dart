@@ -62,6 +62,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                     value: context.formatCurrencyCompact(dashboard.dailyProfit.profit),
                     icon: Icons.today,
                     color: AppColors.primaryGreen,
+                    subtitle: l10n.dailyProfitHint,
                   ),
                   _MonthlyProfitCard(monthlyProfit: dashboard.monthlyProfit),
                   StatCard(

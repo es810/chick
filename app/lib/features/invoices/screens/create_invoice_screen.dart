@@ -44,6 +44,57 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   double get _balanceBefore => _selectedClient?.balance ?? 0;
   double get _balanceAfter => _balanceBefore + _mealTotal;
 
+  StockModel? _selectedStock(List<StockModel> stock) {
+    if (_chickenType == null) return null;
+    for (final item in stock) {
+      if (item.chickenType == _chickenType) return item;
+    }
+    return null;
+  }
+
+  Widget _stockAvailabilityCard(AppLocalizations l10n, StockModel selected) {
+    final low = selected.isLowStock;
+    final color = low ? AppColors.warning : AppColors.primaryGreen;
+
+    return Card(
+      color: color.withValues(alpha: 0.08),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(Icons.inventory_2_outlined, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.availableInStock,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    '${selected.quantity}',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                  ),
+                  if (selected.netWeight > 0)
+                    Text(
+                      '${l10n.netWeight}: ${selected.netWeight.toStringAsFixed(2)} kg',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ),
+            if (low)
+              Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -70,6 +121,8 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   }
 
   Widget _buildForm(AppLocalizations l10n, List<ClientModel> clients, List<StockModel> stock) {
+    final selectedStock = _selectedStock(stock);
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -89,7 +142,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
               .map(
                 (s) => DropdownMenuItem(
                   value: s.chickenType,
-                  child: Text(s.chickenType),
+                  child: Text('${s.chickenType} — ${l10n.available}: ${s.quantity}'),
                 ),
               )
               .toList(),
@@ -101,10 +154,20 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
             });
           },
         ),
+        if (selectedStock != null) ...[
+          const SizedBox(height: 12),
+          _stockAvailabilityCard(l10n, selectedStock),
+        ],
         const SizedBox(height: 16),
         TextFormField(
           controller: _countController,
-          decoration: InputDecoration(labelText: l10n.itemCount),
+          decoration: InputDecoration(
+            labelText: l10n.itemCount,
+            helperText: selectedStock != null
+                ? '${l10n.availableInStock}: ${selectedStock.quantity}'
+                : null,
+            helperMaxLines: 2,
+          ),
           keyboardType: TextInputType.number,
           onChanged: (_) => setState(() {}),
         ),
@@ -199,6 +262,17 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       return;
     }
 
+    final selectedStock = _selectedStock(stock);
+    if (selectedStock != null && _count > selectedStock.quantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.insufficientStock(_chickenType!)),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -218,6 +292,11 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       };
 
       final invoice = await ref.read(invoiceRepositoryProvider).createInvoice(payload);
+
+      ref.invalidate(invoicesProvider);
+      ref.invalidate(dashboardProvider);
+      ref.invalidate(clientsProvider);
+      ref.invalidate(stockProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

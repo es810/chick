@@ -119,6 +119,8 @@ class SupplierStockScreen extends ConsumerWidget {
                     .addStock(supplierId, form.toPayload());
                 ref.invalidate(supplierStockProvider(supplierId));
                 ref.invalidate(stockProvider);
+                ref.invalidate(suppliersProvider);
+                ref.invalidate(supplierStatementProvider(supplierId));
                 if (context.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -176,6 +178,8 @@ class SupplierStockScreen extends ConsumerWidget {
                     .updateStock(supplierId, item.id, form.toPayload());
                 ref.invalidate(supplierStockProvider(supplierId));
                 ref.invalidate(stockProvider);
+                ref.invalidate(suppliersProvider);
+                ref.invalidate(supplierStatementProvider(supplierId));
                 if (context.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -228,6 +232,8 @@ class SupplierStockScreen extends ConsumerWidget {
       await ref.read(supplierStockRepositoryProvider).deleteStock(supplierId, item.id);
       ref.invalidate(supplierStockProvider(supplierId));
       ref.invalidate(stockProvider);
+      ref.invalidate(suppliersProvider);
+      ref.invalidate(supplierStatementProvider(supplierId));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.stockDeleted), backgroundColor: AppColors.success),

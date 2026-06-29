@@ -1,8 +1,9 @@
 const Invoice = require('../models/Invoice');
 const Client = require('../models/Client');
 const AuditLog = require('../models/AuditLog');
-const { getTreasurySummary, computeProfitForPeriod, computeMonthlyProfit } = require('../services/treasuryService');
+const { getTreasurySummary, computeDailyProfit, computeMonthlyProfit } = require('../services/treasuryService');
 const { getDamagedStockSummary } = require('../services/damagedStockService');
+const { getCairoDayRange } = require('../utils/businessCalendar');
 const asyncHandler = require('../utils/asyncHandler');
 
 const getSalesReport = asyncHandler(async (req, res) => {
@@ -113,8 +114,7 @@ const getAuditLogs = asyncHandler(async (req, res) => {
 
 const getDashboard = asyncHandler(async (req, res) => {
   const now = new Date();
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
+  const { start: startOfDay, end: endOfDay } = getCairoDayRange(now);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const profitYear = parseInt(req.query.year, 10) || now.getFullYear();
@@ -152,7 +152,7 @@ const getDashboard = asyncHandler(async (req, res) => {
       .select('invoiceNumber totalPrice paymentStatus createdAt clientId'),
     getTreasurySummary(),
     Client.aggregate([{ $group: { _id: null, total: { $sum: '$balance' } } }]),
-    computeProfitForPeriod(startOfDay),
+    computeDailyProfit(startOfDay, endOfDay),
     computeMonthlyProfit(profitYear, profitMonth),
     getDamagedStockSummary(),
   ]);

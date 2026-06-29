@@ -120,6 +120,10 @@ class AppLocalizations {
 
   'monthlyRevenue': {'en': 'Monthly Revenue', 'ar': 'إيرادات الشهر'},
   'dailyProfit': {'en': 'Daily Profit', 'ar': 'أرباح يومية'},
+  'dailyProfitHint': {
+    'en': 'Today (Cairo): sales − loading − expenses − discounts − withdrawals',
+    'ar': 'اليوم: توزيع − تحميل − مصاريف − خصومات − سحوبات',
+  },
   'monthlyProfit': {'en': 'Monthly Profit', 'ar': 'أرباح شهرية'},
   'selectMonth': {'en': 'Select month', 'ar': 'اختيار الشهر'},
   'afterSalariesDeduction': {'en': 'After salary advances', 'ar': 'بعد خصم السلف'},
@@ -199,6 +203,7 @@ class AppLocalizations {
   'selectClientRequired': {'en': 'Please select a client', 'ar': 'يرجى اختيار عميل'},
   'selectChickenType': {'en': 'Please select chicken type for all items', 'ar': 'يرجى اختيار نوع الدجاج لجميع العناصر'},
   'insufficientStock': {'en': 'Insufficient stock for', 'ar': 'مخزون غير كافٍ لـ'},
+  'availableInStock': {'en': 'Available in stock', 'ar': 'المتاح في المخزون'},
   'invoiceCreated': {'en': 'Invoice created', 'ar': 'تم إنشاء الفاتورة'},
   'editInvoice': {'en': 'Edit Invoice', 'ar': 'تعديل الفاتورة'},
   'invoiceUpdated': {'en': 'Invoice updated', 'ar': 'تم تحديث الفاتورة'},
@@ -517,6 +522,7 @@ class AppLocalizations {
 
   String get monthlyRevenue => _get('monthlyRevenue');
   String get dailyProfit => _get('dailyProfit');
+  String get dailyProfitHint => _get('dailyProfitHint');
   String get monthlyProfit => _get('monthlyProfit');
   String get selectMonth => _get('selectMonth');
   String get afterSalariesDeduction => _get('afterSalariesDeduction');
@@ -580,6 +586,7 @@ class AppLocalizations {
   String get chickenType => _get('chickenType');
   String get quantity => _get('quantity');
   String get available => _get('available');
+  String get availableInStock => _get('availableInStock');
   String estWeight(String kg) => '${_get('estWeight')}: $kg kg';
   String get selectClientRequired => _get('selectClientRequired');
   String get selectChickenType => _get('selectChickenType');

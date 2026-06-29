@@ -7,6 +7,7 @@ const Invoice = require('../models/Invoice');
 const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
+const { getCairoMonthRange } = require('../utils/businessCalendar');
 
 const MAIN_KEY = 'main';
 
@@ -73,12 +74,35 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
   return { revenue, loading, expenses, discount, profit };
 };
 
+const sumWithdrawalsForPeriod = async (startDate, endDate) => {
+  const createdAtFilter = endDate
+    ? { $gte: startDate, $lt: endDate }
+    : { $gte: startDate };
+
+  const rows = await TreasuryMovement.aggregate([
+    { $match: { type: 'withdrawal', createdAt: createdAtFilter } },
+    { $group: { _id: null, total: { $sum: '$amount' } } },
+  ]);
+
+  return rows[0]?.total || 0;
+};
+
+/** Daily profit includes same-day treasury withdrawals (supplier payments, advances, etc.). */
+const computeDailyProfit = async (startDate, endDate) => {
+  const base = await computeProfitForPeriod(startDate, endDate);
+  const withdrawals = await sumWithdrawalsForPeriod(startDate, endDate);
+  return {
+    ...base,
+    withdrawals,
+    profit: base.profit - withdrawals,
+  };
+};
+
 /**
  * أرباح الشهر = مجموع أرباح كل أيام الشهر − إجمالي السلف المأخوذة فقط
  */
 const computeMonthlyProfit = async (year, month) => {
-  const startOfMonth = new Date(year, month - 1, 1);
-  const startOfNextMonth = new Date(year, month, 1);
+  const { start: startOfMonth, end: startOfNextMonth } = getCairoMonthRange(year, month);
 
   const [periodProfit, advancesAgg] = await Promise.all([
     computeProfitForPeriod(startOfMonth, startOfNextMonth),
@@ -274,5 +298,6 @@ module.exports = {
   resetMainTreasury,
   computeTreasuryBalance,
   computeProfitForPeriod,
+  computeDailyProfit,
   computeMonthlyProfit,
 };

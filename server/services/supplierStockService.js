@@ -13,6 +13,20 @@ const ensureSupplier = async (supplierId) => {
 
 const supplierReason = (supplier, action) => `${action}: ${supplier.name}`;
 
+const stockLineTotal = (stock) => {
+  if (!stock) return 0;
+  if (stock.totalAmount > 0) return stock.totalAmount;
+  return (stock.pricePerKg || 0) * (stock.netWeight || 0);
+};
+
+const adjustSupplierBalance = async (supplierId, delta, session) => {
+  if (!delta) return;
+  const supplier = await Supplier.findById(supplierId).session(session);
+  if (!supplier) throw new ApiError(404, 'Supplier not found');
+  supplier.balance = Math.max(0, (supplier.balance || 0) + delta);
+  await supplier.save({ session });
+};
+
 const normalizeSupplierBatch = (data) => {
   const {
     chickenType,
@@ -88,6 +102,8 @@ const addSupplierStock = async (supplierId, data, user) => {
       supplierReason(supplier, 'Received from supplier')
     );
 
+    await adjustSupplierBalance(supplierId, batch.totalAmount, session);
+
     await session.commitTransaction();
     await logAction(user._id, user.name, 'SUPPLIER_STOCK_IN', chickenType, { supplierId, quantity });
 
@@ -111,6 +127,7 @@ const updateSupplierStock = async (supplierId, stockId, updates, user) => {
     if (!existing) throw new ApiError(404, 'Supplier stock not found');
 
     const before = existing.toObject();
+    const beforeTotal = stockLineTotal(before);
     const merged = {
       chickenType: updates.chickenType ?? existing.chickenType,
       quantity: updates.quantity ?? existing.quantity,
@@ -140,6 +157,9 @@ const updateSupplierStock = async (supplierId, stockId, updates, user) => {
       user,
       supplierReason(supplier, 'Supplier stock updated')
     );
+
+    const afterTotal = stockLineTotal(existing);
+    await adjustSupplierBalance(supplierId, afterTotal - beforeTotal, session);
 
     await session.commitTransaction();
     await logAction(user._id, user.name, 'UPDATE_SUPPLIER_STOCK', existing.chickenType, {
@@ -185,8 +205,11 @@ const deleteSupplierStock = async (supplierId, stockId, user) => {
     const stock = await SupplierStock.findOne({ _id: stockId, supplierId }).session(session);
     if (!stock) throw new ApiError(404, 'Supplier stock not found');
 
+    const removedTotal = stockLineTotal(stock);
+
     await removeSupplierStockFromMain(session, stock.toObject(), supplier, user);
     await SupplierStock.findByIdAndDelete(stock._id, { session });
+    await adjustSupplierBalance(supplierId, -removedTotal, session);
 
     await session.commitTransaction();
     await logAction(user._id, user.name, 'DELETE_SUPPLIER_STOCK', stock.chickenType, {
@@ -212,10 +235,15 @@ const deleteAllForSupplier = async (supplierId, user) => {
 
   try {
     const items = await SupplierStock.find({ supplierId }).session(session);
+    let removedTotal = 0;
     for (const item of items) {
+      removedTotal += stockLineTotal(item);
       await removeSupplierStockFromMain(session, item.toObject(), supplier, user);
     }
     await SupplierStock.deleteMany({ supplierId }, { session });
+    if (removedTotal > 0) {
+      await adjustSupplierBalance(supplierId, -removedTotal, session);
+    }
     await session.commitTransaction();
   } catch (error) {
     await session.abortTransaction();

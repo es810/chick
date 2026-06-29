@@ -7,6 +7,7 @@ class ProfitSummary extends Equatable {
     required this.expenses,
     required this.discount,
     required this.profit,
+    this.withdrawals = 0,
   });
 
   final double revenue;
@@ -14,6 +15,7 @@ class ProfitSummary extends Equatable {
   final double expenses;
   final double discount;
   final double profit;
+  final double withdrawals;
 
   factory ProfitSummary.fromJson(Map<String, dynamic> json) {
     return ProfitSummary(
@@ -22,6 +24,7 @@ class ProfitSummary extends Equatable {
       expenses: (json['expenses'] as num?)?.toDouble() ?? 0,
       discount: (json['discount'] as num?)?.toDouble() ?? 0,
       profit: (json['profit'] as num?)?.toDouble() ?? 0,
+      withdrawals: (json['withdrawals'] as num?)?.toDouble() ?? 0,
     );
   }
 
