@@ -176,7 +176,33 @@ const applyStockIncrement = async (session, chickenType, delta, user, reason) =>
   return stock;
 };
 
-const applyStockDelta = async (session, chickenType, delta, user, reason) => {
+const proportionalOutDelta = (stock, outQty) => {
+  if (outQty <= 0) {
+    throw new ApiError(400, 'Invalid stock deduction quantity');
+  }
+  if (stock.quantity < outQty) {
+    throw new ApiError(400, `Insufficient stock for ${stock.chickenType}`);
+  }
+  if (outQty === stock.quantity) {
+    return {
+      quantity: -stock.quantity,
+      grossWeight: -stock.grossWeight,
+      tareWeight: -stock.tareWeight,
+      netWeight: -stock.netWeight,
+      totalAmount: -stock.totalAmount,
+    };
+  }
+  const ratio = outQty / stock.quantity;
+  return {
+    quantity: -outQty,
+    grossWeight: -(stock.grossWeight * ratio),
+    tareWeight: -(stock.tareWeight * ratio),
+    netWeight: -(stock.netWeight * ratio),
+    totalAmount: -(stock.totalAmount * ratio),
+  };
+};
+
+const applyStockDelta = async (session, chickenType, delta, user, reason, options = {}) => {
   if (
     !delta.quantity &&
     !delta.grossWeight &&
@@ -194,15 +220,24 @@ const applyStockDelta = async (session, chickenType, delta, user, reason) => {
   const stock = await Stock.findOne({ chickenType }).session(session);
   if (!stock) return null;
 
-  const outQty = Math.min(stock.quantity, Math.abs(delta.quantity || 0));
+  const requestedOut = Math.abs(delta.quantity || 0);
+  if (options.strict && requestedOut > stock.quantity) {
+    throw new ApiError(400, `Insufficient stock for ${chickenType}`);
+  }
+
+  const outQty = options.strict
+    ? requestedOut
+    : Math.min(stock.quantity, requestedOut);
   stock.quantity = Math.max(0, stock.quantity + (delta.quantity || 0));
   stock.grossWeight = Math.max(0, stock.grossWeight + (delta.grossWeight || 0));
   stock.tareWeight = Math.max(0, stock.tareWeight + (delta.tareWeight || 0));
   stock.netWeight = Math.max(0, stock.netWeight + (delta.netWeight || 0));
   stock.totalAmount = Math.max(0, stock.totalAmount + (delta.totalAmount || 0));
   if (delta.pricePerKg != null) stock.pricePerKg = delta.pricePerKg;
-  if (stock.quantity > 0 && delta.averageWeight != null) {
-    stock.averageWeight = delta.averageWeight;
+  if (stock.quantity > 0) {
+    stock.averageWeight = stock.netWeight / stock.quantity;
+  } else {
+    stock.averageWeight = 0;
   }
   await stock.save({ session });
 
@@ -214,8 +249,13 @@ const applyStockDelta = async (session, chickenType, delta, user, reason) => {
           stockId: stock._id,
           chickenType,
           quantity: outQty,
+          grossWeight: Math.abs(delta.grossWeight || 0),
+          tareWeight: Math.abs(delta.tareWeight || 0),
+          netWeight: Math.abs(delta.netWeight || 0),
+          totalAmount: Math.abs(delta.totalAmount || 0),
           reason,
           employeeId: user._id,
+          invoiceId: options.invoiceId,
         },
       ],
       { session }
@@ -223,6 +263,37 @@ const applyStockDelta = async (session, chickenType, delta, user, reason) => {
   }
 
   return stock;
+};
+
+const deductStockForInvoice = async (
+  session,
+  chickenType,
+  quantity,
+  user,
+  reason,
+  invoiceId
+) => {
+  const stock = await Stock.findOne({ chickenType }).session(session);
+  if (!stock) throw new ApiError(404, `Stock not found for type: ${chickenType}`);
+  const delta = proportionalOutDelta(stock, quantity);
+  return applyStockDelta(session, chickenType, delta, user, reason, {
+    invoiceId,
+    strict: true,
+  });
+};
+
+const restoreStockForInvoice = async (session, invoiceId, user, reason) => {
+  const movements = await StockMovement.find({ invoiceId, type: 'OUT' }).session(session);
+  for (const mov of movements) {
+    await applyStockIncrement(session, mov.chickenType, {
+      quantity: mov.quantity,
+      grossWeight: mov.grossWeight || 0,
+      tareWeight: mov.tareWeight || 0,
+      netWeight: mov.netWeight || 0,
+      totalAmount: mov.totalAmount || 0,
+    }, user, reason);
+  }
+  await StockMovement.deleteMany({ invoiceId }).session(session);
 };
 
 const addStock = async (data, employee) => {
@@ -318,6 +389,9 @@ module.exports = {
   applyStockIn,
   applyStockIncrement,
   applyStockDelta,
+  proportionalOutDelta,
+  deductStockForInvoice,
+  restoreStockForInvoice,
   stockSnapshotDelta,
   getLowStockAlerts,
   getMovements,

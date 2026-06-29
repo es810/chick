@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 const Invoice = require('../models/Invoice');
 const Stock = require('../models/Stock');
-const StockMovement = require('../models/StockMovement');
 const Client = require('../models/Client');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
+const { deductStockForInvoice, restoreStockForInvoice } = require('./stockService');
 
 /** Tare weight (kg) = item count × TARE_KG_PER_UNIT */
 const TARE_KG_PER_UNIT = 8;
@@ -49,6 +49,9 @@ const createInvoice = async (data, employee) => {
       const stock = await Stock.findOne({ chickenType: item.chickenType }).session(session);
       if (!stock) {
         throw new ApiError(404, `Stock not found for type: ${item.chickenType}`);
+      }
+      if (stock.quantity < item.quantity) {
+        throw new ApiError(400, `Insufficient stock for ${item.chickenType}`);
       }
 
       const weight = item.weight || stock.averageWeight * item.quantity;
@@ -96,16 +99,16 @@ const createInvoice = async (data, employee) => {
       { session }
     );
 
-    const movementIds = await StockMovement.find({
-      employeeId: employee._id,
-      invoiceId: { $exists: false },
-      createdAt: { $gte: new Date(Date.now() - 5000) },
-    }).session(session);
-
-    for (const mov of movementIds) {
-      mov.invoiceId = invoice._id;
-      mov.reason = `Invoice #${invoiceNumber}`;
-      await mov.save({ session });
+    const invoiceReason = `Invoice #${invoiceNumber}`;
+    for (const item of processedItems) {
+      await deductStockForInvoice(
+        session,
+        item.chickenType,
+        item.quantity,
+        employee,
+        invoiceReason,
+        invoice._id
+      );
     }
 
     if (paymentStatus !== 'paid') {
@@ -158,6 +161,14 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     const oldClientId = invoice.clientId.toString();
     const oldTotalPrice = invoice.totalPrice;
     const oldPaymentStatus = invoice.paymentStatus;
+    const invoiceReason = `Invoice #${invoice.invoiceNumber}`;
+
+    await restoreStockForInvoice(
+      session,
+      invoice._id,
+      user,
+      `${invoiceReason} updated - stock restored`
+    );
 
     if (oldPaymentStatus !== 'paid') {
       const oldClient = await Client.findById(oldClientId).session(session);
@@ -179,6 +190,9 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
       const stock = await Stock.findOne({ chickenType: item.chickenType }).session(session);
       if (!stock) {
         throw new ApiError(404, `Stock not found for type: ${item.chickenType}`);
+      }
+      if (stock.quantity < item.quantity) {
+        throw new ApiError(400, `Insufficient stock for ${item.chickenType}`);
       }
 
       const weight = item.weight || stock.averageWeight * item.quantity;
@@ -224,6 +238,17 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     }
 
     await invoice.save({ session });
+
+    for (const item of processedItems) {
+      await deductStockForInvoice(
+        session,
+        item.chickenType,
+        item.quantity,
+        user,
+        invoiceReason,
+        invoice._id
+      );
+    }
 
     await session.commitTransaction();
 
@@ -282,7 +307,12 @@ const deleteInvoice = async (invoiceId, user) => {
       }
     }
 
-    await StockMovement.deleteMany({ invoiceId: invoice._id }).session(session);
+    await restoreStockForInvoice(
+      session,
+      invoice._id,
+      user,
+      `Invoice #${invoice.invoiceNumber} deleted - stock restored`
+    );
     await Invoice.findByIdAndDelete(invoice._id).session(session);
 
     await session.commitTransaction();
