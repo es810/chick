@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.6.0] — 2026-05-29
+
+### Employee treasury
+- **خزينة الموظف** on employee dashboard with full balance formula
+- **كشف حساب** for employee treasury (collections, transfers, expenses, advances, debts)
+- Admin **تحويل بين الموظفين** from Employees Treasury tab
+
+### Suppliers (employee)
+- **الموردين** tab for employees: view, add suppliers, add supplier stock
+- Supplier selection when admin records employee goods debt
+
+### Fixes & UI
+- Collection nav label shows **فواتير التحصيل** (not التوزيع)
+- Suppliers list trailing overflow fixed on employee screen
+- Removed employee goods-debt entry form from dashboard (treasury card replaces it)
+- Daily profit, supplier debt sync, invoices list refresh (from 1.5.x follow-ups)
+
 ## [1.5.0] — 2026-06-27
 
 ### Account statements

@@ -140,8 +140,8 @@ Stock is **never** decreased directly. All changes go through `StockMovements`:
 
 | Version | APK |
 |---------|-----|
-| **1.5.0** | `release/ChickenFarm-v1.5.0-7.apk` (after build) |
-| **1.1.0** | `release/ChickenFarm-v1.1.0-3.apk` (after build) |
+| **1.6.0** | `release/ChickenFarm-v1.6.0-8.apk` |
+| **1.5.0** | `release/ChickenFarm-v1.5.0-7.apk` |
 
 Build from repo root (uses Railway API by default):
 
