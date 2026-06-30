@@ -18,4 +18,10 @@ const getCairoMonthRange = (year, month) => {
   return { start, end };
 };
 
-module.exports = { getCairoDayRange, getCairoMonthRange };
+/** Normalize any timestamp to the Cairo business-day start for that calendar date. */
+const normalizeToCairoDayStart = (value) => {
+  const { start } = getCairoDayRange(new Date(value));
+  return start;
+};
+
+module.exports = { getCairoDayRange, getCairoMonthRange, normalizeToCairoDayStart };

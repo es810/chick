@@ -42,10 +42,6 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
   const createdAtFilter = endDate
     ? { $gte: startDate, $lt: endDate }
     : { $gte: startDate };
-  const collectionDateFilter = endDate
-    ? { $gte: startDate, $lt: endDate }
-    : { $gte: startDate };
-
   const [salesAgg, loadingAgg, expenseAgg, discountAgg] = await Promise.all([
     Invoice.aggregate([
       { $match: { createdAt: invoiceDateFilter } },
@@ -60,7 +56,12 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
     CollectionInvoice.aggregate([
-      { $match: { collectionDate: collectionDateFilter } },
+      {
+        $match: {
+          createdAt: createdAtFilter,
+          amountDeducted: { $gt: 0 },
+        },
+      },
       { $group: { _id: null, total: { $sum: '$amountDeducted' } } },
     ]),
   ]);

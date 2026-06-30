@@ -49,7 +49,9 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
   void initState() {
     super.initState();
     final existing = widget.existing;
-    _collectionDate = existing?.collectionDate ?? DateTime.now();
+    final now = DateTime.now();
+    _collectionDate = existing?.collectionDate ??
+        DateTime(now.year, now.month, now.day);
 
     if (existing != null) {
       _selectedEmployeeId = existing.employeeId;
@@ -145,7 +147,11 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (picked != null) setState(() => _collectionDate = picked);
+    if (picked != null) {
+      setState(
+        () => _collectionDate = DateTime(picked.year, picked.month, picked.day),
+      );
+    }
   }
 
   Future<void> _submit() async {
