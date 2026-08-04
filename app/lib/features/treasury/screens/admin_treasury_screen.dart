@@ -545,16 +545,6 @@ class _FinancialCard extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
           ),
-          if (summary.stockValue > 0) ...[
-            const SizedBox(height: 10),
-            Text(
-              '${l10n.stockValue}: ${context.formatCurrency(summary.stockValue)}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF80CBC4),
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ],
         ],
       ),
     );

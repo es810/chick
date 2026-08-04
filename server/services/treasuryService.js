@@ -15,20 +15,22 @@ const MAIN_KEY = 'main';
 
 /**
  * إجمالي الخزنة =
- * رصيد أول المدة + إجمالي التحصيل + الإيرادات الخارجية
- * − إجمالي التحميل − المصاريف الأخرى − السحوبات
+ * رصيد أول المدة + التحصيل + إيرادات خارجية + قيمة المخزون
+ * − التحميل − المصاريف − السحوبات
  */
 const computeTreasuryBalance = ({
   openingBalance,
   totalCollection,
   externalRevenue,
+  stockValue = 0,
   totalLoading,
   otherExpenses,
   withdrawals,
 }) =>
   openingBalance +
   totalCollection +
-  externalRevenue -
+  externalRevenue +
+  stockValue -
   totalLoading -
   otherExpenses -
   withdrawals;
@@ -244,15 +246,17 @@ const getTreasurySummary = async () => {
   }
 
   const openingBalance = getOpeningBalance(treasury);
-  // Prefer supplier stock value (مخزون المورد); fall back to main stock inventory value
-  const supplierStockValue = supplierStockAgg[0]?.total || 0;
+  // Inventory in the main warehouse (for distribution & sales). Use the larger of
+  // main stock vs supplier-stock records so older rows still show correctly.
   const mainStockValue = mainStockAgg[0]?.total || 0;
-  const stockValue = supplierStockValue > 0 ? supplierStockValue : mainStockValue;
+  const supplierStockValue = supplierStockAgg[0]?.total || 0;
+  const stockValue = Math.max(mainStockValue, supplierStockValue);
 
   const balance = computeTreasuryBalance({
     openingBalance,
     totalCollection,
     externalRevenue,
+    stockValue,
     totalLoading,
     otherExpenses,
     withdrawals,

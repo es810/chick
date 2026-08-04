@@ -65,8 +65,8 @@ class AppLocalizations {
   'treasuryAmount': {'en': 'Treasury amount (EGP)', 'ar': 'مبلغ الخزينة (ج.م)'},
   'openingBalance': {'en': 'Opening Balance', 'ar': 'رصيد أول المدة'},
   'treasuryFormula': {
-    'en': 'Total = opening + collection + external revenue − loading − expenses − withdrawals',
-    'ar': 'الإجمالي = رصيد أول المدة + التحصيل + إيرادات خارجية − التحميل − المصاريف − السحوبات',
+    'en': 'Total = opening + collection + external + stock − loading − expenses − withdrawals',
+    'ar': 'الإجمالي = رصيد أول المدة + التحصيل + إيرادات خارجية + المخزون − التحميل − المصاريف − السحوبات',
   },
   'treasuryUpdated': {'en': 'Main treasury updated', 'ar': 'تم تحديث الخزينة الرئيسية'},
   'editTreasury': {'en': 'Edit treasury', 'ar': 'تعديل الخزينة'},
@@ -338,7 +338,7 @@ class AppLocalizations {
   'auditLogs': {'en': 'Audit Logs', 'ar': 'سجل التدقيق'},
   'dailyRevenue': {'en': 'Daily Revenue', 'ar': 'إيرادات اليوم'},
   'monthlyRevenueLabel': {'en': 'Monthly Revenue', 'ar': 'إيرادات الشهر'},
-  'stockValue': {'en': 'Supplier stock value', 'ar': 'قيمة مخزون المورد'},
+  'stockValue': {'en': 'Stock', 'ar': 'المخزون'},
   'noSalesDataShort': {'en': 'No sales data', 'ar': 'لا توجد بيانات مبيعات'},
 
   'role': {'en': 'Role', 'ar': 'الدور'},
