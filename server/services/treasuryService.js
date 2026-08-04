@@ -13,23 +13,22 @@ const { getCairoMonthRange } = require('../utils/businessCalendar');
 const MAIN_KEY = 'main';
 
 /**
- * إجمالي الخزنة =
- * رصيد أول المدة + التحصيل + إيرادات خارجية + قيمة المخزون
+ * إجمالي الخزنة (نقدي) =
+ * رصيد أول المدة + التحصيل + إيرادات خارجية
  * − التحميل − المصاريف − السحوبات
+ * قيمة المخزون لا تدخل في رصيد الخزنة النقدية.
  */
 const computeTreasuryBalance = ({
   openingBalance,
   totalCollection,
   externalRevenue,
-  stockValue = 0,
   totalLoading,
   otherExpenses,
   withdrawals,
 }) =>
   openingBalance +
   totalCollection +
-  externalRevenue +
-  stockValue -
+  externalRevenue -
   totalLoading -
   otherExpenses -
   withdrawals;
@@ -235,8 +234,7 @@ const getTreasurySummary = async () => {
   }
 
   const openingBalance = getOpeningBalance(treasury);
-  // Inventory in the main warehouse (for distribution & sales). Use the larger of
-  // main stock vs supplier-stock records so older rows still show correctly.
+  // Inventory value is tracked separately and does not inflate cash treasury.
   const mainStockValue = mainStockAgg[0]?.total || 0;
   const supplierStockValue = supplierStockAgg[0]?.total || 0;
   const stockValue = Math.max(mainStockValue, supplierStockValue);
@@ -245,7 +243,6 @@ const getTreasurySummary = async () => {
     openingBalance,
     totalCollection,
     externalRevenue,
-    stockValue,
     totalLoading,
     otherExpenses,
     withdrawals,

@@ -65,8 +65,8 @@ class AppLocalizations {
   'treasuryAmount': {'en': 'Treasury amount (EGP)', 'ar': 'مبلغ الخزينة (ج.م)'},
   'openingBalance': {'en': 'Opening Balance', 'ar': 'رصيد أول المدة'},
   'treasuryFormula': {
-    'en': 'Total = opening + collection + external + stock − loading − expenses − withdrawals',
-    'ar': 'الإجمالي = رصيد أول المدة + التحصيل + إيرادات خارجية + المخزون − التحميل − المصاريف − السحوبات',
+    'en': 'Total = opening + collection + external − loading − expenses − withdrawals',
+    'ar': 'الإجمالي = رصيد أول المدة + التحصيل + إيرادات خارجية − التحميل − المصاريف − السحوبات',
   },
   'treasuryUpdated': {'en': 'Main treasury updated', 'ar': 'تم تحديث الخزينة الرئيسية'},
   'editTreasury': {'en': 'Edit treasury', 'ar': 'تعديل الخزينة'},
