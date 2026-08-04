@@ -338,7 +338,7 @@ class AppLocalizations {
   'auditLogs': {'en': 'Audit Logs', 'ar': 'سجل التدقيق'},
   'dailyRevenue': {'en': 'Daily Revenue', 'ar': 'إيرادات اليوم'},
   'monthlyRevenueLabel': {'en': 'Monthly Revenue', 'ar': 'إيرادات الشهر'},
-  'stockValue': {'en': 'Stock Value', 'ar': 'قيمة المخزون'},
+  'stockValue': {'en': 'Supplier stock value', 'ar': 'قيمة مخزون المورد'},
   'noSalesDataShort': {'en': 'No sales data', 'ar': 'لا توجد بيانات مبيعات'},
 
   'role': {'en': 'Role', 'ar': 'الدور'},

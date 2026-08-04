@@ -5,6 +5,7 @@ const EmployeeLedger = require('../models/EmployeeLedger');
 const SalaryAdvance = require('../models/SalaryAdvance');
 const Invoice = require('../models/Invoice');
 const Stock = require('../models/Stock');
+const SupplierStock = require('../models/SupplierStock');
 const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
@@ -188,10 +189,26 @@ const ensureMainTreasuryInSession = async (session) => {
 const applyMainTreasuryDeltaInSession = async () => null;
 
 const getTreasurySummary = async () => {
-  const [treasury, ledgerRows, movementRows, stockValueAgg] = await Promise.all([
+  const [treasury, ledgerRows, movementRows, supplierStockAgg, mainStockAgg] = await Promise.all([
     getMainTreasury(),
     EmployeeLedger.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
     TreasuryMovement.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
+    SupplierStock.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: {
+              $cond: [
+                { $gt: ['$totalAmount', 0] },
+                '$totalAmount',
+                { $multiply: [{ $ifNull: ['$pricePerKg', 0] }, { $ifNull: ['$netWeight', 0] }] },
+              ],
+            },
+          },
+        },
+      },
+    ]),
     Stock.aggregate([
       {
         $group: {
@@ -227,7 +244,10 @@ const getTreasurySummary = async () => {
   }
 
   const openingBalance = getOpeningBalance(treasury);
-  const stockValue = stockValueAgg[0]?.total || 0;
+  // Prefer supplier stock value (مخزون المورد); fall back to main stock inventory value
+  const supplierStockValue = supplierStockAgg[0]?.total || 0;
+  const mainStockValue = mainStockAgg[0]?.total || 0;
+  const stockValue = supplierStockValue > 0 ? supplierStockValue : mainStockValue;
 
   const balance = computeTreasuryBalance({
     openingBalance,

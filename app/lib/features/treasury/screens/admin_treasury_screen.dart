@@ -355,6 +355,14 @@ class _MainTreasuryTab extends ConsumerWidget {
               onTap: () => _openCategory(context, ref, TreasuryCategory.opening, l10n.openingBalance),
             ),
             _MetricRow(
+              label: l10n.stockValue,
+              value: summary.stockValue,
+              valueColor: const Color(0xFF26A69A),
+              icon: Icons.inventory_2_outlined,
+              iconColor: const Color(0xFF26A69A),
+              onTap: () => context.push('/admin/stock'),
+            ),
+            _MetricRow(
               label: l10n.totalCollection,
               value: summary.totalCollection,
               valueColor: const Color(0xFF66BB6A),
@@ -377,14 +385,6 @@ class _MainTreasuryTab extends ConsumerWidget {
               icon: Icons.local_shipping,
               iconColor: const Color(0xFF29B6F6),
               onTap: () => _openCategory(context, ref, TreasuryCategory.loading, l10n.totalLoading),
-            ),
-            _MetricRow(
-              label: l10n.stockValue,
-              value: summary.stockValue,
-              valueColor: const Color(0xFF26A69A),
-              icon: Icons.inventory_2_outlined,
-              iconColor: const Color(0xFF26A69A),
-              onTap: () => context.push('/admin/stock'),
             ),
             _MetricRow(
               label: l10n.otherExpenses,
@@ -545,6 +545,16 @@ class _FinancialCard extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
           ),
+          if (summary.stockValue > 0) ...[
+            const SizedBox(height: 10),
+            Text(
+              '${l10n.stockValue}: ${context.formatCurrency(summary.stockValue)}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: const Color(0xFF80CBC4),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
         ],
       ),
     );

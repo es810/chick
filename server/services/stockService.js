@@ -58,12 +58,13 @@ const applyStockIn = async (session, data, user, reason) => {
   if (stock) {
     stock.quantity += quantity;
     stock.location = location || stock.location;
-    stock.grossWeight = grossWeight;
-    stock.tareWeight = tareWeight;
-    stock.netWeight = netWeight;
-    stock.averageWeight = averageWeight;
+    stock.grossWeight = (stock.grossWeight || 0) + (grossWeight || 0);
+    stock.tareWeight = (stock.tareWeight || 0) + (tareWeight || 0);
+    stock.netWeight = (stock.netWeight || 0) + (netWeight || 0);
+    stock.totalAmount = (stock.totalAmount || 0) + (totalAmount || 0);
     stock.pricePerKg = pricePerKg ?? stock.pricePerKg;
-    stock.totalAmount = totalAmount;
+    stock.averageWeight =
+      stock.quantity > 0 ? stock.netWeight / stock.quantity : averageWeight;
     await stock.save({ session });
   } else {
     [stock] = await Stock.create(
