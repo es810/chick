@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.8.1] — 2026-08-05
+
+### Stock variance (عندي مخزون)
+- Oversell count/weight becomes **pending surplus** until تأكيد الهلاك
+- **عندي مخزون** = book stock − open surplus (new loads show correctly, e.g. 999 after +1 kg oversell)
+- Confirming write-off clears pending without deducting stock again
+- Manual هلك still removes leftover birds/weight from book stock
+
+### Profits
+- Daily/monthly profit deducts **goods cost at load time** (supplier stock IN), not when the supplier is paid
+- Paying the supplier affects cash treasury only
+
+### Distribution
+- Allow distributing more birds than stock (count surplus), same as weight surplus
+
 ## [1.8.0] — 2026-08-04
 
 ### Search & distribution
