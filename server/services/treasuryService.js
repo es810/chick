@@ -78,29 +78,12 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
   return { revenue, loading, expenses, discount, profit };
 };
 
-const sumWithdrawalsForPeriod = async (startDate, endDate) => {
-  const createdAtFilter = endDate
-    ? { $gte: startDate, $lt: endDate }
-    : { $gte: startDate };
-
-  const rows = await TreasuryMovement.aggregate([
-    { $match: { type: 'withdrawal', createdAt: createdAtFilter } },
-    { $group: { _id: null, total: { $sum: '$amount' } } },
-  ]);
-
-  return rows[0]?.total || 0;
-};
-
-/** Daily profit includes same-day treasury withdrawals (supplier payments, advances, etc.). */
-const computeDailyProfit = async (startDate, endDate) => {
-  const base = await computeProfitForPeriod(startDate, endDate);
-  const withdrawals = await sumWithdrawalsForPeriod(startDate, endDate);
-  return {
-    ...base,
-    withdrawals,
-    profit: base.profit - withdrawals,
-  };
-};
+/**
+ * أرباح اليوم = إجمالي المبيعات (التوزيع) − التحميل − المصروفات − الخصومات
+ * السحوبات تخص الخزنة فقط وليست جزءاً من معادلة الأرباح.
+ */
+const computeDailyProfit = async (startDate, endDate) =>
+  computeProfitForPeriod(startDate, endDate);
 
 /**
  * أرباح الشهر = أرباح الفترة − إجمالي مرتبات الموظفين النشطين

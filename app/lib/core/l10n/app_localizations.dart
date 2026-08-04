@@ -137,8 +137,8 @@ class AppLocalizations {
   'monthlyRevenue': {'en': 'Monthly Revenue', 'ar': 'إيرادات الشهر'},
   'dailyProfit': {'en': 'Daily Profit', 'ar': 'أرباح يومية'},
   'dailyProfitHint': {
-    'en': 'Today (Cairo): sales − loading − expenses − discounts − withdrawals',
-    'ar': 'اليوم: توزيع − تحميل − مصاريف − خصومات − سحوبات',
+    'en': 'Today: sales − loading − expenses − discounts',
+    'ar': 'اليوم: إجمالي المبيعات − التحميل − المصروفات − الخصومات',
   },
   'monthlyProfit': {'en': 'Monthly Profit', 'ar': 'أرباح شهرية'},
   'selectMonth': {'en': 'Select month', 'ar': 'اختيار الشهر'},
@@ -210,6 +210,8 @@ class AppLocalizations {
 
   'createInvoice': {'en': 'Create Invoice', 'ar': 'إنشاء فاتورة'},
   'selectClient': {'en': 'Select Client', 'ar': 'اختر العميل'},
+  'searchClients': {'en': 'Search by client name...', 'ar': 'ابحث باسم العميل...'},
+  'noClientsMatch': {'en': 'No matching clients', 'ar': 'لا يوجد عملاء مطابقون'},
   'paymentStatus': {'en': 'Payment Status', 'ar': 'حالة الدفع'},
   'addItem': {'en': 'Add Item', 'ar': 'إضافة عنصر'},
   'chickenType': {'en': 'Chicken Type', 'ar': 'نوع الدجاج'},
@@ -284,6 +286,8 @@ class AppLocalizations {
     'ar': 'حذف هذا العميل؟ سيتم حذف حساب الدخول أيضاً.',
   },
   'noSuppliersYet': {'en': 'No suppliers yet', 'ar': 'لا يوجد موردين بعد'},
+  'searchSuppliers': {'en': 'Search by supplier name...', 'ar': 'ابحث باسم المورد...'},
+  'noSuppliersMatch': {'en': 'No matching suppliers', 'ar': 'لا يوجد موردين مطابقون'},
   'addSupplier': {'en': 'Add Supplier', 'ar': 'إضافة مورد'},
   'editSupplier': {'en': 'Edit Supplier', 'ar': 'تعديل المورد'},
   'supplierAdded': {'en': 'Supplier added', 'ar': 'تمت إضافة المورد'},
@@ -618,6 +622,8 @@ class AppLocalizations {
 
   String get createInvoice => _get('createInvoice');
   String get selectClient => _get('selectClient');
+  String get searchClients => _get('searchClients');
+  String get noClientsMatch => _get('noClientsMatch');
   String get paymentStatus => _get('paymentStatus');
   String get addItem => _get('addItem');
   String get chickenType => _get('chickenType');
@@ -680,6 +686,8 @@ class AppLocalizations {
   String get clientDeleted => _get('clientDeleted');
   String get confirmDeleteClient => _get('confirmDeleteClient');
   String get noSuppliersYet => _get('noSuppliersYet');
+  String get searchSuppliers => _get('searchSuppliers');
+  String get noSuppliersMatch => _get('noSuppliersMatch');
   String get addSupplier => _get('addSupplier');
   String get editSupplier => _get('editSupplier');
   String get supplierAdded => _get('supplierAdded');

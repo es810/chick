@@ -10,6 +10,7 @@ import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/client_model.dart';
 import '../../../models/treasury_entry_item.dart';
 import '../../../models/user_model.dart';
+import '../../../shared/widgets/client_picker_field.dart';
 
 Future<bool?> showCollectionInvoiceDialog({
   required BuildContext context,
@@ -244,14 +245,11 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        DropdownButtonFormField<ClientModel>(
-          key: ValueKey(_selectedClient?.id ?? 'client'),
-          initialValue: _selectedClient,
-          decoration: InputDecoration(labelText: l10n.selectClient),
-          items: _clients
-              .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
-              .toList(),
-          onChanged: _onClientSelected,
+        ClientPickerField(
+          clients: _clients,
+          selected: _selectedClient,
+          showPhone: false,
+          onSelected: _onClientSelected,
         ),
         const SizedBox(height: 12),
         InkWell(

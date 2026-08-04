@@ -21,7 +21,51 @@ class ClientsScreen extends ConsumerStatefulWidget {
 }
 
 class _ClientsScreenState extends ConsumerState<ClientsScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   bool _isAdmin() => ref.read(currentUserProvider)?.role == UserRole.admin;
+
+  List<ClientModel> _filterClients(List<ClientModel> clients) {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return clients;
+    return clients.where((c) {
+      return c.name.toLowerCase().contains(q) ||
+          c.phone.toLowerCase().contains(q) ||
+          c.address.toLowerCase().contains(q) ||
+          c.email.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  Widget _searchBar(AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: l10n.searchClients,
+          prefixIcon: const Icon(Icons.search),
+          isDense: true,
+          suffixIcon: _query.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
+                  },
+                ),
+        ),
+        onChanged: (v) => setState(() => _query = v),
+      ),
+    );
+  }
 
   void _openClientStatement(ClientModel client) {
     context.push(
@@ -245,6 +289,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
       body: Column(
         children: [
           RoleHintBanner(text: l10n.clientsRoleHint),
+          _searchBar(l10n),
           Expanded(
             child: clientsAsync.when(
               loading: () => const LoadingShimmer(),
@@ -261,13 +306,17 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 if (clients.isEmpty) {
                   return EmptyStateWidget(icon: Icons.people, title: l10n.noClientsYet);
                 }
+                final filtered = _filterClients(clients);
+                if (filtered.isEmpty) {
+                  return EmptyStateWidget(icon: Icons.search_off, title: l10n.noClientsMatch);
+                }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(clientsProvider),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: clients.length,
+                    itemCount: filtered.length,
                     itemBuilder: (_, i) {
-                      final client = clients[i];
+                      final client = filtered[i];
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(

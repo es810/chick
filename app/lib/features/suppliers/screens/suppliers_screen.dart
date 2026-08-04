@@ -23,11 +23,54 @@ class SuppliersScreen extends ConsumerStatefulWidget {
 }
 
 class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   bool _isAdmin() => ref.read(currentUserProvider)?.role == UserRole.admin;
 
   bool _canAddSupplier() {
     final role = ref.read(currentUserProvider)?.role;
     return role == UserRole.admin || role == UserRole.employee;
+  }
+
+  List<SupplierModel> _filterSuppliers(List<SupplierModel> suppliers) {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return suppliers;
+    return suppliers.where((s) {
+      return s.name.toLowerCase().contains(q) ||
+          s.phone.toLowerCase().contains(q) ||
+          s.location.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  Widget _searchBar(AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: l10n.searchSuppliers,
+          prefixIcon: const Icon(Icons.search),
+          isDense: true,
+          suffixIcon: _query.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
+                  },
+                ),
+        ),
+        onChanged: (v) => setState(() => _query = v),
+      ),
+    );
   }
 
   void _openSupplierStock(SupplierModel supplier) {
@@ -221,6 +264,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
       body: Column(
         children: [
           RoleHintBanner(text: l10n.suppliersRoleHint),
+          _searchBar(l10n),
           Expanded(
             child: suppliersAsync.when(
               loading: () => const LoadingShimmer(),
@@ -247,13 +291,20 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                         : null,
                   );
                 }
+                final filtered = _filterSuppliers(suppliers);
+                if (filtered.isEmpty) {
+                  return EmptyStateWidget(
+                    icon: Icons.search_off,
+                    title: l10n.noSuppliersMatch,
+                  );
+                }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(suppliersProvider),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: suppliers.length,
+                    itemCount: filtered.length,
                     itemBuilder: (_, i) {
-                      final supplier = suppliers[i];
+                      final supplier = filtered[i];
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(

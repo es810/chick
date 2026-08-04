@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../models/client_model.dart';
 import '../../../models/invoice_model.dart';
 import '../../../models/stock_model.dart';
+import '../../../shared/widgets/client_picker_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
 class EditInvoiceScreen extends ConsumerStatefulWidget {
@@ -110,13 +111,10 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
                 ),
           ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<ClientModel>(
-          initialValue: _selectedClient,
-          decoration: InputDecoration(labelText: l10n.selectClient),
-          items: clients
-              .map((c) => DropdownMenuItem(value: c, child: Text('${c.name} (${c.phone})')))
-              .toList(),
-          onChanged: (v) => setState(() => _selectedClient = v),
+        ClientPickerField(
+          clients: clients,
+          selected: _selectedClient,
+          onSelected: (v) => setState(() => _selectedClient = v),
         ),
         const SizedBox(height: 16),
         TextFormField(
