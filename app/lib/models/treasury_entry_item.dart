@@ -15,6 +15,7 @@ class TreasuryEntryItem {
     this.amountDeducted,
     this.balanceBefore,
     this.balanceAfter,
+    this.readOnly = false,
   });
 
   final String id;
@@ -32,6 +33,7 @@ class TreasuryEntryItem {
   final double? amountDeducted;
   final double? balanceBefore;
   final double? balanceAfter;
+  final bool readOnly;
 
   bool get isCollectionInvoice => category == 'collection' && clientId != null;
 
@@ -55,6 +57,8 @@ class TreasuryEntryItem {
       amountDeducted: (json['amountDeducted'] as num?)?.toDouble(),
       balanceBefore: (json['balanceBefore'] as num?)?.toDouble(),
       balanceAfter: (json['balanceAfter'] as num?)?.toDouble(),
+      readOnly: json['readOnly'] == true ||
+          (rawId?.toString().startsWith('supplier-debt-') ?? false),
     );
   }
 }

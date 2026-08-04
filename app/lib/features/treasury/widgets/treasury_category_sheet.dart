@@ -390,7 +390,9 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
                               color: Colors.white.withValues(alpha: 0.08),
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
-                                onTap: _submitting ? null : () => _openEntryForm(existing: entry),
+                                onTap: _submitting || entry.readOnly
+                                    ? null
+                                    : () => _openEntryForm(existing: entry),
                                 title: Text(
                                   entry.isCollectionInvoice
                                       ? '${entry.clientName ?? entry.description} — ${context.formatCurrency(entry.amountPaid ?? entry.amount)}'
@@ -406,7 +408,9 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                trailing: PopupMenuButton<String>(
+                                trailing: entry.readOnly
+                                    ? null
+                                    : PopupMenuButton<String>(
                                   icon: const Icon(Icons.more_vert, color: Colors.white70),
                                   onSelected: (action) {
                                     if (action == 'edit') {
