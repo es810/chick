@@ -1,4 +1,5 @@
 const Invoice = require('../models/Invoice');
+const Stock = require('../models/Stock');
 const Client = require('../models/Client');
 const AuditLog = require('../models/AuditLog');
 const { getTreasurySummary, computeDailyProfit, computeMonthlyProfit } = require('../services/treasuryService');

@@ -1,6 +1,7 @@
 const app = require('./app');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
+const { startDisconnectWatch } = require('./config/db');
 const { port, nodeEnv } = require('./config/env');
 const logger = require('./utils/logger');
 const { bootstrapInitialAdmin, ensureAdminFromEnv } = require('./utils/bootstrapAdmin');
@@ -25,6 +26,8 @@ async function bootstrapIfEmpty() {
 }
 
 async function startMongoWithRetry() {
+  startDisconnectWatch();
+
   for (let attempt = 1; attempt <= MAX_DB_ATTEMPTS; attempt += 1) {
     try {
       await connectDB();

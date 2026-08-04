@@ -831,7 +831,7 @@ class AppLocalizations {
   String navLabelForPath(String path) {
     if (path.contains('dashboard')) return path.contains('/client') ? home : dashboard;
     if (path.contains('collection-invoices')) return collectionInvoices;
-    if (path.contains('invoices')) return navDistribution;
+    if (path.contains('invoices')) return invoices;
     if (path.contains('treasury')) return treasury;
     if (path.contains('stock')) return stock;
     if (path.contains('clients')) return clients;

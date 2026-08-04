@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +20,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _rememberMe = false;
+  bool _rememberMe = true;
+  bool _autoLoginStarted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kDebugMode) {
+      const email = String.fromEnvironment(
+        'DEV_ADMIN_EMAIL',
+        defaultValue: 'admin@chick.com',
+      );
+      const password = String.fromEnvironment(
+        'DEV_ADMIN_PASSWORD',
+        defaultValue: 'admin123',
+      );
+      _emailController.text = email;
+      _passwordController.text = password;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLogin());
+    }
+  }
+
+  Future<void> _tryAutoLogin() async {
+    if (!kDebugMode || _autoLoginStarted || !mounted) return;
+    _autoLoginStarted = true;
+    await _login();
+  }
 
   @override
   void dispose() {
@@ -42,7 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (success) {
       final user = ref.read(authProvider).user;
       _navigateByRole(user!.role);
-    } else {
+    } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(ref.read(authProvider).error ?? context.l10n.loginFailed),
