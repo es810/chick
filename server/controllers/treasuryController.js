@@ -85,7 +85,7 @@ const listTreasuryEntriesHandler = asyncHandler(async (req, res) => {
 });
 
 const createTreasuryEntryHandler = asyncHandler(async (req, res) => {
-  const { category, amount, description, employeeId } = req.body;
+  const { category, amount, description, employeeId, supplierId } = req.body;
   let entry;
 
   if (category === 'collection') {
@@ -96,7 +96,17 @@ const createTreasuryEntryHandler = asyncHandler(async (req, res) => {
     if (!employeeId) {
       return res.status(400).json({ success: false, message: 'employeeId is required' });
     }
-    entry = await createLedgerEntry(category, employeeId, amount, description, req.user);
+    if (category === 'loading' && !supplierId) {
+      return res.status(400).json({ success: false, message: 'supplierId is required for loading' });
+    }
+    entry = await createLedgerEntry(
+      category,
+      employeeId,
+      amount,
+      description,
+      req.user,
+      supplierId
+    );
   } else {
     return res.status(400).json({ success: false, message: 'Invalid category' });
   }

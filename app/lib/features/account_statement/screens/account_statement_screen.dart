@@ -6,9 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/api_error.dart';
-import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/account_statement_model.dart';
-import '../../../models/user_model.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
@@ -32,13 +30,12 @@ class AccountStatementScreen extends ConsumerWidget {
     final statementAsync = kind == AccountStatementKind.client
         ? ref.watch(clientStatementProvider(entityId))
         : ref.watch(supplierStatementProvider(entityId));
-    final isAdmin = ref.watch(currentUserProvider)?.role == UserRole.admin;
 
     return Scaffold(
       appBar: AppBar(
         title: Text('${l10n.accountStatement} — $entityName'),
       ),
-      floatingActionButton: kind == AccountStatementKind.supplier && isAdmin
+      floatingActionButton: kind == AccountStatementKind.supplier
           ? statementAsync.maybeWhen(
               data: (statement) => statement.entity.balance > 0
                   ? FloatingActionButton.extended(
@@ -180,6 +177,7 @@ class AccountStatementScreen extends ConsumerWidget {
       ref.invalidate(supplierStatementProvider(entityId));
       ref.invalidate(suppliersProvider);
       ref.invalidate(treasurySummaryProvider);
+      ref.invalidate(dashboardProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.supplierPaymentRecorded)),

@@ -4,11 +4,56 @@ const Invoice = require('../models/Invoice');
 const CollectionInvoice = require('../models/CollectionInvoice');
 const SupplierStock = require('../models/SupplierStock');
 const SupplierPayment = require('../models/SupplierPayment');
+const EmployeeLedger = require('../models/EmployeeLedger');
 const ApiError = require('../utils/apiError');
 
 const lineTotal = (amount, pricePerKg, netWeight) => {
   if (amount > 0) return amount;
   return (pricePerKg || 0) * (netWeight || 0);
+};
+
+/**
+ * Backfill supplier payments from older employee goods-debt rows that never
+ * reduced supplier balance / appeared on the statement.
+ */
+const syncPaymentsFromEmployeeLedger = async (supplierId) => {
+  const debts = await EmployeeLedger.find({
+    type: 'debt',
+    supplierId,
+  }).populate('employeeId', 'name');
+
+  for (const debt of debts) {
+    const exists = await SupplierPayment.exists({ employeeLedgerId: debt._id });
+    if (exists) continue;
+
+    const supplier = await Supplier.findById(supplierId);
+    if (!supplier) continue;
+
+    const balanceBefore = supplier.balance || 0;
+    const balanceAfter = Math.max(0, balanceBefore - debt.amount);
+    supplier.balance = balanceAfter;
+    await supplier.save();
+
+    const employeeName = debt.employeeId?.name;
+    const notes = [
+      employeeName ? `عن طريق ${employeeName}` : null,
+      debt.description || null,
+    ]
+      .filter(Boolean)
+      .join(' — ');
+
+    await SupplierPayment.create({
+      supplierId,
+      paymentDate: debt.createdAt || new Date(),
+      amount: debt.amount,
+      balanceBefore,
+      balanceAfter,
+      notes,
+      employeeLedgerId: debt._id,
+      employeeId: debt.employeeId?._id ?? debt.employeeId ?? null,
+      createdBy: debt.createdBy,
+    });
+  }
 };
 
 const getClientStatement = async (clientId) => {
@@ -70,12 +115,15 @@ const getClientStatement = async (clientId) => {
 };
 
 const getSupplierStatement = async (supplierId) => {
+  await syncPaymentsFromEmployeeLedger(supplierId);
+
   const supplier = await Supplier.findById(supplierId);
   if (!supplier) throw new ApiError(404, 'Supplier not found');
 
   const stockItems = await SupplierStock.find({ supplierId }).sort({ updatedAt: 1 });
   const payments = await SupplierPayment.find({ supplierId })
     .populate('createdBy', 'name')
+    .populate('employeeId', 'name')
     .sort({ paymentDate: 1, createdAt: 1 });
 
   const entries = [];
@@ -101,7 +149,11 @@ const getSupplierStatement = async (supplierId) => {
       type: 'payment',
       date: payment.paymentDate,
       description: 'دفع دين',
-      subtitle: payment.notes || payment.createdBy?.name || '',
+      subtitle:
+        payment.notes ||
+        payment.employeeId?.name ||
+        payment.createdBy?.name ||
+        '',
       debit: 0,
       credit: payment.amount,
       balanceAfter: payment.balanceAfter,
@@ -119,15 +171,14 @@ const getSupplierStatement = async (supplierId) => {
   const ledgerDebt = Math.max(0, stockTotal - paidTotal);
   const currentBalance = supplier.balance || 0;
 
-  // Keep stored balance in sync when stock ledger is ahead (e.g. after new purchases).
-  // Never lower balance here — older rows may under-report after past overwrite bugs.
-  if (ledgerDebt > currentBalance) {
+  // Sync upward only when stock purchases outpace stored balance AND there is no
+  // payment history yet that would make a lower balance correct.
+  if (ledgerDebt > currentBalance + 0.001 && paidTotal < 0.001) {
     supplier.balance = ledgerDebt;
     await supplier.save();
   }
 
-  // If stored debt is higher than reconstructed stock lines, show the gap so the
-  // statement still ends at the real supplier balance.
+  // If stored debt is higher than reconstructed stock−payments, show prior debt gap.
   const balanceGap = Math.max(0, (supplier.balance || 0) - ledgerDebt);
   if (balanceGap > 0.001) {
     entries.unshift({

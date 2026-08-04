@@ -65,6 +65,7 @@ class _TreasuryCategorySheet extends ConsumerStatefulWidget {
 class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> {
   List<TreasuryEntryItem> _entries = [];
   List<Map<String, dynamic>> _employees = [];
+  List<Map<String, dynamic>> _suppliers = [];
   bool _loading = true;
   bool _submitting = false;
   String? _error;
@@ -139,13 +140,21 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
       final repo = ref.read(treasuryRepositoryProvider);
       final entries = await repo.listEntries(widget.category);
       List<Map<String, dynamic>> employees = [];
+      List<Map<String, dynamic>> suppliers = [];
       if (widget.category.needsEmployee) {
         employees = await repo.listEmployees();
+      }
+      if (widget.category == TreasuryCategory.loading) {
+        final list = await ref.read(suppliersProvider.future);
+        suppliers = list
+            .map((s) => {'_id': s.id, 'id': s.id, 'name': s.name, 'balance': s.balance})
+            .toList();
       }
       if (mounted) {
         setState(() {
           _entries = entries;
           _employees = employees;
+          _suppliers = suppliers;
           _loading = false;
         });
       }
@@ -217,6 +226,9 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
     );
     final descController = TextEditingController(text: existing?.description ?? '');
     String? selectedEmployeeId;
+    String? selectedSupplierId;
+    final needsSupplier =
+        widget.category == TreasuryCategory.loading && existing == null;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -240,6 +252,27 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
                         )
                         .toList(),
                     onChanged: (v) => setDialogState(() => selectedEmployeeId = v),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (needsSupplier) ...[
+                  Text(
+                    l10n.employeeDebtHint,
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedSupplierId,
+                    decoration: InputDecoration(labelText: l10n.selectSupplier),
+                    items: _suppliers
+                        .map(
+                          (s) => DropdownMenuItem<String>(
+                            value: (s['_id'] ?? s['id']).toString(),
+                            child: Text(s['name'] as String? ?? ''),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => selectedSupplierId = v),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -290,6 +323,13 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
       return;
     }
 
+    if (needsSupplier && (selectedSupplierId == null || selectedSupplierId!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.supplierRequired), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
     try {
       final repo = ref.read(treasuryRepositoryProvider);
@@ -299,6 +339,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
           amount: amount,
           description: description.isEmpty ? null : description,
           employeeId: selectedEmployeeId,
+          supplierId: selectedSupplierId,
         );
       } else {
         await repo.updateEntry(
@@ -309,6 +350,11 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
         );
       }
       await _afterMutation();
+      if (selectedSupplierId != null) {
+        ref.invalidate(supplierStatementProvider(selectedSupplierId!));
+        ref.invalidate(suppliersProvider);
+        ref.invalidate(dashboardProvider);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

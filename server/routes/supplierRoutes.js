@@ -24,7 +24,7 @@ router.get('/:id', authorize('admin', 'employee'), getSupplier);
 
 router.post(
   '/:id/payments',
-  authorize('admin'),
+  authorize('admin', 'employee'),
   [
     body('paymentDate').isISO8601(),
     body('amount').isFloat({ min: 0.01 }),

@@ -51,7 +51,14 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
       { $group: { _id: null, total: { $sum: '$totalPrice' } } },
     ]),
     EmployeeLedger.aggregate([
-      { $match: { type: 'debt', createdAt: createdAtFilter } },
+      {
+        $match: {
+          type: 'debt',
+          createdAt: createdAtFilter,
+          // Supplier-linked debts are payments (AP settlement), not P&L loading.
+          $or: [{ supplierId: null }, { supplierId: { $exists: false } }],
+        },
+      },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
     EmployeeLedger.aggregate([

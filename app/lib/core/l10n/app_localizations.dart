@@ -372,11 +372,11 @@ class AppLocalizations {
   'expenses': {'en': 'Expenses', 'ar': 'المصروفات'},
   'employeeDebt': {'en': 'Goods Debt', 'ar': 'المديونية'},
   'employeeDebtHint': {
-    'en': 'Goods carried by employee (deducted from main treasury)',
-    'ar': 'البضاعة التي يحملها الموظف (تُخصم من الخزينة الرئيسية)',
+    'en': 'Paying a supplier through the employee — reduces supplier debt and main treasury (not profit)',
+    'ar': 'دفع لمورد عن طريق الموظف — ينقص مديونية المورد والخزنة (ولا يخصم من الأرباح)',
   },
   'addExpense': {'en': 'Add Expense', 'ar': 'إضافة مصروف'},
-  'addDebt': {'en': 'Add Goods Debt', 'ar': 'إضافة مديونية بضاعة'},
+  'addDebt': {'en': 'Pay supplier via employee', 'ar': 'دفع لمورد عن طريق الموظف'},
   'expenseDescriptionHint': {
     'en': 'e.g. Gasoline, maintenance...',
     'ar': 'مثل: بنزين، صيانة...',

@@ -177,13 +177,16 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
         await repo.addExpense(widget.employeeId, amount, description);
       } else {
         await repo.addDebt(widget.employeeId, amount, description, selectedSupplierId!);
+        ref.invalidate(supplierStatementProvider(selectedSupplierId!));
+        ref.invalidate(suppliersProvider);
       }
       ref.invalidate(dashboardProvider);
+      ref.invalidate(treasurySummaryProvider);
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.deductedFromMainTreasury),
+            content: Text(isExpense ? l10n.deductedFromMainTreasury : l10n.supplierPaymentRecorded),
             backgroundColor: AppColors.success,
           ),
         );
