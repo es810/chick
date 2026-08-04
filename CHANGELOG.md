@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.8.0] — 2026-08-04
+
+### Search & distribution
+- Search clients/suppliers by name in list screens
+- Searchable client picker when creating/editing distribution and collection
+
+### Profits & treasury
+- Daily profit = sales − loading − expenses − discounts (**no withdrawals**)
+- Main treasury is **cash only** (inventory value no longer inflates the total)
+- Formula: opening + collection + external − loading − expenses − withdrawals
+
+### Suppliers & employees
+- Paying a supplier via employee updates **كشف حساب المورد** and reduces debt
+- Those payments no longer reduce daily profit
+- Employee detail shows **معاه الآن** (cash on hand) from treasury formula
+
+### Damaged stock
+- Distribution weight surplus (sold kg above book weight) appears under المخزون الهالك
+
 ## [1.7.0] — 2026-08-04
 
 ### Stock & invoices
