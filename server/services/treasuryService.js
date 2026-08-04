@@ -2,7 +2,6 @@ const Treasury = require('../models/Treasury');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const CollectionInvoice = require('../models/CollectionInvoice');
 const EmployeeLedger = require('../models/EmployeeLedger');
-const SalaryAdvance = require('../models/SalaryAdvance');
 const Invoice = require('../models/Invoice');
 const Stock = require('../models/Stock');
 const SupplierStock = require('../models/SupplierStock');
@@ -104,29 +103,29 @@ const computeDailyProfit = async (startDate, endDate) => {
 };
 
 /**
- * أرباح الشهر = مجموع أرباح كل أيام الشهر − إجمالي السلف المأخوذة فقط
+ * أرباح الشهر = أرباح الفترة − إجمالي مرتبات الموظفين النشطين
  */
 const computeMonthlyProfit = async (year, month) => {
   const { start: startOfMonth, end: startOfNextMonth } = getCairoMonthRange(year, month);
 
-  const [periodProfit, advancesAgg] = await Promise.all([
+  const [periodProfit, salaryAgg] = await Promise.all([
     computeProfitForPeriod(startOfMonth, startOfNextMonth),
-    SalaryAdvance.aggregate([
-      { $match: { advanceDate: { $gte: startOfMonth, $lt: startOfNextMonth } } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
+    User.aggregate([
+      { $match: { role: 'employee', isActive: { $ne: false } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$salary', 0] } } } },
     ]),
   ]);
 
   const dailyProfitsTotal = periodProfit.profit;
-  const salaryAdvances = advancesAgg[0]?.total || 0;
+  const salaries = salaryAgg[0]?.total || 0;
 
   return {
     year,
     month,
     dailyProfitsTotal,
-    salaries: salaryAdvances,
-    salaryAdvances,
-    profit: dailyProfitsTotal - salaryAdvances,
+    salaries,
+    salaryAdvances: salaries,
+    profit: dailyProfitsTotal - salaries,
     breakdown: periodProfit,
   };
 };

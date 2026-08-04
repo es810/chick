@@ -142,10 +142,10 @@ class AppLocalizations {
   },
   'monthlyProfit': {'en': 'Monthly Profit', 'ar': 'أرباح شهرية'},
   'selectMonth': {'en': 'Select month', 'ar': 'اختيار الشهر'},
-  'afterSalariesDeduction': {'en': 'After salary advances', 'ar': 'بعد خصم السلف'},
+  'afterSalariesDeduction': {'en': 'After salaries', 'ar': 'بعد خصم المرتبات'},
   'monthlyProfitFormula': {
-    'en': 'Sum of daily profits − salary advances taken',
-    'ar': 'مجموع أرباح الأيام − السلف المأخوذة فقط',
+    'en': 'Period profit − total employee salaries',
+    'ar': 'أرباح الفترة − إجمالي مرتبات الموظفين',
   },
   'salaryAdvance': {'en': 'Salary advance', 'ar': 'طلب سلفة'},
   'addSalaryAdvance': {'en': 'Add salary advance', 'ar': 'إضافة سلفة'},
