@@ -340,9 +340,9 @@ class _StockCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: StatCard(
-                    title: l10n.itemCount,
-                    value: '${item.quantity}',
-                    icon: Icons.numbers,
+                    title: l10n.onHandStock,
+                    value: '${item.usableQuantity}',
+                    icon: Icons.inventory_2,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -355,19 +355,33 @@ class _StockCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (item.hasPendingSurplus) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${l10n.pendingSurplusLabel}: '
+                '${item.pendingSurplusQuantity > 0 ? '${item.pendingSurplusQuantity} ' : ''}'
+                '${item.pendingSurplusNetWeight > 0 ? '${item.pendingSurplusNetWeight.toStringAsFixed(1)} kg' : ''}'
+                .trim(),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.warning,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              Text(
+                '${l10n.bookStockLabel}: ${item.quantity}'
+                '${item.netWeight > 0 ? ' — ${item.netWeight.toStringAsFixed(2)} kg' : ''}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
             const SizedBox(height: 8),
+            Text(
+              '${l10n.netWeight}: ${item.usableNetWeight.toStringAsFixed(2)} kg'
+              '${item.hasPendingSurplus ? ' (${l10n.onHandStock})' : ''}',
+            ),
+            const SizedBox(height: 4),
             Text('${l10n.grossWeight}: ${item.grossWeight.toStringAsFixed(2)}'),
             const SizedBox(height: 4),
-            Row(
-              children: [
-                Expanded(
-                  child: Text('${l10n.tareWeight}: ${item.tareWeight.toStringAsFixed(2)}'),
-                ),
-                Expanded(
-                  child: Text('${l10n.netWeight}: ${item.netWeight.toStringAsFixed(2)}'),
-                ),
-              ],
-            ),
+            Text('${l10n.tareWeight}: ${item.tareWeight.toStringAsFixed(2)}'),
             const SizedBox(height: 4),
             Text(
               '${l10n.stockTotal}: ${context.formatCurrency(item.displayTotal)}',

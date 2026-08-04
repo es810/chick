@@ -70,20 +70,30 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.availableInStock,
+                    l10n.onHandStock,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    '${selected.quantity}',
+                    '${selected.usableQuantity}',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: color,
                         ),
                   ),
-                  if (selected.netWeight > 0)
+                  if (selected.usableNetWeight > 0)
                     Text(
-                      '${l10n.netWeight}: ${selected.netWeight.toStringAsFixed(2)} kg',
+                      '${l10n.netWeight}: ${selected.usableNetWeight.toStringAsFixed(2)} kg',
                       style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  if (selected.hasPendingSurplus)
+                    Text(
+                      '${l10n.pendingSurplusLabel}: '
+                      '${selected.pendingSurplusQuantity > 0 ? '${selected.pendingSurplusQuantity} ' : ''}'
+                      '${selected.pendingSurplusNetWeight > 0 ? '${selected.pendingSurplusNetWeight.toStringAsFixed(1)} kg' : ''}'
+                          .trim(),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.warning,
+                          ),
                     ),
                 ],
               ),
@@ -140,7 +150,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
               .map(
                 (s) => DropdownMenuItem(
                   value: s.chickenType,
-                  child: Text('${s.chickenType} — ${l10n.available}: ${s.quantity}'),
+                  child: Text('${s.chickenType} — ${l10n.onHandStock}: ${s.usableQuantity}'),
                 ),
               )
               .toList(),
@@ -162,7 +172,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           decoration: InputDecoration(
             labelText: l10n.itemCount,
             helperText: selectedStock != null
-                ? '${l10n.availableInStock}: ${selectedStock.quantity}'
+                ? '${l10n.onHandStock}: ${selectedStock.usableQuantity}'
                 : null,
             helperMaxLines: 2,
           ),

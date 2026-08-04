@@ -39,4 +39,11 @@ class DamagedStockRepository {
     final data = response.data as Map<String, dynamic>;
     return DamagedStockEntry.fromJson(data['data'] as Map<String, dynamic>);
   }
+
+  /// Confirm هلك of distribution surplus (clears pending; does not deduct stock again).
+  Future<DamagedStockEntry> writeOff(String id) async {
+    final response = await _api.patch('${ApiConstants.damagedStock}/$id/write-off');
+    final data = response.data as Map<String, dynamic>;
+    return DamagedStockEntry.fromJson(data['data'] as Map<String, dynamic>);
+  }
 }

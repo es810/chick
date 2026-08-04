@@ -8,6 +8,7 @@ class DamagedStockEntry extends Equatable {
     this.netWeight = 0,
     this.reason = '',
     this.source = 'manual',
+    this.status = 'written_off',
     this.recordedByName,
     this.createdAt,
   });
@@ -18,20 +19,30 @@ class DamagedStockEntry extends Equatable {
   final double netWeight;
   final String reason;
   final String source;
+  final String status;
   final String? recordedByName;
   final DateTime? createdAt;
 
   bool get isDistributionSurplus => source == 'distribution_surplus';
 
+  bool get isOpenSurplus =>
+      isDistributionSurplus && (status == 'open' || status.isEmpty);
+
   factory DamagedStockEntry.fromJson(Map<String, dynamic> json) {
     final recordedBy = json['recordedBy'] as Map<String, dynamic>?;
+    final source = json['source'] as String? ?? 'manual';
+    final rawStatus = json['status'] as String?;
+    final status = rawStatus ??
+        (source == 'distribution_surplus' ? 'open' : 'written_off');
+
     return DamagedStockEntry(
       id: json['_id'] as String? ?? json['id'] as String? ?? '',
       chickenType: json['chickenType'] as String? ?? '',
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       netWeight: (json['netWeight'] as num?)?.toDouble() ?? 0,
       reason: json['reason'] as String? ?? '',
-      source: json['source'] as String? ?? 'manual',
+      source: source,
+      status: status,
       recordedByName: recordedBy?['name'] as String?,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
@@ -40,5 +51,5 @@ class DamagedStockEntry extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, chickenType, quantity, netWeight, source];
+  List<Object?> get props => [id, chickenType, quantity, netWeight, source, status];
 }

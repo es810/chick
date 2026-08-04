@@ -14,6 +14,15 @@ const damagedStockSchema = new mongoose.Schema(
       enum: ['manual', 'distribution_surplus'],
       default: 'manual',
     },
+    /**
+     * open = surplus still reduces "عندي مخزون" until confirmed هلك.
+     * written_off = settled; no longer reduces usable stock.
+     */
+    status: {
+      type: String,
+      enum: ['open', 'written_off'],
+      default: 'open',
+    },
     invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice', default: null },
     recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
@@ -23,5 +32,6 @@ const damagedStockSchema = new mongoose.Schema(
 damagedStockSchema.index({ createdAt: -1 });
 damagedStockSchema.index({ stockId: 1 });
 damagedStockSchema.index({ invoiceId: 1 });
+damagedStockSchema.index({ status: 1, source: 1 });
 
 module.exports = mongoose.model('DamagedStock', damagedStockSchema);

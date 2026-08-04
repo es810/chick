@@ -256,6 +256,34 @@ class AppLocalizations {
     'en': 'Distribution surplus (count/weight)',
     'ar': 'زيادة التوزيع (عدد/وزن)',
   },
+  'pendingSurplusOpen': {
+    'en': 'Pending write-off — reduces on-hand until confirmed',
+    'ar': 'زيادة معلّقة — تخصم من «عندي مخزون» حتى تأكيد الهلاك',
+  },
+  'confirmWriteOffSurplus': {
+    'en': 'Confirm write-off',
+    'ar': 'تأكيد الهلاك',
+  },
+  'writeOffSurplusDone': {
+    'en': 'Surplus written off — on-hand restored',
+    'ar': 'تم تأكيد الهلاك — لن يخصم من المخزون الجديد',
+  },
+  'surplusAlreadyWrittenOff': {
+    'en': 'Written off',
+    'ar': 'تم الهلاك',
+  },
+  'onHandStock': {
+    'en': 'On-hand stock',
+    'ar': 'عندي مخزون',
+  },
+  'pendingSurplusLabel': {
+    'en': 'Pending surplus',
+    'ar': 'زيادة معلّقة',
+  },
+  'bookStockLabel': {
+    'en': 'Book stock',
+    'ar': 'رصيد الدفتر',
+  },
   'recordDamagedStock': {'en': 'Record damaged stock', 'ar': 'تسجيل مخزون هالك'},
   'damagedStockReason': {'en': 'Reason (optional)', 'ar': 'السبب (اختياري)'},
   'noDamagedStock': {'en': 'No damaged stock recorded', 'ar': 'لا يوجد مخزون هالك مسجّل'},
@@ -662,6 +690,13 @@ class AppLocalizations {
   String get damagedStock => _get('damagedStock');
   String get damagedStockTreasuryNote => _get('damagedStockTreasuryNote');
   String get distributionWeightSurplus => _get('distributionWeightSurplus');
+  String get pendingSurplusOpen => _get('pendingSurplusOpen');
+  String get confirmWriteOffSurplus => _get('confirmWriteOffSurplus');
+  String get writeOffSurplusDone => _get('writeOffSurplusDone');
+  String get surplusAlreadyWrittenOff => _get('surplusAlreadyWrittenOff');
+  String get onHandStock => _get('onHandStock');
+  String get pendingSurplusLabel => _get('pendingSurplusLabel');
+  String get bookStockLabel => _get('bookStockLabel');
   String get recordDamagedStock => _get('recordDamagedStock');
   String get damagedStockReason => _get('damagedStockReason');
   String get noDamagedStock => _get('noDamagedStock');

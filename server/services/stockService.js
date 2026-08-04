@@ -389,7 +389,9 @@ const addStock = async (data, employee) => {
 
 const getLowStockAlerts = async () => {
   const stocks = await Stock.find();
-  return stocks.filter((s) => s.quantity <= s.lowStockThreshold);
+  return stocks.filter(
+    (s) => (s.usableQuantity ?? s.quantity) <= s.lowStockThreshold
+  );
 };
 
 const getMovements = async (filters = {}, page = 1, limit = 20) => {

@@ -12,12 +12,26 @@ const stockSchema = new mongoose.Schema(
     pricePerKg: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number, default: 0, min: 0 },
     lowStockThreshold: { type: Number, default: 50 },
+    /**
+     * Oversold count/weight not yet written off (هلك).
+     * Usable on-hand = book stock − these pending surpluses.
+     */
+    pendingSurplusQuantity: { type: Number, default: 0, min: 0 },
+    pendingSurplusNetWeight: { type: Number, default: 0, min: 0 },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 stockSchema.virtual('isLowStock').get(function () {
-  return this.quantity <= this.lowStockThreshold;
+  return this.usableQuantity <= this.lowStockThreshold;
+});
+
+stockSchema.virtual('usableQuantity').get(function () {
+  return Math.max(0, (this.quantity || 0) - (this.pendingSurplusQuantity || 0));
+});
+
+stockSchema.virtual('usableNetWeight').get(function () {
+  return Math.max(0, (this.netWeight || 0) - (this.pendingSurplusNetWeight || 0));
 });
 
 module.exports = mongoose.model('Stock', stockSchema);

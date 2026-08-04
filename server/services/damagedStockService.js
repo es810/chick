@@ -8,8 +8,75 @@ const { logAction } = require('./auditService');
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
+const isOpenSurplus = (entry) =>
+  entry.source === 'distribution_surplus' &&
+  (entry.status == null || entry.status === 'open');
+
 /**
- * Backfill surplus rows for invoices where sold kg > book kg deducted.
+ * Rebuild pending surplus on each stock from open distribution_surplus rows.
+ * Safe to call repeatedly.
+ */
+const syncPendingSurplusFromOpenEntries = async () => {
+  await Stock.updateMany(
+    {},
+    { $set: { pendingSurplusQuantity: 0, pendingSurplusNetWeight: 0 } }
+  );
+
+  const rows = await DamagedStock.aggregate([
+    {
+      $match: {
+        source: 'distribution_surplus',
+        $or: [{ status: 'open' }, { status: { $exists: false } }, { status: null }],
+      },
+    },
+    {
+      $group: {
+        _id: '$stockId',
+        qty: { $sum: '$quantity' },
+        kg: { $sum: '$netWeight' },
+      },
+    },
+  ]);
+
+  for (const row of rows) {
+    if (!row._id) continue;
+    await Stock.findByIdAndUpdate(row._id, {
+      pendingSurplusQuantity: Math.max(0, row.qty || 0),
+      pendingSurplusNetWeight: Math.max(0, round2(row.kg || 0)),
+    });
+  }
+};
+
+const bumpPendingSurplus = async (session, stockId, qty, kg) => {
+  const stock = await Stock.findById(stockId).session(session);
+  if (!stock) return;
+  stock.pendingSurplusQuantity = Math.max(
+    0,
+    (stock.pendingSurplusQuantity || 0) + (qty || 0)
+  );
+  stock.pendingSurplusNetWeight = Math.max(
+    0,
+    round2((stock.pendingSurplusNetWeight || 0) + (kg || 0))
+  );
+  await stock.save({ session });
+};
+
+const reducePendingSurplus = async (session, stockId, qty, kg) => {
+  const stock = await Stock.findById(stockId).session(session);
+  if (!stock) return;
+  stock.pendingSurplusQuantity = Math.max(
+    0,
+    (stock.pendingSurplusQuantity || 0) - (qty || 0)
+  );
+  stock.pendingSurplusNetWeight = Math.max(
+    0,
+    round2((stock.pendingSurplusNetWeight || 0) - (kg || 0))
+  );
+  await stock.save({ session });
+};
+
+/**
+ * Backfill surplus rows for invoices where sold kg/qty > book deducted.
  * Safe to call repeatedly (skips invoices that already have surplus entries).
  */
 const reconcileDistributionSurplus = async () => {
@@ -18,6 +85,8 @@ const reconcileDistributionSurplus = async () => {
     .sort({ createdAt: -1 })
     .limit(2000)
     .lean();
+
+  let created = false;
 
   for (const inv of invoices) {
     const existing = await DamagedStock.exists({
@@ -62,15 +131,23 @@ const reconcileDistributionSurplus = async () => {
         netWeight: Math.max(0, surplusKg),
         reason,
         source: 'distribution_surplus',
+        status: 'open',
         invoiceId: inv._id,
         recordedBy: inv.employeeId,
       });
+      created = true;
     }
+  }
+
+  if (created) {
+    await syncPendingSurplusFromOpenEntries();
   }
 };
 
 const listDamagedStock = async () => {
   await reconcileDistributionSurplus();
+  // One-time style sync so legacy open surplus reduces "عندي مخزون"
+  await syncPendingSurplusFromOpenEntries();
   return DamagedStock.find()
     .populate('recordedBy', 'name')
     .populate('stockId', 'chickenType location')
@@ -87,6 +164,34 @@ const getDamagedStockSummary = async () => {
         totalQuantity: { $sum: '$quantity' },
         totalNetWeight: { $sum: '$netWeight' },
         entryCount: { $sum: 1 },
+        openQuantity: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$source', 'distribution_surplus'] },
+                  { $ne: ['$status', 'written_off'] },
+                ],
+              },
+              '$quantity',
+              0,
+            ],
+          },
+        },
+        openNetWeight: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$source', 'distribution_surplus'] },
+                  { $ne: ['$status', 'written_off'] },
+                ],
+              },
+              '$netWeight',
+              0,
+            ],
+          },
+        },
       },
     },
   ]);
@@ -94,12 +199,15 @@ const getDamagedStockSummary = async () => {
     totalQuantity: agg?.totalQuantity || 0,
     totalNetWeight: round2(agg?.totalNetWeight || 0),
     entryCount: agg?.entryCount || 0,
+    openQuantity: agg?.openQuantity || 0,
+    openNetWeight: round2(agg?.openNetWeight || 0),
   };
 };
 
 /**
  * Auto entry when invoice count/weight exceeds book stock.
- * Does not deduct stock again (stock already adjusted by the invoice).
+ * Raises pending surplus so usable "عندي مخزون" shrinks until هلك is confirmed.
+ * Does not deduct book stock again.
  */
 const recordDistributionSurplus = async ({
   session,
@@ -129,6 +237,7 @@ const recordDistributionSurplus = async ({
         netWeight: kg,
         reason: reason || defaultReason,
         source: 'distribution_surplus',
+        status: 'open',
         invoiceId: invoiceId || null,
         recordedBy: user._id,
       },
@@ -136,17 +245,74 @@ const recordDistributionSurplus = async ({
     { session }
   );
 
+  await bumpPendingSurplus(session, stockId, qty, kg);
+
   return entry;
 };
 
 const removeSurplusForInvoice = async (session, invoiceId) => {
   if (!invoiceId) return;
+  const entries = await DamagedStock.find({
+    invoiceId,
+    source: 'distribution_surplus',
+  }).session(session);
+
+  for (const entry of entries) {
+    if (isOpenSurplus(entry)) {
+      await reducePendingSurplus(session, entry.stockId, entry.quantity, entry.netWeight);
+    }
+  }
+
   await DamagedStock.deleteMany({
     invoiceId,
     source: 'distribution_surplus',
   }).session(session);
 };
 
+/**
+ * Confirm هلك of distribution surplus: clear pending so new loads are not reduced.
+ * Does NOT deduct book stock again (oversell was never in book stock).
+ */
+const writeOffSurplus = async (entryId, user) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const entry = await DamagedStock.findById(entryId).session(session);
+    if (!entry) throw new ApiError(404, 'Damaged stock entry not found');
+    if (entry.source !== 'distribution_surplus') {
+      throw new ApiError(400, 'Only distribution surplus can be written off this way');
+    }
+    if (entry.status === 'written_off') {
+      await session.commitTransaction();
+      return DamagedStock.findById(entry._id).populate('recordedBy', 'name');
+    }
+
+    await reducePendingSurplus(session, entry.stockId, entry.quantity, entry.netWeight);
+    entry.status = 'written_off';
+    await entry.save({ session });
+
+    await session.commitTransaction();
+
+    await logAction(user._id, user.name, 'WRITE_OFF_SURPLUS', entry.chickenType, {
+      quantity: entry.quantity,
+      netWeight: entry.netWeight,
+      entryId: entry._id,
+    });
+
+    return DamagedStock.findById(entry._id).populate('recordedBy', 'name');
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
+/**
+ * Manual هلك of leftover birds/weight still on the books (e.g. died in yard).
+ * Deducts real stock immediately; status written_off.
+ */
 const recordDamagedStock = async ({ stockId, quantity, netWeight, reason = '' }, user) => {
   const qty = Math.max(0, parseInt(quantity, 10) || 0);
   const kg = round2(netWeight);
@@ -207,6 +373,7 @@ const recordDamagedStock = async ({ stockId, quantity, netWeight, reason = '' },
           netWeight: kg > 0 ? kg : weightOut,
           reason: reason.trim(),
           source: 'manual',
+          status: 'written_off',
           recordedBy: user._id,
         },
       ],
@@ -253,4 +420,6 @@ module.exports = {
   recordDistributionSurplus,
   removeSurplusForInvoice,
   reconcileDistributionSurplus,
+  writeOffSurplus,
+  syncPendingSurplusFromOpenEntries,
 };

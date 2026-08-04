@@ -3,6 +3,7 @@ const {
   listDamagedStock,
   getDamagedStockSummary,
   recordDamagedStock,
+  writeOffSurplus,
 } = require('../services/damagedStockService');
 
 const listHandler = asyncHandler(async (req, res) => {
@@ -16,4 +17,9 @@ const createHandler = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: entry });
 });
 
-module.exports = { listHandler, createHandler };
+const writeOffHandler = asyncHandler(async (req, res) => {
+  const entry = await writeOffSurplus(req.params.id, req.user);
+  res.json({ success: true, data: entry });
+});
+
+module.exports = { listHandler, createHandler, writeOffHandler };

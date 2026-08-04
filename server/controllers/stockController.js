@@ -5,8 +5,12 @@ const { addStock, getLowStockAlerts, getMovements, deleteStockType } = require('
 const { logAction } = require('../services/auditService');
 
 const getStock = asyncHandler(async (req, res) => {
+  const { syncPendingSurplusFromOpenEntries } = require('../services/damagedStockService');
+  await syncPendingSurplusFromOpenEntries();
   const stocks = await Stock.find().sort({ chickenType: 1 });
-  const lowStock = stocks.filter((s) => s.quantity <= s.lowStockThreshold);
+  const lowStock = stocks.filter(
+    (s) => (s.usableQuantity ?? s.quantity) <= s.lowStockThreshold
+  );
   res.json({ success: true, data: stocks, lowStockAlerts: lowStock });
 });
 
