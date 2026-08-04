@@ -4,6 +4,7 @@ const CollectionInvoice = require('../models/CollectionInvoice');
 const EmployeeLedger = require('../models/EmployeeLedger');
 const Invoice = require('../models/Invoice');
 const Stock = require('../models/Stock');
+const StockMovement = require('../models/StockMovement');
 const SupplierStock = require('../models/SupplierStock');
 const User = require('../models/User');
 const ApiError = require('../utils/apiError');
@@ -34,8 +35,10 @@ const computeTreasuryBalance = ({
   withdrawals;
 
 /**
- * أرباح الفترة = إجمالي التوزيعات − التحميل − المصروفات − الخصومات
- * الإيرادات = مجموع فواتير التوزيع (totalPrice) في الفترة
+ * أرباح الفترة = المبيعات − تكلفة البضاعة عند التحميل − المصروفات − الخصومات
+ *
+ * التحميل هنا = قيمة البضاعة وقت دخولها للمخزون (التزام شراء)،
+ * بغض النظر عن دفع الحساب للمورد. دفع المورد يخص الخزنة فقط وليس الربح.
  */
 const computeProfitForPeriod = async (startDate, endDate = null) => {
   const invoiceDateFilter = endDate
@@ -49,16 +52,34 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
       { $match: { createdAt: invoiceDateFilter } },
       { $group: { _id: null, total: { $sum: '$totalPrice' } } },
     ]),
-    EmployeeLedger.aggregate([
+    // Cost of goods when loaded (IN), not when paid. Skip invoice stock restores.
+    StockMovement.aggregate([
       {
         $match: {
-          type: 'debt',
+          type: 'IN',
           createdAt: createdAtFilter,
-          // Supplier-linked debts are payments (AP settlement), not P&L loading.
-          $or: [{ supplierId: null }, { supplierId: { $exists: false } }],
+          reason: { $not: /stock restored/i },
         },
       },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: {
+              $cond: [
+                { $gt: ['$totalAmount', 0] },
+                '$totalAmount',
+                {
+                  $multiply: [
+                    { $ifNull: ['$unitPrice', 0] },
+                    { $ifNull: ['$netWeight', 0] },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
     ]),
     EmployeeLedger.aggregate([
       { $match: { type: 'expense', createdAt: createdAtFilter } },
@@ -85,8 +106,8 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
 };
 
 /**
- * أرباح اليوم = إجمالي المبيعات (التوزيع) − التحميل − المصروفات − الخصومات
- * السحوبات تخص الخزنة فقط وليست جزءاً من معادلة الأرباح.
+ * أرباح اليوم = المبيعات − تكلفة التحميل − المصروفات − الخصومات
+ * السحوبات ودفع المورد يخصّان الخزنة فقط وليسا جزءاً من معادلة الأرباح.
  */
 const computeDailyProfit = async (startDate, endDate) =>
   computeProfitForPeriod(startDate, endDate);
