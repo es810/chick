@@ -1,11 +1,13 @@
 const asyncHandler = require('../utils/asyncHandler');
 const { getEmployeeLedger, addLedgerEntry } = require('../services/employeeLedgerService');
 const { listEmployeeAdvances, createSalaryAdvance } = require('../services/salaryAdvanceService');
+const { getEmployeeTreasurySummary } = require('../services/employeeTreasuryService');
 
 const getLedger = asyncHandler(async (req, res) => {
-  const [ledger, advanceData] = await Promise.all([
+  const [ledger, advanceData, treasury] = await Promise.all([
     getEmployeeLedger(req.params.id),
     listEmployeeAdvances(req.params.id),
+    getEmployeeTreasurySummary(req.params.id),
   ]);
 
   res.json({
@@ -17,6 +19,16 @@ const getLedger = asyncHandler(async (req, res) => {
       entries: ledger.entries,
       totalAdvances: advanceData.totalAdvances,
       advances: advanceData.advances,
+      treasuryBalance: treasury.balance,
+      treasury: {
+        balance: treasury.balance,
+        collection: treasury.collection,
+        incomingTransfer: treasury.incomingTransfer,
+        expenses: treasury.expenses,
+        advances: treasury.advances,
+        debts: treasury.debts,
+        outgoingTransfer: treasury.outgoingTransfer,
+      },
     },
   });
 });

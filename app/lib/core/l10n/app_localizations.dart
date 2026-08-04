@@ -96,7 +96,7 @@ class AppLocalizations {
   'withdrawFromTreasury': {'en': 'Withdraw from Treasury', 'ar': 'سحب من الخزنة'},
   'addExternalRevenue': {'en': 'Add External Revenue', 'ar': 'إضافة إيراد خارجي'},
   'employeesTreasury': {'en': 'Employees Treasury', 'ar': 'خزنة الموظفين'},
-  'employeeTreasuryBalance': {'en': 'Treasury balance', 'ar': 'رصيد الخزنة'},
+  'employeeTreasuryBalance': {'en': 'On hand now', 'ar': 'معاه الآن'},
   'employeeTreasuryTransfer': {'en': 'Transfer between employees', 'ar': 'تحويل بين الموظفين'},
   'transferFromEmployee': {'en': 'From employee', 'ar': 'من موظف'},
   'transferToEmployee': {'en': 'To employee', 'ar': 'إلى موظف'},

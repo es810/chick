@@ -363,6 +363,16 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
+                      _SummaryCard(
+                        title: l10n.employeeTreasuryBalance,
+                        amount: _ledger!.treasuryBalance,
+                        icon: Icons.account_balance_wallet,
+                        color: _ledger!.treasuryBalance >= 0
+                            ? AppColors.primaryGreen
+                            : AppColors.error,
+                        subtitle: l10n.employeeTreasuryFormula,
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
@@ -543,12 +553,14 @@ class _SummaryCard extends StatelessWidget {
     required this.amount,
     required this.icon,
     required this.color,
+    this.subtitle,
   });
 
   final String title;
   final double amount;
   final IconData icon;
   final Color color;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -564,8 +576,18 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               context.formatCurrency(amount),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
             ),
+            if (subtitle != null && subtitle!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                subtitle!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+              ),
+            ],
           ],
         ),
       ),
