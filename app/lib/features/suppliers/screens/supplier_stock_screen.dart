@@ -127,6 +127,8 @@ class SupplierStockScreen extends ConsumerWidget {
                 ref.invalidate(stockProvider);
                 ref.invalidate(suppliersProvider);
                 ref.invalidate(supplierStatementProvider(supplierId));
+                ref.invalidate(treasurySummaryProvider);
+                ref.invalidate(dashboardProvider);
                 if (context.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -186,6 +188,8 @@ class SupplierStockScreen extends ConsumerWidget {
                 ref.invalidate(stockProvider);
                 ref.invalidate(suppliersProvider);
                 ref.invalidate(supplierStatementProvider(supplierId));
+                ref.invalidate(treasurySummaryProvider);
+                ref.invalidate(dashboardProvider);
                 if (context.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -240,6 +244,8 @@ class SupplierStockScreen extends ConsumerWidget {
       ref.invalidate(stockProvider);
       ref.invalidate(suppliersProvider);
       ref.invalidate(supplierStatementProvider(supplierId));
+      ref.invalidate(treasurySummaryProvider);
+      ref.invalidate(dashboardProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.stockDeleted), backgroundColor: AppColors.success),
