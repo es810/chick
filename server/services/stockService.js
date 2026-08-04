@@ -277,59 +277,73 @@ const deductStockForInvoice = async (
 ) => {
   const stock = await Stock.findOne({ chickenType }).session(session);
   if (!stock) throw new ApiError(404, `Stock not found for type: ${chickenType}`);
-  if (stock.quantity < quantity) {
-    throw new ApiError(400, `Insufficient stock for ${chickenType}`);
+  if (quantity <= 0) {
+    throw new ApiError(400, 'Invalid stock deduction quantity');
   }
 
-  const beforeQty = stock.quantity;
+  const beforeQty = stock.quantity || 0;
   const beforeNet = stock.netWeight || 0;
   const weight = Math.max(0, Number(actualNetWeight) || 0);
+  const qtySurplus = Math.max(0, quantity - beforeQty);
+  const deductQty = Math.min(quantity, beforeQty);
+
+  // Book weight for birds that actually exist in stock (surplus count has no book weight).
   const bookNet =
-    quantity === beforeQty
-      ? beforeNet
-      : beforeQty > 0
-        ? (beforeNet * quantity) / beforeQty
-        : 0;
+    deductQty <= 0
+      ? 0
+      : deductQty === beforeQty
+        ? beforeNet
+        : beforeQty > 0
+          ? (beforeNet * deductQty) / beforeQty
+          : 0;
   const surplusKg = Math.max(0, Math.round((weight - bookNet) * 100) / 100);
 
-  const delta =
-    quantity === beforeQty
-      ? {
-          quantity: -beforeQty,
-          grossWeight: -(stock.grossWeight || 0),
-          tareWeight: -(stock.tareWeight || 0),
-          netWeight: -beforeNet,
-          totalAmount: -(stock.totalAmount || 0),
-        }
-      : {
-          quantity: -quantity,
-          grossWeight: -((stock.grossWeight || 0) * quantity) / beforeQty,
-          tareWeight: -((stock.tareWeight || 0) * quantity) / beforeQty,
-          // Deduct actual sold weight (floored at 0 inside applyStockDelta)
-          netWeight: -(weight > 0 ? weight : bookNet),
-          totalAmount: -((stock.totalAmount || 0) * quantity) / beforeQty,
-        };
-
   const stockId = stock._id;
-  await applyStockDelta(session, chickenType, delta, user, reason, {
-    invoiceId,
-    strict: true,
-  });
 
-  if (surplusKg > 0) {
+  if (deductQty > 0) {
+    const delta =
+      deductQty === beforeQty
+        ? {
+            quantity: -beforeQty,
+            grossWeight: -(stock.grossWeight || 0),
+            tareWeight: -(stock.tareWeight || 0),
+            netWeight: -beforeNet,
+            totalAmount: -(stock.totalAmount || 0),
+          }
+        : {
+            quantity: -deductQty,
+            grossWeight: -((stock.grossWeight || 0) * deductQty) / beforeQty,
+            tareWeight: -((stock.tareWeight || 0) * deductQty) / beforeQty,
+            netWeight: -(weight > 0 ? Math.min(weight, beforeNet) : bookNet),
+            totalAmount: -((stock.totalAmount || 0) * deductQty) / beforeQty,
+          };
+
+    await applyStockDelta(session, chickenType, delta, user, reason, {
+      invoiceId,
+      strict: true,
+    });
+  }
+
+  if (qtySurplus > 0 || surplusKg > 0) {
     const { recordDistributionSurplus } = require('./damagedStockService');
+    let surplusReason = 'زيادة التوزيع';
+    if (qtySurplus > 0 && surplusKg > 0) surplusReason = 'زيادة عدد/وزن التوزيع';
+    else if (qtySurplus > 0) surplusReason = 'زيادة عدد التوزيع';
+    else surplusReason = 'زيادة وزن التوزيع';
+
     await recordDistributionSurplus({
       session,
       stockId,
       chickenType,
+      quantity: qtySurplus,
       netWeight: surplusKg,
       invoiceId,
       user,
-      reason: reason ? `زيادة وزن التوزيع — ${reason}` : 'زيادة وزن التوزيع',
+      reason: reason ? `${surplusReason} — ${reason}` : surplusReason,
     });
   }
 
-  return { surplusKg };
+  return { surplusKg, qtySurplus };
 };
 
 const restoreStockForInvoice = async (session, invoiceId, user, reason) => {

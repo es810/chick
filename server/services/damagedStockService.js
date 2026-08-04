@@ -32,24 +32,35 @@ const reconcileDistributionSurplus = async () => {
         chickenType: item.chickenType,
         type: 'OUT',
       })
-        .select('netWeight')
+        .select('netWeight quantity')
         .lean();
 
       const bookNet = mov?.netWeight ?? 0;
-      const surplus = round2((item.weight || 0) - bookNet);
-      if (surplus <= 0) continue;
+      const bookQty = mov?.quantity ?? 0;
+      const surplusKg = round2((item.weight || 0) - bookNet);
+      const surplusQty = Math.max(0, (item.quantity || 0) - bookQty);
+      if (surplusKg <= 0 && surplusQty <= 0) continue;
 
       const stock =
         (item.stockId && (await Stock.findById(item.stockId))) ||
         (await Stock.findOne({ chickenType: item.chickenType }));
       if (!stock || !inv.employeeId) continue;
 
+      let reason = `زيادة التوزيع — Invoice #${inv.invoiceNumber}`;
+      if (surplusQty > 0 && surplusKg > 0) {
+        reason = `زيادة عدد/وزن التوزيع — Invoice #${inv.invoiceNumber}`;
+      } else if (surplusQty > 0) {
+        reason = `زيادة عدد التوزيع — Invoice #${inv.invoiceNumber}`;
+      } else {
+        reason = `زيادة وزن التوزيع — Invoice #${inv.invoiceNumber}`;
+      }
+
       await DamagedStock.create({
         stockId: stock._id,
         chickenType: item.chickenType,
-        quantity: 0,
-        netWeight: surplus,
-        reason: `زيادة وزن التوزيع — Invoice #${inv.invoiceNumber}`,
+        quantity: surplusQty,
+        netWeight: Math.max(0, surplusKg),
+        reason,
         source: 'distribution_surplus',
         invoiceId: inv._id,
         recordedBy: inv.employeeId,
@@ -87,23 +98,36 @@ const getDamagedStockSummary = async () => {
 };
 
 /**
- * Auto entry when invoice net weight exceeds book weight for the birds sold.
+ * Auto entry when invoice count/weight exceeds book stock.
  * Does not deduct stock again (stock already adjusted by the invoice).
  */
-const recordDistributionSurplus = async (
-  { session, stockId, chickenType, netWeight, invoiceId, user, reason },
-) => {
+const recordDistributionSurplus = async ({
+  session,
+  stockId,
+  chickenType,
+  netWeight = 0,
+  quantity = 0,
+  invoiceId,
+  user,
+  reason,
+}) => {
   const kg = round2(netWeight);
-  if (kg <= 0) return null;
+  const qty = Math.max(0, parseInt(quantity, 10) || 0);
+  if (kg <= 0 && qty <= 0) return null;
+
+  let defaultReason = 'زيادة التوزيع';
+  if (qty > 0 && kg > 0) defaultReason = 'زيادة عدد/وزن التوزيع';
+  else if (qty > 0) defaultReason = 'زيادة عدد التوزيع';
+  else defaultReason = 'زيادة وزن التوزيع';
 
   const [entry] = await DamagedStock.create(
     [
       {
         stockId,
         chickenType,
-        quantity: 0,
+        quantity: qty,
         netWeight: kg,
-        reason: reason || 'زيادة وزن التوزيع',
+        reason: reason || defaultReason,
         source: 'distribution_surplus',
         invoiceId: invoiceId || null,
         recordedBy: user._id,

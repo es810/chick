@@ -50,9 +50,6 @@ const createInvoice = async (data, employee) => {
       if (!stock) {
         throw new ApiError(404, `Stock not found for type: ${item.chickenType}`);
       }
-      if (stock.quantity < item.quantity) {
-        throw new ApiError(400, `Insufficient stock for ${item.chickenType}`);
-      }
 
       const weight = item.weight || stock.averageWeight * item.quantity;
       const unitPrice = item.unitPrice || stock.pricePerKg;
@@ -191,9 +188,6 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
       const stock = await Stock.findOne({ chickenType: item.chickenType }).session(session);
       if (!stock) {
         throw new ApiError(404, `Stock not found for type: ${item.chickenType}`);
-      }
-      if (stock.quantity < item.quantity) {
-        throw new ApiError(400, `Insufficient stock for ${item.chickenType}`);
       }
 
       const weight = item.weight || stock.averageWeight * item.quantity;

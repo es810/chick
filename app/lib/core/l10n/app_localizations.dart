@@ -253,8 +253,8 @@ class AppLocalizations {
     'ar': 'لا يؤثر على الخزينة الأساسية',
   },
   'distributionWeightSurplus': {
-    'en': 'Distribution weight surplus',
-    'ar': 'زيادة وزن التوزيع',
+    'en': 'Distribution surplus (count/weight)',
+    'ar': 'زيادة التوزيع (عدد/وزن)',
   },
   'recordDamagedStock': {'en': 'Record damaged stock', 'ar': 'تسجيل مخزون هالك'},
   'damagedStockReason': {'en': 'Reason (optional)', 'ar': 'السبب (اختياري)'},
