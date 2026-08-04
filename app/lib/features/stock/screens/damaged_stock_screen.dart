@@ -28,6 +28,7 @@ class DamagedStockScreen extends ConsumerWidget {
 
     StockModel? selected = stock.first;
     final quantityController = TextEditingController();
+    final weightController = TextEditingController();
     final reasonController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
@@ -49,7 +50,9 @@ class DamagedStockScreen extends ConsumerWidget {
                         .map(
                           (s) => DropdownMenuItem(
                             value: s,
-                            child: Text('${s.chickenType} (${s.quantity})'),
+                            child: Text(
+                              '${s.chickenType} (${s.quantity} — ${s.netWeight.toStringAsFixed(1)} kg)',
+                            ),
                           ),
                         )
                         .toList(),
@@ -62,11 +65,30 @@ class DamagedStockScreen extends ConsumerWidget {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(labelText: l10n.itemCount),
                     validator: (v) {
-                      final qty = int.tryParse(v?.trim() ?? '');
-                      if (qty == null || qty <= 0) return l10n.invalidAmount;
+                      final raw = v?.trim() ?? '';
+                      if (raw.isEmpty) return null;
+                      final qty = int.tryParse(raw);
+                      if (qty == null || qty < 0) return l10n.invalidAmount;
                       if (selected != null && qty > selected!.quantity) {
                         return l10n.insufficientStock(selected!.chickenType);
                       }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: weightController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(labelText: l10n.damagedWeightKg),
+                    validator: (v) {
+                      final raw = v?.trim() ?? '';
+                      final qtyRaw = quantityController.text.trim();
+                      if (raw.isEmpty && qtyRaw.isEmpty) {
+                        return l10n.fieldRequired;
+                      }
+                      if (raw.isEmpty) return null;
+                      final w = double.tryParse(raw);
+                      if (w == null || w <= 0) return l10n.invalidAmount;
                       return null;
                     },
                   ),
@@ -97,17 +119,22 @@ class DamagedStockScreen extends ConsumerWidget {
 
     if (ok != true || selected == null || !context.mounted) {
       quantityController.dispose();
+      weightController.dispose();
       reasonController.dispose();
       return;
     }
 
     try {
+      final qty = int.tryParse(quantityController.text.trim()) ?? 0;
+      final weight = double.tryParse(weightController.text.trim());
       await ref.read(damagedStockRepositoryProvider).record(
             stockId: selected!.id,
-            quantity: int.parse(quantityController.text.trim()),
+            quantity: qty,
+            netWeight: weight,
             reason: reasonController.text,
           );
       quantityController.dispose();
+      weightController.dispose();
       reasonController.dispose();
       ref.invalidate(damagedStockProvider);
       ref.invalidate(stockProvider);
@@ -119,6 +146,7 @@ class DamagedStockScreen extends ConsumerWidget {
       }
     } catch (e) {
       quantityController.dispose();
+      weightController.dispose();
       reasonController.dispose();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -187,13 +215,21 @@ class DamagedStockScreen extends ConsumerWidget {
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          '${l10n.itemCount}: ${result.totalQuantity}',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.error,
-                              ),
-                        ),
+                        if (result.totalNetWeight > 0)
+                          Text(
+                            '${l10n.damagedWeightKg}: ${result.totalNetWeight.toStringAsFixed(1)}',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.error,
+                                ),
+                          ),
+                        if (result.totalQuantity > 0)
+                          Text(
+                            '${l10n.itemCount}: ${result.totalQuantity}',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
                       ],
                     ),
                   ),
@@ -227,13 +263,27 @@ class _DamagedEntryCard extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: AppColors.error.withValues(alpha: 0.12),
-          child: const Icon(Icons.delete_sweep_outlined, color: AppColors.error),
+          child: Icon(
+            entry.isDistributionSurplus ? Icons.scale : Icons.delete_sweep_outlined,
+            color: AppColors.error,
+          ),
         ),
         title: Text(entry.chickenType),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${l10n.itemCount}: ${entry.quantity}'),
+            if (entry.isDistributionSurplus)
+              Text(
+                l10n.distributionWeightSurplus,
+                style: TextStyle(
+                  color: AppColors.warning,
+                  fontWeight: FontWeight.w600,
+                  fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                ),
+              ),
+            if (entry.netWeight > 0)
+              Text('${l10n.damagedWeightKg}: ${entry.netWeight.toStringAsFixed(1)}'),
+            if (entry.quantity > 0) Text('${l10n.itemCount}: ${entry.quantity}'),
             if (entry.reason.isNotEmpty) Text(entry.reason),
             if (entry.createdAt != null)
               Text(DateFormat.yMMMd().add_jm().format(entry.createdAt!)),

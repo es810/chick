@@ -107,7 +107,8 @@ const createInvoice = async (data, employee) => {
         item.quantity,
         employee,
         invoiceReason,
-        invoice._id
+        invoice._id,
+        item.weight
       );
     }
 
@@ -246,7 +247,8 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
         item.quantity,
         user,
         invoiceReason,
-        invoice._id
+        invoice._id,
+        item.weight
       );
     }
 

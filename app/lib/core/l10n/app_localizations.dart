@@ -252,10 +252,15 @@ class AppLocalizations {
     'en': 'Not linked to main treasury',
     'ar': 'لا يؤثر على الخزينة الأساسية',
   },
+  'distributionWeightSurplus': {
+    'en': 'Distribution weight surplus',
+    'ar': 'زيادة وزن التوزيع',
+  },
   'recordDamagedStock': {'en': 'Record damaged stock', 'ar': 'تسجيل مخزون هالك'},
   'damagedStockReason': {'en': 'Reason (optional)', 'ar': 'السبب (اختياري)'},
   'noDamagedStock': {'en': 'No damaged stock recorded', 'ar': 'لا يوجد مخزون هالك مسجّل'},
   'damagedStockRecorded': {'en': 'Damaged stock recorded', 'ar': 'تم تسجيل المخزون الهالك'},
+  'damagedWeightKg': {'en': 'Weight (kg)', 'ar': 'الوزن (كجم)'},
   'selectStockType': {'en': 'Please select stock type', 'ar': 'يرجى اختيار نوع المخزون'},
   'noStockAddFirst': {'en': 'No stock items. Admin must add stock first.', 'ar': 'لا يوجد مخزون. يجب على المدير إضافة مخزون أولاً.'},
 
@@ -656,10 +661,12 @@ class AppLocalizations {
   String get selectStockType => _get('selectStockType');
   String get damagedStock => _get('damagedStock');
   String get damagedStockTreasuryNote => _get('damagedStockTreasuryNote');
+  String get distributionWeightSurplus => _get('distributionWeightSurplus');
   String get recordDamagedStock => _get('recordDamagedStock');
   String get damagedStockReason => _get('damagedStockReason');
   String get noDamagedStock => _get('noDamagedStock');
   String get damagedStockRecorded => _get('damagedStockRecorded');
+  String get damagedWeightKg => _get('damagedWeightKg');
   String get noStockAddFirst => _get('noStockAddFirst');
 
   String get stockManagement => _get('stockManagement');

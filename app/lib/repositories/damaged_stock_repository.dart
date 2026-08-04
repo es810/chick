@@ -7,7 +7,7 @@ class DamagedStockRepository {
 
   final ApiClient _api;
 
-  Future<({List<DamagedStockEntry> entries, int totalQuantity})> list() async {
+  Future<({List<DamagedStockEntry> entries, int totalQuantity, double totalNetWeight})> list() async {
     final response = await _api.get(ApiConstants.damagedStock);
     final data = response.data as Map<String, dynamic>;
     final summary = data['summary'] as Map<String, dynamic>? ?? {};
@@ -17,12 +17,14 @@ class DamagedStockRepository {
           .map((e) => DamagedStockEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
       totalQuantity: (summary['totalQuantity'] as num?)?.toInt() ?? 0,
+      totalNetWeight: (summary['totalNetWeight'] as num?)?.toDouble() ?? 0,
     );
   }
 
   Future<DamagedStockEntry> record({
     required String stockId,
-    required int quantity,
+    int quantity = 0,
+    double? netWeight,
     String? reason,
   }) async {
     final response = await _api.post(
@@ -30,6 +32,7 @@ class DamagedStockRepository {
       data: {
         'stockId': stockId,
         'quantity': quantity,
+        if (netWeight != null) 'netWeight': netWeight,
         if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
       },
     );

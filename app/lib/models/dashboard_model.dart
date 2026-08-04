@@ -68,6 +68,7 @@ class DashboardData extends Equatable {
     required this.monthlyInvoices,
     required this.pendingPayments,
     required this.damagedStockQuantity,
+    this.damagedStockNetWeight = 0,
     required this.recentInvoices,
     required this.mainTreasuryBalance,
     this.mainTreasuryUpdatedAt,
@@ -80,6 +81,7 @@ class DashboardData extends Equatable {
   final int monthlyInvoices;
   final int pendingPayments;
   final int damagedStockQuantity;
+  final double damagedStockNetWeight;
   final List<Map<String, dynamic>> recentInvoices;
   final double mainTreasuryBalance;
   final DateTime? mainTreasuryUpdatedAt;
@@ -100,6 +102,7 @@ class DashboardData extends Equatable {
       monthlyInvoices: (stats['count'] as num?)?.toInt() ?? 0,
       pendingPayments: (stats['pending'] as num?)?.toInt() ?? 0,
       damagedStockQuantity: (damaged['totalQuantity'] as num?)?.toInt() ?? 0,
+      damagedStockNetWeight: (damaged['totalNetWeight'] as num?)?.toDouble() ?? 0,
       recentInvoices: recent.map((e) => Map<String, dynamic>.from(e as Map)).toList(),
       mainTreasuryBalance: (mainTreasury['balance'] as num?)?.toDouble() ?? 0,
       mainTreasuryUpdatedAt: mainTreasury['updatedAt'] != null
