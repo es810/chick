@@ -604,6 +604,12 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(l10n.employees),
         actions: [
           IconButton(

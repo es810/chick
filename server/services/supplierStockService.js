@@ -74,14 +74,16 @@ const addSupplierStock = async (supplierId, data, user) => {
     let stock = await SupplierStock.findOne({ supplierId, chickenType }).session(session);
 
     if (stock) {
+      // Accumulate on top of existing debt/stock for the same type
       stock.quantity += quantity;
       stock.location = batch.location || stock.location;
-      stock.grossWeight = batch.grossWeight;
-      stock.tareWeight = batch.tareWeight;
-      stock.netWeight = batch.netWeight;
-      stock.averageWeight = batch.averageWeight;
+      stock.grossWeight = (stock.grossWeight || 0) + (batch.grossWeight || 0);
+      stock.tareWeight = (stock.tareWeight || 0) + (batch.tareWeight || 0);
+      stock.netWeight = (stock.netWeight || 0) + (batch.netWeight || 0);
+      stock.totalAmount = (stock.totalAmount || 0) + (batch.totalAmount || 0);
       stock.pricePerKg = batch.pricePerKg ?? stock.pricePerKg;
-      stock.totalAmount = batch.totalAmount;
+      stock.averageWeight =
+        stock.quantity > 0 ? stock.netWeight / stock.quantity : batch.averageWeight;
       await stock.save({ session });
     } else {
       [stock] = await SupplierStock.create(

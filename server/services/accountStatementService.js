@@ -117,10 +117,30 @@ const getSupplierStatement = async (supplierId) => {
   );
   const paidTotal = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const ledgerDebt = Math.max(0, stockTotal - paidTotal);
+  const currentBalance = supplier.balance || 0;
 
-  if (ledgerDebt > (supplier.balance || 0)) {
+  // Keep stored balance in sync when stock ledger is ahead (e.g. after new purchases).
+  // Never lower balance here — older rows may under-report after past overwrite bugs.
+  if (ledgerDebt > currentBalance) {
     supplier.balance = ledgerDebt;
     await supplier.save();
+  }
+
+  // If stored debt is higher than reconstructed stock lines, show the gap so the
+  // statement still ends at the real supplier balance.
+  const balanceGap = Math.max(0, (supplier.balance || 0) - ledgerDebt);
+  if (balanceGap > 0.001) {
+    entries.unshift({
+      id: `${supplier._id.toString()}-prior-debt`,
+      type: 'purchase',
+      date: stockItems[0]?.createdAt || supplier.createdAt || new Date(),
+      description: 'مديونية سابقة',
+      subtitle: '',
+      debit: balanceGap,
+      credit: 0,
+      balanceAfter: null,
+      reference: null,
+    });
   }
 
   let running = 0;

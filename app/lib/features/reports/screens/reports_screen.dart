@@ -20,12 +20,18 @@ class ReportsScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Reports & Analytics'),
-          bottom: const TabBar(
+          leading: Navigator.of(context).canPop()
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
+          title: Text(context.l10n.reports),
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Revenue'),
-              Tab(text: 'Sales'),
-              Tab(text: 'Audit Logs'),
+              Tab(text: context.l10n.revenue),
+              Tab(text: context.l10n.salesTrend),
+              Tab(text: context.l10n.auditLogs),
             ],
           ),
         ),

@@ -32,6 +32,12 @@ class AppShell extends StatelessWidget {
         return true;
       }
     }
+    // Keep shell chrome for secondary admin screens opened from dashboard chips
+    if (location.endsWith('/stock') ||
+        location.endsWith('/reports') ||
+        location.endsWith('/employees')) {
+      return true;
+    }
     return false;
   }
 
@@ -44,6 +50,7 @@ class AppShell extends StatelessWidget {
       if (path.endsWith('/treasury') && location.startsWith(path)) return i;
       if (path.endsWith('/suppliers') && location.startsWith(path)) return i;
     }
+    // Secondary screens: highlight dashboard so nav stays usable
     return 0;
   }
 

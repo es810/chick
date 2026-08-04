@@ -127,22 +127,32 @@ class AdminDashboardScreen extends ConsumerWidget {
                   _QuickAction(
                     icon: Icons.receipt_long,
                     label: l10n.distributionInvoices,
-                    onTap: () => context.go('/admin/invoices'),
+                    onTap: () => context.push('/admin/invoices'),
                   ),
                   _QuickAction(
                     icon: Icons.people,
                     label: l10n.employees,
-                    onTap: () => context.go('/admin/employees'),
+                    onTap: () => context.push('/admin/employees'),
                   ),
                   _QuickAction(
                     icon: Icons.inventory,
                     label: l10n.stock,
-                    onTap: () => context.go('/admin/stock'),
+                    onTap: () => context.push('/admin/stock'),
                   ),
                   _QuickAction(
                     icon: Icons.analytics,
                     label: l10n.reports,
-                    onTap: () => context.go('/admin/reports'),
+                    onTap: () => context.push('/admin/reports'),
+                  ),
+                  _QuickAction(
+                    icon: Icons.local_shipping,
+                    label: l10n.suppliers,
+                    onTap: () => context.push('/admin/suppliers'),
+                  ),
+                  _QuickAction(
+                    icon: Icons.account_balance_wallet,
+                    label: l10n.treasury,
+                    onTap: () => context.push('/admin/treasury'),
                   ),
                 ],
               ),
