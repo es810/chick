@@ -14,12 +14,12 @@ class ApiConfig {
       return value;
     }
 
-    if (kIsWeb) return 'http://localhost:3000/api';
+    if (kIsWeb) return 'https://chick-production.up.railway.app/api';
 
     if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000/api';
+      return 'https://chick-production.up.railway.app/api';
     }
 
-    return 'http://localhost:3000/api';
+    return 'https://chick-production.up.railway.app/api';
   }
 }

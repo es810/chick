@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/api_error.dart';
@@ -26,7 +27,7 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._repo, this._ref) : super(const AuthState()) {
+  AuthNotifier(this._repo, this._ref) : super(const AuthState(isLoading: true)) {
     _init();
   }
 
@@ -38,16 +39,47 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final hasToken = await _repo.hasToken();
     if (cached != null && hasToken) {
       state = AuthState(user: cached, isLoading: false);
-      _refreshUserInBackground();
-      return;
+      await _refreshUserInBackground();
+      if (state.isAuthenticated) return;
     }
 
     state = state.copyWith(isLoading: true);
     try {
       final user = await _repo.getCurrentUser();
-      state = AuthState(user: user, isLoading: false);
+      if (user != null) {
+        state = AuthState(user: user, isLoading: false);
+        return;
+      }
     } catch (_) {
-      state = const AuthState(isLoading: false);
+      // fall through to debug auto-login
+    }
+
+    if (kDebugMode) {
+      final ok = await _debugAutoLogin();
+      if (ok) return;
+    }
+
+    state = const AuthState(isLoading: false);
+  }
+
+  /// Debug-only: sign in as admin so testers skip the login screen after DB resets.
+  Future<bool> _debugAutoLogin() async {
+    const email = String.fromEnvironment(
+      'DEV_ADMIN_EMAIL',
+      defaultValue: 'admin@chick.com',
+    );
+    const password = String.fromEnvironment(
+      'DEV_ADMIN_PASSWORD',
+      defaultValue: 'admin123',
+    );
+    try {
+      await _repo.clearSession();
+      final auth = await _repo.login(email, password, remember: true);
+      invalidateAllAppData(_ref);
+      state = AuthState(user: auth.user, isLoading: false);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

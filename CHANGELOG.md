@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.7.0] — 2026-08-04
+
+### Stock & invoices
+- Distribution invoices **deduct stock** on create; restore on edit/delete
+- Supplier stock **accumulates** debt/value when adding the same type again
+- Main treasury balance includes **inventory value** (not supplier debt line)
+- Removed separate «قيمة مخزون المورد» row from treasury UI
+
+### Profits
+- Daily profit includes collection **discounts** (`amountDeducted`)
+- Monthly profit deducts **employee salaries** (active payroll)
+
+### App & ops
+- Bottom nav label **الفواتير** (not التوزيع)
+- Mongo reconnect after disconnect; revenue report Stock import fix
+- Debug auto-login only (not in release APK)
+- Clean production DB: admin account only, no demo data
+
 ## [1.6.0] — 2026-05-29
 
 ### Employee treasury
