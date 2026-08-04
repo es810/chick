@@ -4,7 +4,7 @@ const CollectionInvoice = require('../models/CollectionInvoice');
 const EmployeeLedger = require('../models/EmployeeLedger');
 const SalaryAdvance = require('../models/SalaryAdvance');
 const Invoice = require('../models/Invoice');
-const Supplier = require('../models/Supplier');
+const Stock = require('../models/Stock');
 const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
@@ -15,7 +15,7 @@ const MAIN_KEY = 'main';
 /**
  * إجمالي الخزنة =
  * رصيد أول المدة + إجمالي التحصيل + الإيرادات الخارجية
- * − إجمالي التحميل (مديونية موظفين + مديونية موردين/بضاعة) − المصاريف − السحوبات
+ * − إجمالي التحميل − المصاريف الأخرى − السحوبات
  */
 const computeTreasuryBalance = ({
   openingBalance,
@@ -188,24 +188,34 @@ const ensureMainTreasuryInSession = async (session) => {
 const applyMainTreasuryDeltaInSession = async () => null;
 
 const getTreasurySummary = async () => {
-  const [treasury, ledgerRows, movementRows, supplierDebtAgg] = await Promise.all([
+  const [treasury, ledgerRows, movementRows, stockValueAgg] = await Promise.all([
     getMainTreasury(),
     EmployeeLedger.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
     TreasuryMovement.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
-    Supplier.aggregate([
-      { $group: { _id: null, total: { $sum: '$balance' } } },
+    Stock.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: {
+              $cond: [
+                { $gt: ['$totalAmount', 0] },
+                '$totalAmount',
+                { $multiply: [{ $ifNull: ['$pricePerKg', 0] }, { $ifNull: ['$netWeight', 0] }] },
+              ],
+            },
+          },
+        },
+      },
     ]),
   ]);
 
-  let employeeLoading = 0;
+  let totalLoading = 0;
   let otherExpenses = 0;
   for (const row of ledgerRows) {
-    if (row._id === 'debt') employeeLoading = row.total;
+    if (row._id === 'debt') totalLoading = row.total;
     if (row._id === 'expense') otherExpenses = row.total;
   }
-
-  const supplierLoading = supplierDebtAgg[0]?.total || 0;
-  const totalLoading = employeeLoading + supplierLoading;
 
   let totalCollection = 0;
   let externalRevenue = 0;
@@ -217,6 +227,7 @@ const getTreasurySummary = async () => {
   }
 
   const openingBalance = getOpeningBalance(treasury);
+  const stockValue = stockValueAgg[0]?.total || 0;
 
   const balance = computeTreasuryBalance({
     openingBalance,
@@ -233,10 +244,9 @@ const getTreasurySummary = async () => {
     totalCollection,
     externalRevenue,
     totalLoading,
-    employeeLoading,
-    supplierLoading,
     otherExpenses,
     withdrawals,
+    stockValue,
     updatedAt: treasury.updatedAt,
     updatedByName: treasury.updatedBy?.name ?? null,
   };

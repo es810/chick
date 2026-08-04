@@ -1,6 +1,5 @@
 const TreasuryMovement = require('../models/TreasuryMovement');
 const EmployeeLedger = require('../models/EmployeeLedger');
-const Supplier = require('../models/Supplier');
 const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const { getTreasurySummary } = require('./treasuryService');
@@ -38,26 +37,6 @@ const listLedgerEntries = async (type) => {
     subtitle: e.employeeId?.name ?? '',
     createdAt: e.createdAt,
   }));
-};
-
-/** Loading = employee goods debts + unpaid supplier stock debts. */
-const listLoadingEntries = async () => {
-  const [employeeDebts, suppliers] = await Promise.all([
-    listLedgerEntries('debt'),
-    Supplier.find({ balance: { $gt: 0 } }).sort({ updatedAt: -1 }),
-  ]);
-
-  const supplierEntries = suppliers.map((s) => ({
-    id: `supplier-debt-${s._id}`,
-    category: 'loading',
-    amount: s.balance,
-    description: `بضاعة مورد — ${s.name}`,
-    subtitle: 'مديونية مورد (مخزون)',
-    createdAt: s.updatedAt,
-    readOnly: true,
-  }));
-
-  return [...supplierEntries, ...employeeDebts];
 };
 
 const createMovement = async (type, amount, description, user) => {
@@ -160,7 +139,6 @@ module.exports = {
   listCollectionEntries: listCollectionInvoices,
   listMovements,
   listLedgerEntries,
-  listLoadingEntries,
   createMovement,
   updateMovement,
   deleteMovement,

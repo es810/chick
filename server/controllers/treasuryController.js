@@ -11,7 +11,6 @@ const {
   listCollectionEntries,
   listMovements,
   listLedgerEntries,
-  listLoadingEntries,
   createMovement,
   updateMovement,
   deleteMovement,
@@ -74,7 +73,7 @@ const listTreasuryEntriesHandler = asyncHandler(async (req, res) => {
       data = await listMovements('withdrawal');
       break;
     case 'loading':
-      data = await listLoadingEntries();
+      data = await listLedgerEntries('debt');
       break;
     case 'expense':
       data = await listLedgerEntries('expense');

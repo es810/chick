@@ -379,6 +379,14 @@ class _MainTreasuryTab extends ConsumerWidget {
               onTap: () => _openCategory(context, ref, TreasuryCategory.loading, l10n.totalLoading),
             ),
             _MetricRow(
+              label: l10n.stockValue,
+              value: summary.stockValue,
+              valueColor: const Color(0xFF26A69A),
+              icon: Icons.inventory_2_outlined,
+              iconColor: const Color(0xFF26A69A),
+              onTap: () => context.push('/admin/stock'),
+            ),
+            _MetricRow(
               label: l10n.otherExpenses,
               value: summary.otherExpenses,
               valueColor: const Color(0xFFFFA726),
