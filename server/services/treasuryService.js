@@ -37,9 +37,23 @@ const computeTreasuryBalance = ({
 /**
  * أرباح الفترة = المبيعات − تكلفة البضاعة عند التحميل − المصروفات − الخصومات
  *
- * التحميل هنا = قيمة البضاعة وقت دخولها للمخزون (التزام شراء)،
- * بغض النظر عن دفع الحساب للمورد. دفع المورد يخص الخزنة فقط وليس الربح.
+ * التحميل = صافي تكلفة الشراء في الفترة:
+ *   حركات دخول (IN) − تعديلات النقص (OUT بدون فاتورة توزيع، وغير الهالك)
+ * تعديل المخزون بالزيادة/النقص يحرّك الربح فوراً. دفع المورد يخص الخزنة فقط.
  */
+const movementAmountExpr = {
+  $cond: [
+    { $gt: ['$totalAmount', 0] },
+    '$totalAmount',
+    {
+      $multiply: [
+        { $ifNull: ['$unitPrice', 0] },
+        { $ifNull: ['$netWeight', 0] },
+      ],
+    },
+  ],
+};
+
 const computeProfitForPeriod = async (startDate, endDate = null) => {
   const invoiceDateFilter = endDate
     ? { $gte: startDate, $lt: endDate }
@@ -47,57 +61,58 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
   const createdAtFilter = endDate
     ? { $gte: startDate, $lt: endDate }
     : { $gte: startDate };
-  const [salesAgg, loadingAgg, expenseAgg, discountAgg] = await Promise.all([
-    Invoice.aggregate([
-      { $match: { createdAt: invoiceDateFilter } },
-      { $group: { _id: null, total: { $sum: '$totalPrice' } } },
-    ]),
-    // Cost of goods when loaded (IN), not when paid. Skip invoice stock restores.
-    StockMovement.aggregate([
-      {
-        $match: {
-          type: 'IN',
-          createdAt: createdAtFilter,
-          reason: { $not: /stock restored/i },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: {
-            $sum: {
-              $cond: [
-                { $gt: ['$totalAmount', 0] },
-                '$totalAmount',
-                {
-                  $multiply: [
-                    { $ifNull: ['$unitPrice', 0] },
-                    { $ifNull: ['$netWeight', 0] },
-                  ],
-                },
-              ],
-            },
+  const [salesAgg, loadingInAgg, loadingAdjOutAgg, expenseAgg, discountAgg] =
+    await Promise.all([
+      Invoice.aggregate([
+        { $match: { createdAt: invoiceDateFilter } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } },
+      ]),
+      StockMovement.aggregate([
+        {
+          $match: {
+            type: 'IN',
+            createdAt: createdAtFilter,
+            reason: { $not: /stock restored/i },
           },
         },
-      },
-    ]),
-    EmployeeLedger.aggregate([
-      { $match: { type: 'expense', createdAt: createdAtFilter } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]),
-    CollectionInvoice.aggregate([
-      {
-        $match: {
-          createdAt: createdAtFilter,
-          amountDeducted: { $gt: 0 },
+        { $group: { _id: null, total: { $sum: movementAmountExpr } } },
+      ]),
+      // Edits/removals that reduce purchase cost (not sales, not damaged write-off).
+      StockMovement.aggregate([
+        {
+          $match: {
+            type: 'OUT',
+            createdAt: createdAtFilter,
+            $and: [
+              {
+                $or: [{ invoiceId: null }, { invoiceId: { $exists: false } }],
+              },
+              { reason: { $not: /Damaged stock/i } },
+            ],
+          },
         },
-      },
-      { $group: { _id: null, total: { $sum: '$amountDeducted' } } },
-    ]),
-  ]);
+        { $group: { _id: null, total: { $sum: movementAmountExpr } } },
+      ]),
+      EmployeeLedger.aggregate([
+        { $match: { type: 'expense', createdAt: createdAtFilter } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      CollectionInvoice.aggregate([
+        {
+          $match: {
+            createdAt: createdAtFilter,
+            amountDeducted: { $gt: 0 },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$amountDeducted' } } },
+      ]),
+    ]);
 
   const revenue = salesAgg[0]?.total || 0;
-  const loading = loadingAgg[0]?.total || 0;
+  const loading = Math.max(
+    0,
+    (loadingInAgg[0]?.total || 0) - (loadingAdjOutAgg[0]?.total || 0)
+  );
   const expenses = expenseAgg[0]?.total || 0;
   const discount = discountAgg[0]?.total || 0;
   const profit = revenue - loading - expenses - discount;

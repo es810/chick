@@ -153,14 +153,14 @@ const applyStockIncrement = async (session, chickenType, delta, user, reason) =>
     await stock.save({ session });
   }
 
-  if ((delta.quantity || 0) > 0) {
+  if ((delta.quantity || 0) > 0 || (delta.totalAmount || 0) > 0) {
     await StockMovement.create(
       [
         {
           type: 'IN',
           stockId: stock._id,
           chickenType,
-          quantity: delta.quantity,
+          quantity: Math.max(0, delta.quantity || 0),
           grossWeight: Math.max(0, delta.grossWeight || 0),
           tareWeight: Math.max(0, delta.tareWeight || 0),
           netWeight: Math.max(0, delta.netWeight || 0),
@@ -204,24 +204,25 @@ const proportionalOutDelta = (stock, outQty) => {
 };
 
 const applyStockDelta = async (session, chickenType, delta, user, reason, options = {}) => {
-  if (
-    !delta.quantity &&
-    !delta.grossWeight &&
-    !delta.tareWeight &&
-    !delta.netWeight &&
-    !delta.totalAmount
-  ) {
+  const qtyDelta = Number(delta.quantity) || 0;
+  const amountDelta = Number(delta.totalAmount) || 0;
+  const grossDelta = Number(delta.grossWeight) || 0;
+  const tareDelta = Number(delta.tareWeight) || 0;
+  const netDelta = Number(delta.netWeight) || 0;
+
+  if (!qtyDelta && !grossDelta && !tareDelta && !netDelta && !amountDelta) {
     return null;
   }
 
-  if ((delta.quantity || 0) > 0) {
+  // Quantity or value increase → purchase cost goes up (affects profit).
+  if (qtyDelta > 0 || (qtyDelta === 0 && amountDelta > 0)) {
     return applyStockIncrement(session, chickenType, delta, user, reason);
   }
 
   const stock = await Stock.findOne({ chickenType }).session(session);
   if (!stock) return null;
 
-  const requestedOut = Math.abs(delta.quantity || 0);
+  const requestedOut = Math.abs(qtyDelta);
   if (options.strict && requestedOut > stock.quantity) {
     throw new ApiError(400, `Insufficient stock for ${chickenType}`);
   }
@@ -229,11 +230,11 @@ const applyStockDelta = async (session, chickenType, delta, user, reason, option
   const outQty = options.strict
     ? requestedOut
     : Math.min(stock.quantity, requestedOut);
-  stock.quantity = Math.max(0, stock.quantity + (delta.quantity || 0));
-  stock.grossWeight = Math.max(0, stock.grossWeight + (delta.grossWeight || 0));
-  stock.tareWeight = Math.max(0, stock.tareWeight + (delta.tareWeight || 0));
-  stock.netWeight = Math.max(0, stock.netWeight + (delta.netWeight || 0));
-  stock.totalAmount = Math.max(0, stock.totalAmount + (delta.totalAmount || 0));
+  stock.quantity = Math.max(0, stock.quantity + qtyDelta);
+  stock.grossWeight = Math.max(0, stock.grossWeight + grossDelta);
+  stock.tareWeight = Math.max(0, stock.tareWeight + tareDelta);
+  stock.netWeight = Math.max(0, stock.netWeight + netDelta);
+  stock.totalAmount = Math.max(0, stock.totalAmount + amountDelta);
   if (delta.pricePerKg != null) stock.pricePerKg = delta.pricePerKg;
   if (stock.quantity > 0) {
     stock.averageWeight = stock.netWeight / stock.quantity;
@@ -242,7 +243,9 @@ const applyStockDelta = async (session, chickenType, delta, user, reason, option
   }
   await stock.save({ session });
 
-  if (outQty > 0) {
+  // Record purchase-cost reduction even when only the money changes (qty unchanged).
+  const amountOut = amountDelta < 0 ? Math.abs(amountDelta) : Math.abs(delta.totalAmount || 0);
+  if (outQty > 0 || amountDelta < 0) {
     await StockMovement.create(
       [
         {
@@ -250,10 +253,10 @@ const applyStockDelta = async (session, chickenType, delta, user, reason, option
           stockId: stock._id,
           chickenType,
           quantity: outQty,
-          grossWeight: Math.abs(delta.grossWeight || 0),
-          tareWeight: Math.abs(delta.tareWeight || 0),
-          netWeight: Math.abs(delta.netWeight || 0),
-          totalAmount: Math.abs(delta.totalAmount || 0),
+          grossWeight: Math.abs(grossDelta),
+          tareWeight: Math.abs(tareDelta),
+          netWeight: Math.abs(netDelta),
+          totalAmount: amountDelta < 0 ? Math.abs(amountDelta) : amountOut,
           reason,
           employeeId: user._id,
           invoiceId: options.invoiceId,
@@ -421,14 +424,18 @@ const deleteStockType = async (stockId, user) => {
     const stock = await Stock.findById(stockId).session(session);
     if (!stock) throw new ApiError(404, 'Stock not found');
 
-    if (stock.quantity > 0) {
+    if ((stock.quantity || 0) > 0 || (stock.totalAmount || 0) > 0) {
       await StockMovement.create(
         [
           {
             type: 'OUT',
             stockId: stock._id,
             chickenType: stock.chickenType,
-            quantity: stock.quantity,
+            quantity: stock.quantity || 0,
+            grossWeight: stock.grossWeight || 0,
+            tareWeight: stock.tareWeight || 0,
+            netWeight: stock.netWeight || 0,
+            totalAmount: stock.totalAmount || 0,
             reason: 'Stock type deleted',
             employeeId: user._id,
           },
@@ -453,6 +460,101 @@ const deleteStockType = async (stockId, user) => {
   }
 };
 
+/**
+ * Replace stock snapshot (edit form). Records IN/OUT so profit moves with the change.
+ */
+const updateStockSnapshot = async (stockId, data, user) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const existing = await Stock.findById(stockId).session(session);
+    if (!existing) throw new ApiError(404, 'Stock not found');
+
+    const before = {
+      chickenType: existing.chickenType,
+      quantity: existing.quantity || 0,
+      location: existing.location || '',
+      grossWeight: existing.grossWeight || 0,
+      tareWeight: existing.tareWeight || 0,
+      netWeight: existing.netWeight || 0,
+      averageWeight: existing.averageWeight || 0,
+      pricePerKg: existing.pricePerKg || 0,
+      totalAmount: existing.totalAmount || 0,
+    };
+
+    const after = normalizeBatch({
+      chickenType: data.chickenType ?? existing.chickenType,
+      quantity: data.quantity ?? existing.quantity,
+      location: data.location ?? existing.location,
+      grossWeight: data.grossWeight ?? existing.grossWeight,
+      tareWeight: data.tareWeight ?? existing.tareWeight,
+      netWeight: data.netWeight ?? existing.netWeight,
+      averageWeight: data.averageWeight ?? existing.averageWeight,
+      pricePerKg: data.pricePerKg ?? existing.pricePerKg,
+      totalAmount:
+        data.totalAmount ??
+        (data.pricePerKg != null && data.netWeight != null
+          ? data.pricePerKg * data.netWeight
+          : existing.totalAmount),
+    });
+
+    if (after.chickenType !== before.chickenType) {
+      await applyStockDelta(
+        session,
+        before.chickenType,
+        stockSnapshotDelta(
+          {
+            quantity: 0,
+            grossWeight: 0,
+            tareWeight: 0,
+            netWeight: 0,
+            totalAmount: 0,
+          },
+          before
+        ),
+        user,
+        'Stock type changed — removed'
+      );
+      await applyStockIn(session, after, user, 'Stock type changed — added');
+      await Stock.findByIdAndDelete(existing._id, { session });
+    } else {
+      const delta = stockSnapshotDelta(after, before);
+      await applyStockDelta(
+        session,
+        before.chickenType,
+        {
+          ...delta,
+          pricePerKg: after.pricePerKg,
+          location: after.location,
+          averageWeight: after.averageWeight,
+        },
+        user,
+        'Stock updated'
+      );
+    }
+
+    if (data.lowStockThreshold != null) {
+      const stock = await Stock.findOne({ chickenType: after.chickenType }).session(session);
+      if (stock) {
+        stock.lowStockThreshold = data.lowStockThreshold;
+        await stock.save({ session });
+      }
+    }
+
+    await session.commitTransaction();
+
+    await logAction(user._id, user.name, 'UPDATE_STOCK', after.chickenType);
+
+    return Stock.findOne({ chickenType: after.chickenType });
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
 module.exports = {
   addStock,
   applyStockIn,
@@ -462,6 +564,7 @@ module.exports = {
   deductStockForInvoice,
   restoreStockForInvoice,
   stockSnapshotDelta,
+  updateStockSnapshot,
   getLowStockAlerts,
   getMovements,
   deleteStockType,
