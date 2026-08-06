@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.2] — 2026-08-06
+
+### Profits & stock edits
+- Profit follows stock load **edits** (increase/decrease), not only the first load
+- Net goods cost = purchase IN − adjustment OUT (supplier/main stock corrections)
+- Editing main stock now records movements so P&L stays in sync
+
 ## [1.8.1] — 2026-08-05
 
 ### Stock variance (عندي مخزون)
