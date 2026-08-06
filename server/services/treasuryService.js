@@ -6,7 +6,7 @@ const Invoice = require('../models/Invoice');
 const Stock = require('../models/Stock');
 const StockMovement = require('../models/StockMovement');
 const SupplierStock = require('../models/SupplierStock');
-const User = require('../models/User');
+const SalaryAdvance = require('../models/SalaryAdvance');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 const { getCairoMonthRange } = require('../utils/businessCalendar');
@@ -117,29 +117,35 @@ const computeDailyProfit = async (startDate, endDate) =>
   computeProfitForPeriod(startDate, endDate);
 
 /**
- * أرباح الشهر = أرباح الفترة − إجمالي مرتبات الموظفين النشطين
+ * أرباح الشهر = أرباح الفترة − سلف الموظفين في الشهر
+ * حقل الراتب على الموظف للتعريف/سقف السلفة فقط — لا يُخصم تلقائياً من الربح.
  */
 const computeMonthlyProfit = async (year, month) => {
   const { start: startOfMonth, end: startOfNextMonth } = getCairoMonthRange(year, month);
 
-  const [periodProfit, salaryAgg] = await Promise.all([
+  const [periodProfit, advanceAgg] = await Promise.all([
     computeProfitForPeriod(startOfMonth, startOfNextMonth),
-    User.aggregate([
-      { $match: { role: 'employee', isActive: { $ne: false } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ['$salary', 0] } } } },
+    SalaryAdvance.aggregate([
+      {
+        $match: {
+          advanceDate: { $gte: startOfMonth, $lt: startOfNextMonth },
+        },
+      },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
   ]);
 
   const dailyProfitsTotal = periodProfit.profit;
-  const salaries = salaryAgg[0]?.total || 0;
+  const salaryAdvances = advanceAgg[0]?.total || 0;
 
   return {
     year,
     month,
     dailyProfitsTotal,
-    salaries,
-    salaryAdvances: salaries,
-    profit: dailyProfitsTotal - salaries,
+    /** @deprecated use salaryAdvances — kept for app compatibility */
+    salaries: salaryAdvances,
+    salaryAdvances,
+    profit: dailyProfitsTotal - salaryAdvances,
     breakdown: periodProfit,
   };
 };
