@@ -25,9 +25,9 @@ const createCollectionInvoiceHandler = asyncHandler(async (req, res) => {
 });
 
 const updateCollectionInvoiceHandler = asyncHandler(async (req, res) => {
-  await updateCollectionInvoice(req.params.id, req.body, req.user);
+  const entry = await updateCollectionInvoice(req.params.id, req.body, req.user);
   const summary = await getTreasurySummary();
-  res.json({ success: true, data: summary });
+  res.json({ success: true, data: { entry, summary } });
 });
 
 const deleteCollectionInvoiceHandler = asyncHandler(async (req, res) => {

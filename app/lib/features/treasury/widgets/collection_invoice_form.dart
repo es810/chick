@@ -12,12 +12,12 @@ import '../../../models/treasury_entry_item.dart';
 import '../../../models/user_model.dart';
 import '../../../shared/widgets/client_picker_field.dart';
 
-Future<bool?> showCollectionInvoiceDialog({
+Future<TreasuryEntryItem?> showCollectionInvoiceDialog({
   required BuildContext context,
   required WidgetRef ref,
   TreasuryEntryItem? existing,
 }) {
-  return showDialog<bool>(
+  return showDialog<TreasuryEntryItem>(
     context: context,
     builder: (ctx) => _CollectionInvoiceDialog(existing: existing),
   );
@@ -198,8 +198,9 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
         'balanceAfter': _balanceAfter,
       };
 
+      late TreasuryEntryItem saved;
       if (widget.existing == null) {
-        await repo.createInvoice(
+        final result = await repo.createInvoice(
           clientId: body['clientId'] as String,
           employeeId: body['employeeId'] as String,
           collectionDate: body['collectionDate'] as DateTime,
@@ -208,8 +209,9 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
           balanceBefore: body['balanceBefore'] as double,
           balanceAfter: body['balanceAfter'] as double,
         );
+        saved = result.entry;
       } else {
-        await repo.updateInvoice(
+        saved = await repo.updateInvoice(
           id: widget.existing!.id,
           clientId: body['clientId'] as String,
           employeeId: body['employeeId'] as String,
@@ -221,13 +223,37 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
         );
       }
 
+      // Prefer phone from picker when API omits it.
+      if ((saved.clientPhone == null || saved.clientPhone!.isEmpty) &&
+          _selectedClient != null &&
+          _selectedClient!.phone.isNotEmpty) {
+        saved = TreasuryEntryItem(
+          id: saved.id,
+          category: saved.category,
+          amount: saved.amount,
+          description: saved.description,
+          subtitle: saved.subtitle,
+          createdAt: saved.createdAt,
+          clientId: saved.clientId,
+          clientName: saved.clientName,
+          clientPhone: _selectedClient!.phone,
+          employeeId: saved.employeeId,
+          employeeName: saved.employeeName,
+          collectionDate: saved.collectionDate,
+          amountPaid: saved.amountPaid,
+          amountDeducted: saved.amountDeducted,
+          balanceBefore: saved.balanceBefore,
+          balanceAfter: saved.balanceAfter,
+        );
+      }
+
       ref.invalidate(clientsProvider);
       ref.invalidate(dashboardProvider);
       ref.invalidate(treasurySummaryProvider);
       ref.invalidate(myTreasuryProvider);
       ref.invalidate(myTreasuryStatementProvider);
 
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) Navigator.pop(context, saved);
     } catch (e) {
       if (mounted) _showError(apiErrorMessage(e));
     } finally {
@@ -366,7 +392,7 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       ),
       actions: [
         TextButton(
-          onPressed: _submitting ? null : () => Navigator.pop(context, false),
+          onPressed: _submitting ? null : () => Navigator.pop(context),
           child: Text(l10n.cancel),
         ),
         ElevatedButton(

@@ -14,6 +14,7 @@ const toEntry = (doc) => ({
   subtitle: doc.employeeId?.name ?? '',
   clientId: doc.clientId?._id?.toString() ?? doc.clientId?.toString(),
   clientName: doc.clientId?.name ?? '',
+  clientPhone: doc.clientId?.phone ?? '',
   employeeId: doc.employeeId?._id?.toString() ?? doc.employeeId?.toString(),
   employeeName: doc.employeeId?.name ?? '',
   collectionDate: doc.collectionDate,
@@ -26,7 +27,7 @@ const toEntry = (doc) => ({
 
 const listCollectionInvoices = async () => {
   const invoices = await CollectionInvoice.find()
-    .populate('clientId', 'name')
+    .populate('clientId', 'name phone')
     .populate('employeeId', 'name')
     .sort({ collectionDate: -1, createdAt: -1 })
     .limit(500);
@@ -104,7 +105,7 @@ const createCollectionInvoice = async (data, user) => {
     amountDeducted,
   });
 
-  await invoice.populate('clientId', 'name');
+  await invoice.populate('clientId', 'name phone');
   await invoice.populate('employeeId', 'name');
   return toEntry(invoice);
 };
@@ -164,7 +165,7 @@ const updateCollectionInvoice = async (id, data, user) => {
     amountDeducted,
   });
 
-  await invoice.populate('clientId', 'name');
+  await invoice.populate('clientId', 'name phone');
   await invoice.populate('employeeId', 'name');
   return toEntry(invoice);
 };

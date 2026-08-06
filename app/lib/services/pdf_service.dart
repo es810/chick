@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/utils/currency_formatter.dart';
 import '../models/invoice_model.dart';
+import '../models/treasury_entry_item.dart';
 
 class PdfInvoiceResult {
   const PdfInvoiceResult({required this.bytes, required this.filename});
@@ -24,6 +25,13 @@ class PdfService {
   Future<PdfInvoiceResult> buildInvoicePdf(InvoiceModel invoice) async {
     final bytes = await generateInvoicePdf(invoice);
     final filename = '${invoice.invoiceNumber}.pdf';
+    return PdfInvoiceResult(bytes: bytes, filename: filename);
+  }
+
+  Future<PdfInvoiceResult> buildCollectionPdf(TreasuryEntryItem entry) async {
+    final bytes = await generateCollectionPdf(entry);
+    final shortId = entry.id.length > 6 ? entry.id.substring(entry.id.length - 6) : entry.id;
+    final filename = 'collection-$shortId.pdf';
     return PdfInvoiceResult(bytes: bytes, filename: filename);
   }
 
@@ -90,6 +98,76 @@ class PdfService {
     return pdf.save();
   }
 
+  Future<Uint8List> generateCollectionPdf(TreasuryEntryItem entry) async {
+    final arabicRegular = await PdfGoogleFonts.notoSansArabicRegular();
+    final arabicBold = await PdfGoogleFonts.notoSansArabicBold();
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: arabicRegular,
+        bold: arabicBold,
+      ),
+    );
+
+    final date = entry.collectionDate ?? entry.createdAt ?? DateTime.now();
+    final paid = entry.amountPaid ?? entry.amount;
+    final deducted = entry.amountDeducted ?? 0;
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+        build: (context) => pw.Directionality(
+          textDirection: pw.TextDirection.rtl,
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pw.Center(
+                child: pw.Text(
+                  'إيصال تحصيل',
+                  style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+              pw.SizedBox(height: 24),
+              pw.Text(
+                'العميل: ${entry.clientName ?? entry.description}',
+                style: const pw.TextStyle(fontSize: 14),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'التاريخ: ${_formatDate(date)}',
+                style: const pw.TextStyle(fontSize: 14),
+              ),
+              if ((entry.employeeName ?? entry.subtitle).isNotEmpty) ...[
+                pw.SizedBox(height: 8),
+                pw.Text(
+                  'المحصل: ${entry.employeeName ?? entry.subtitle}',
+                  style: const pw.TextStyle(fontSize: 14),
+                ),
+              ],
+              pw.SizedBox(height: 24),
+              _collectionReceiptTable(
+                paid: paid,
+                deducted: deducted,
+                balanceBefore: entry.balanceBefore,
+                balanceAfter: entry.balanceAfter,
+              ),
+              pw.Spacer(),
+              pw.Center(
+                child: pw.Text(
+                  'تم إنشاء هذا الإيصال تلقائياً بواسطة النظام',
+                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return pdf.save();
+  }
+
   pw.Widget _receiptTable(InvoiceModel invoice) {
     final gross = invoice.displayGrossWeight;
     final tare = invoice.displayTareWeight;
@@ -113,6 +191,51 @@ class PdfService {
     }
     if (after != null) {
       rows.add(('المستحق الجديد بعد الفاتورة (ج.م)', _num(after)));
+    }
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.black, width: 1),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(2),
+        1: const pw.FlexColumnWidth(1.2),
+      },
+      children: [
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+          children: [
+            _tableCell('البيان', bold: true),
+            _tableCell('القيمة', bold: true),
+          ],
+        ),
+        ...rows.map(
+          (row) => pw.TableRow(
+            children: [
+              _tableCell(row.$1),
+              _tableCell(row.$2, align: pw.TextAlign.left),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _collectionReceiptTable({
+    required double paid,
+    required double deducted,
+    double? balanceBefore,
+    double? balanceAfter,
+  }) {
+    final rows = <(String, String)>[
+      ('المبلغ المحصل (ج.م)', _num(paid)),
+    ];
+    if (deducted > 0) {
+      rows.add(('الخصم (ج.م)', _num(deducted)));
+    }
+    if (balanceBefore != null) {
+      rows.add(('المستحق قبل التحصيل (ج.م)', _num(balanceBefore)));
+    }
+    if (balanceAfter != null) {
+      rows.add(('المستحق بعد التحصيل (ج.م)', _num(balanceAfter)));
     }
 
     return pw.Table(
@@ -216,6 +339,42 @@ class PdfService {
     );
   }
 
+  Future<void> downloadCollectionPdf(TreasuryEntryItem entry) async {
+    final result = await buildCollectionPdf(entry);
+    await Printing.sharePdf(bytes: result.bytes, filename: result.filename);
+  }
+
+  Future<void> shareCollectionViaWhatsApp(
+    TreasuryEntryItem entry, {
+    String? clientPhone,
+  }) async {
+    final result = await buildCollectionPdf(entry);
+    final message = _collectionShareMessage(entry);
+    final file = XFile.fromData(
+      result.bytes,
+      mimeType: 'application/pdf',
+      name: result.filename,
+    );
+    final phone = (clientPhone ?? entry.clientPhone)?.trim();
+
+    if (!kIsWeb && phone != null && phone.isNotEmpty) {
+      final digits = phone.replaceAll(RegExp(r'\D'), '');
+      final waTextUri = Uri.parse(
+        'https://wa.me/$digits?text=${Uri.encodeComponent(message)}',
+      );
+      if (await canLaunchUrl(waTextUri)) {
+        await Share.shareXFiles([file], text: message, subject: result.filename);
+        return;
+      }
+    }
+
+    await Share.shareXFiles(
+      [file],
+      text: message,
+      subject: result.filename,
+    );
+  }
+
   Future<Directory> _pdfDirectory() async {
     if (!kIsWeb && Platform.isAndroid) {
       final downloads = await getExternalStorageDirectory();
@@ -240,6 +399,16 @@ class PdfService {
     return 'إيصال توزيع ${invoice.invoiceNumber}\n'
         'العميل: ${invoice.clientName ?? ''}\n'
         'حساب الوجبة: $total';
+  }
+
+  String _collectionShareMessage(TreasuryEntryItem entry) {
+    final paid = CurrencyFormatter.format(
+      entry.amountPaid ?? entry.amount,
+      languageCode: 'ar',
+    );
+    return 'إيصال تحصيل\n'
+        'العميل: ${entry.clientName ?? entry.description}\n'
+        'المبلغ المحصل: $paid';
   }
 
   String _formatDate(DateTime date) =>

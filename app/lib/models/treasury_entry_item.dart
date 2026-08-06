@@ -8,6 +8,7 @@ class TreasuryEntryItem {
     this.createdAt,
     this.clientId,
     this.clientName,
+    this.clientPhone,
     this.employeeId,
     this.employeeName,
     this.collectionDate,
@@ -26,6 +27,7 @@ class TreasuryEntryItem {
   final DateTime? createdAt;
   final String? clientId;
   final String? clientName;
+  final String? clientPhone;
   final String? employeeId;
   final String? employeeName;
   final DateTime? collectionDate;
@@ -48,6 +50,7 @@ class TreasuryEntryItem {
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
       clientId: json['clientId']?.toString(),
       clientName: json['clientName'] as String?,
+      clientPhone: json['clientPhone'] as String?,
       employeeId: json['employeeId']?.toString(),
       employeeName: json['employeeName'] as String?,
       collectionDate: json['collectionDate'] != null

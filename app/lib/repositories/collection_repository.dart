@@ -3,6 +3,13 @@ import '../models/treasury_entry_item.dart';
 import '../models/treasury_summary_model.dart';
 import '../services/api_client.dart';
 
+class CollectionCreateResult {
+  const CollectionCreateResult({required this.entry, this.summary});
+
+  final TreasuryEntryItem entry;
+  final TreasurySummaryModel? summary;
+}
+
 class CollectionRepository {
   CollectionRepository(this._api);
 
@@ -21,7 +28,7 @@ class CollectionRepository {
     return (data['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  Future<TreasurySummaryModel?> createInvoice({
+  Future<CollectionCreateResult> createInvoice({
     required String clientId,
     required String employeeId,
     required DateTime collectionDate,
@@ -43,14 +50,15 @@ class CollectionRepository {
       },
     );
     final data = response.data as Map<String, dynamic>;
-    final payload = data['data'] as Map<String, dynamic>?;
-    if (payload?['summary'] != null) {
-      return TreasurySummaryModel.fromJson(payload!['summary'] as Map<String, dynamic>);
-    }
-    return null;
+    final payload = data['data'] as Map<String, dynamic>;
+    final entry = TreasuryEntryItem.fromJson(payload['entry'] as Map<String, dynamic>);
+    final summary = payload['summary'] != null
+        ? TreasurySummaryModel.fromJson(payload['summary'] as Map<String, dynamic>)
+        : null;
+    return CollectionCreateResult(entry: entry, summary: summary);
   }
 
-  Future<void> updateInvoice({
+  Future<TreasuryEntryItem> updateInvoice({
     required String id,
     required String clientId,
     required String employeeId,
@@ -60,7 +68,7 @@ class CollectionRepository {
     required double balanceBefore,
     required double balanceAfter,
   }) async {
-    await _api.patch(
+    final response = await _api.patch(
       '${ApiConstants.collections}/$id',
       data: {
         'clientId': clientId,
@@ -72,6 +80,9 @@ class CollectionRepository {
         'balanceAfter': balanceAfter,
       },
     );
+    final data = response.data as Map<String, dynamic>;
+    final payload = data['data'] as Map<String, dynamic>;
+    return TreasuryEntryItem.fromJson(payload['entry'] as Map<String, dynamic>);
   }
 
   Future<void> deleteInvoice(String id) async {

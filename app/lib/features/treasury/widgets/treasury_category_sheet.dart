@@ -8,6 +8,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../models/treasury_entry_item.dart';
+import '../../../shared/widgets/collection_pdf_actions.dart';
 import 'collection_invoice_form.dart';
 
 Future<void> showTreasuryCategorySheet({
@@ -111,12 +112,12 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
   Future<void> _openEntryForm({TreasuryEntryItem? existing}) async {
     if (widget.category == TreasuryCategory.collection) {
       final l10n = context.l10n;
-      final ok = await showCollectionInvoiceDialog(
+      final saved = await showCollectionInvoiceDialog(
         context: context,
         ref: ref,
         existing: existing,
       );
-      if (ok == true && mounted) {
+      if (saved != null && mounted) {
         await _afterMutation();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -125,6 +126,9 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
             backgroundColor: AppColors.success,
           ),
         );
+        if (existing == null) {
+          await showCollectionShareDialog(context: context, entry: saved);
+        }
       }
       return;
     }
@@ -459,13 +463,23 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
                                     : PopupMenuButton<String>(
                                   icon: const Icon(Icons.more_vert, color: Colors.white70),
                                   onSelected: (action) {
-                                    if (action == 'edit') {
+                                    if (action == 'share') {
+                                      showCollectionShareDialog(
+                                        context: context,
+                                        entry: entry,
+                                      );
+                                    } else if (action == 'edit') {
                                       _openEntryForm(existing: entry);
                                     } else if (action == 'delete') {
                                       _confirmDelete(entry);
                                     }
                                   },
                                   itemBuilder: (_) => [
+                                    if (entry.isCollectionInvoice)
+                                      PopupMenuItem(
+                                        value: 'share',
+                                        child: Text(l10n.shareInvoice),
+                                      ),
                                     PopupMenuItem(
                                       value: 'edit',
                                       child: Text(l10n.editEntry),

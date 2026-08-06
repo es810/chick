@@ -7,6 +7,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../models/treasury_entry_item.dart';
+import '../../../shared/widgets/collection_pdf_actions.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../widgets/collection_invoice_form.dart';
@@ -61,12 +62,12 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
 
   Future<void> _openForm({TreasuryEntryItem? existing}) async {
     final l10n = context.l10n;
-    final ok = await showCollectionInvoiceDialog(
+    final saved = await showCollectionInvoiceDialog(
       context: context,
       ref: ref,
       existing: existing,
     );
-    if (ok == true && mounted) {
+    if (saved != null && mounted) {
       await _refreshAll();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,6 +76,9 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
           backgroundColor: AppColors.success,
         ),
       );
+      if (existing == null) {
+        await showCollectionShareDialog(context: context, entry: saved);
+      }
     }
   }
 
@@ -176,19 +180,35 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
                                 ].join(' · '),
                                 maxLines: 3,
                               ),
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (action) {
-                                  if (action == 'edit') {
-                                    _openForm(existing: entry);
-                                  } else if (action == 'delete') {
-                                    _confirmDelete(entry);
-                                  }
-                                },
-                                itemBuilder: (_) => [
-                                  PopupMenuItem(value: 'edit', child: Text(l10n.editEntry)),
-                                  PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text(l10n.delete, style: const TextStyle(color: AppColors.error)),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CollectionPdfActions(
+                                    entry: entry,
+                                    clientPhone: entry.clientPhone,
+                                    compact: true,
+                                  ),
+                                  PopupMenuButton<String>(
+                                    onSelected: (action) {
+                                      if (action == 'share') {
+                                        showCollectionShareDialog(
+                                          context: context,
+                                          entry: entry,
+                                        );
+                                      } else if (action == 'edit') {
+                                        _openForm(existing: entry);
+                                      } else if (action == 'delete') {
+                                        _confirmDelete(entry);
+                                      }
+                                    },
+                                    itemBuilder: (_) => [
+                                      PopupMenuItem(value: 'share', child: Text(l10n.shareInvoice)),
+                                      PopupMenuItem(value: 'edit', child: Text(l10n.editEntry)),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text(l10n.delete, style: const TextStyle(color: AppColors.error)),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -200,3 +220,4 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
     );
   }
 }
+
