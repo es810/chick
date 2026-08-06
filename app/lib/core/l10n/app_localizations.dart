@@ -300,6 +300,14 @@ class AppLocalizations {
   'stockTypeLabel': {'en': 'Type', 'ar': 'النوع'},
   'stockPrice': {'en': 'Price', 'ar': 'السعر'},
   'stockTotal': {'en': 'Total', 'ar': 'إجمالي'},
+  'stockTotalFormulaHint': {
+    'en': 'Total = price/kg × net weight',
+    'ar': 'الإجمالي = السعر/كغ × الوزن الصافي',
+  },
+  'netWeightFromGrossHint': {
+    'en': 'Auto: gross − tare (you can still edit)',
+    'ar': 'تلقائي: القايم − الفارغ (يمكن التعديل)',
+  },
   'avgWeight': {'en': 'Avg Weight (kg)', 'ar': 'متوسط الوزن (كغ)'},
   'pricePerKg': {'en': 'Price/kg (EGP)', 'ar': 'السعر/كغ (ج.م)'},
   'add': {'en': 'Add', 'ar': 'إضافة'},
@@ -712,6 +720,8 @@ class AppLocalizations {
   String get stockTypeLabel => _get('stockTypeLabel');
   String get stockPrice => _get('stockPrice');
   String get stockTotal => _get('stockTotal');
+  String get stockTotalFormulaHint => _get('stockTotalFormulaHint');
+  String get netWeightFromGrossHint => _get('netWeightFromGrossHint');
   String get avgWeight => _get('avgWeight');
   String get pricePerKg => _get('pricePerKg');
   String get add => _get('add');

@@ -40,6 +40,7 @@ class StockEntryFormState extends State<StockEntryForm> {
   late final TextEditingController _totalController;
 
   double _total = 0;
+  bool _syncingNet = false;
 
   @override
   void initState() {
@@ -56,10 +57,19 @@ class StockEntryFormState extends State<StockEntryForm> {
     for (final c in [_netController, _priceController]) {
       c.addListener(_recalcTotal);
     }
+    for (final c in [_grossController, _tareController]) {
+      c.addListener(_syncNetFromGrossTare);
+    }
   }
 
   @override
   void dispose() {
+    for (final c in [_netController, _priceController]) {
+      c.removeListener(_recalcTotal);
+    }
+    for (final c in [_grossController, _tareController]) {
+      c.removeListener(_syncNetFromGrossTare);
+    }
     _locationController.dispose();
     _typeController.dispose();
     _grossController.dispose();
@@ -71,23 +81,46 @@ class StockEntryFormState extends State<StockEntryForm> {
     super.dispose();
   }
 
+  double? _parseNum(String raw) {
+    final cleaned = raw.trim().replaceAll(',', '');
+    if (cleaned.isEmpty) return null;
+    return double.tryParse(cleaned);
+  }
+
+  void _syncNetFromGrossTare() {
+    if (_syncingNet) return;
+    final gross = _parseNum(_grossController.text);
+    final tare = _parseNum(_tareController.text);
+    if (gross == null || tare == null) return;
+    final net = gross - tare;
+    if (net < 0) return;
+    final formatted = net.toStringAsFixed(2);
+    if (_netController.text == formatted) return;
+    _syncingNet = true;
+    _netController.text = formatted;
+    _syncingNet = false;
+    _recalcTotal();
+  }
+
   void _recalcTotal() {
-    final price = double.tryParse(_priceController.text.trim().replaceAll(',', '')) ?? 0;
-    final net = double.tryParse(_netController.text.trim().replaceAll(',', '')) ?? 0;
+    final price = _parseNum(_priceController.text) ?? 0;
+    final net = _parseNum(_netController.text) ?? 0;
     final next = price * net;
     if (next != _total) {
       _total = next;
       _totalController.text = next.toStringAsFixed(2);
-      setState(() {});
+      if (mounted) setState(() {});
     }
   }
 
   Map<String, dynamic> toPayload() {
     final count = int.parse(_countController.text.trim());
-    final gross = double.parse(_grossController.text.trim().replaceAll(',', ''));
-    final tare = double.parse(_tareController.text.trim().replaceAll(',', ''));
-    final net = double.parse(_netController.text.trim().replaceAll(',', ''));
-    final price = double.parse(_priceController.text.trim().replaceAll(',', ''));
+    final gross = _parseNum(_grossController.text)!;
+    final tare = _parseNum(_tareController.text)!;
+    final net = _parseNum(_netController.text)!;
+    final price = _parseNum(_priceController.text)!;
+    // Always derive total from price × net (never trust a stale _total).
+    final total = price * net;
     return {
       'location': _locationController.text.trim(),
       'chickenType': _typeController.text.trim(),
@@ -96,7 +129,7 @@ class StockEntryFormState extends State<StockEntryForm> {
       'tareWeight': tare,
       'netWeight': net,
       'pricePerKg': price,
-      'totalAmount': _total,
+      'totalAmount': total,
       'averageWeight': count > 0 ? net / count : 0,
     };
   }
@@ -104,12 +137,12 @@ class StockEntryFormState extends State<StockEntryForm> {
   bool validate(BuildContext context) {
     final l10n = context.l10n;
     if (_typeController.text.trim().isEmpty) return false;
-    if (double.tryParse(_grossController.text.trim().replaceAll(',', '')) == null) return false;
+    if (_parseNum(_grossController.text) == null) return false;
     if (int.tryParse(_countController.text.trim()) == null) return false;
-    if (double.tryParse(_tareController.text.trim().replaceAll(',', '')) == null) return false;
-    if (double.tryParse(_netController.text.trim().replaceAll(',', '')) == null) return false;
-    if (double.tryParse(_priceController.text.trim().replaceAll(',', '')) == null) return false;
-    final net = double.parse(_netController.text.trim().replaceAll(',', ''));
+    if (_parseNum(_tareController.text) == null) return false;
+    if (_parseNum(_netController.text) == null) return false;
+    if (_parseNum(_priceController.text) == null) return false;
+    final net = _parseNum(_netController.text)!;
     if (net <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.invalidWeights)),
@@ -176,6 +209,7 @@ class StockEntryFormState extends State<StockEntryForm> {
           decoration: InputDecoration(
             labelText: l10n.netWeight,
             prefixIcon: const Icon(Icons.fitness_center_outlined),
+            helperText: l10n.netWeightFromGrossHint,
           ),
         ),
         const SizedBox(height: 12),
@@ -183,7 +217,7 @@ class StockEntryFormState extends State<StockEntryForm> {
           controller: _priceController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: l10n.stockPrice,
+            labelText: l10n.pricePerKg,
             prefixIcon: const Icon(Icons.attach_money),
           ),
         ),
@@ -196,6 +230,7 @@ class StockEntryFormState extends State<StockEntryForm> {
             prefixIcon: const Icon(Icons.calculate_outlined),
             filled: true,
             fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            helperText: l10n.stockTotalFormulaHint,
           ),
         ),
       ],

@@ -41,18 +41,7 @@ const computeTreasuryBalance = ({
  *   حركات دخول (IN) − تعديلات النقص (OUT بدون فاتورة توزيع، وغير الهالك)
  * تعديل المخزون بالزيادة/النقص يحرّك الربح فوراً. دفع المورد يخص الخزنة فقط.
  */
-const movementAmountExpr = {
-  $cond: [
-    { $gt: ['$totalAmount', 0] },
-    '$totalAmount',
-    {
-      $multiply: [
-        { $ifNull: ['$unitPrice', 0] },
-        { $ifNull: ['$netWeight', 0] },
-      ],
-    },
-  ],
-};
+const movementAmountExpr = { $ifNull: ['$totalAmount', 0] };
 
 const computeProfitForPeriod = async (startDate, endDate = null) => {
   const invoiceDateFilter = endDate

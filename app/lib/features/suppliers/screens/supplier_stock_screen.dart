@@ -105,50 +105,67 @@ class SupplierStockScreen extends ConsumerWidget {
   void _showAddStockDialog(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final formKey = GlobalKey<StockEntryFormState>();
+    var submitting = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.addSupplierStock),
-        content: SingleChildScrollView(
-          child: StockEntryForm(key: formKey),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
-          ElevatedButton(
-            onPressed: () async {
-              final form = formKey.currentState;
-              if (form == null || !form.validate(context)) return;
-              try {
-                await ref
-                    .read(supplierStockRepositoryProvider)
-                    .addStock(supplierId, form.toPayload());
-                ref.invalidate(supplierStockProvider(supplierId));
-                ref.invalidate(stockProvider);
-                ref.invalidate(suppliersProvider);
-                ref.invalidate(supplierStatementProvider(supplierId));
-                ref.invalidate(treasurySummaryProvider);
-                ref.invalidate(dashboardProvider);
-                if (context.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.supplierStockSynced)),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(apiErrorMessage(e)),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text(l10n.add),
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.addSupplierStock),
+          content: SingleChildScrollView(
+            child: StockEntryForm(key: formKey),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: submitting ? null : () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: submitting
+                  ? null
+                  : () async {
+                      final form = formKey.currentState;
+                      if (form == null || !form.validate(context)) return;
+                      setDialogState(() => submitting = true);
+                      try {
+                        await ref
+                            .read(supplierStockRepositoryProvider)
+                            .addStock(supplierId, form.toPayload());
+                        ref.invalidate(supplierStockProvider(supplierId));
+                        ref.invalidate(stockProvider);
+                        ref.invalidate(suppliersProvider);
+                        ref.invalidate(supplierStatementProvider(supplierId));
+                        ref.invalidate(treasurySummaryProvider);
+                        ref.invalidate(dashboardProvider);
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.supplierStockSynced)),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => submitting = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(apiErrorMessage(e)),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.add),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -156,60 +173,80 @@ class SupplierStockScreen extends ConsumerWidget {
   void _showEditStockDialog(BuildContext context, WidgetRef ref, StockModel item) {
     final l10n = context.l10n;
     final formKey = GlobalKey<StockEntryFormState>();
+    var submitting = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.editStock),
-        content: SingleChildScrollView(
-          child: StockEntryForm(
-            key: formKey,
-            initialLocation: item.location,
-            initialType: item.chickenType,
-            initialGross: item.grossWeight.toStringAsFixed(2),
-            initialCount: '${item.quantity}',
-            initialTare: item.tareWeight.toStringAsFixed(2),
-            initialNet: item.netWeight.toStringAsFixed(2),
-            initialPrice: item.pricePerKg.toStringAsFixed(2),
-            typeReadOnly: true,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.editStock),
+          content: SingleChildScrollView(
+            child: StockEntryForm(
+              key: formKey,
+              initialLocation: item.location,
+              initialType: item.chickenType,
+              initialGross: item.grossWeight.toStringAsFixed(2),
+              initialCount: '${item.quantity}',
+              initialTare: item.tareWeight.toStringAsFixed(2),
+              initialNet: item.netWeight.toStringAsFixed(2),
+              initialPrice: item.pricePerKg.toStringAsFixed(2),
+              typeReadOnly: true,
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: submitting ? null : () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: submitting
+                  ? null
+                  : () async {
+                      final form = formKey.currentState;
+                      if (form == null || !form.validate(context)) return;
+                      setDialogState(() => submitting = true);
+                      try {
+                        await ref
+                            .read(supplierStockRepositoryProvider)
+                            .updateStock(supplierId, item.id, form.toPayload());
+                        ref.invalidate(supplierStockProvider(supplierId));
+                        ref.invalidate(stockProvider);
+                        ref.invalidate(suppliersProvider);
+                        ref.invalidate(supplierStatementProvider(supplierId));
+                        ref.invalidate(treasurySummaryProvider);
+                        ref.invalidate(dashboardProvider);
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.stockUpdated),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => submitting = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(apiErrorMessage(e)),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.save),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
-          ElevatedButton(
-            onPressed: () async {
-              final form = formKey.currentState;
-              if (form == null || !form.validate(context)) return;
-              try {
-                await ref
-                    .read(supplierStockRepositoryProvider)
-                    .updateStock(supplierId, item.id, form.toPayload());
-                ref.invalidate(supplierStockProvider(supplierId));
-                ref.invalidate(stockProvider);
-                ref.invalidate(suppliersProvider);
-                ref.invalidate(supplierStatementProvider(supplierId));
-                ref.invalidate(treasurySummaryProvider);
-                ref.invalidate(dashboardProvider);
-                if (context.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.stockUpdated), backgroundColor: AppColors.success),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(apiErrorMessage(e)),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text(l10n.save),
-          ),
-        ],
       ),
     );
   }

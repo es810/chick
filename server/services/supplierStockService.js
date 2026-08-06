@@ -27,27 +27,34 @@ const adjustSupplierBalance = async (supplierId, delta, session) => {
   await supplier.save({ session });
 };
 
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
 const normalizeSupplierBatch = (data) => {
-  const {
-    chickenType,
-    quantity,
-    location = '',
-    grossWeight = 0,
-    tareWeight = 0,
-    netWeight = 0,
-    averageWeight,
-    pricePerKg,
-    totalAmount,
-  } = data;
+  const chickenType = String(data.chickenType || '').trim();
+  const quantity = Math.max(0, parseInt(data.quantity, 10) || 0);
+  const location = data.location != null ? String(data.location).trim() : '';
+  const grossWeight = Math.max(0, Number(data.grossWeight) || 0);
+  const tareWeight = Math.max(0, Number(data.tareWeight) || 0);
+  let netWeight = Math.max(0, Number(data.netWeight) || 0);
+  const pricePerKg = Math.max(0, Number(data.pricePerKg) || 0);
+
+  // Prefer scale math when gross/tare are present so net isn't double-counted.
+  if (grossWeight > 0 || tareWeight > 0) {
+    const fromScale = round2(grossWeight - tareWeight);
+    if (fromScale >= 0) {
+      netWeight = fromScale;
+    }
+  }
 
   const avgWeight =
-    averageWeight != null
-      ? averageWeight
+    data.averageWeight != null && Number(data.averageWeight) > 0
+      ? Number(data.averageWeight)
       : quantity > 0 && netWeight > 0
         ? netWeight / quantity
         : 0;
-  const total =
-    totalAmount != null ? totalAmount : (pricePerKg || 0) * (netWeight || 0);
+
+  // Always derive money from price × net (ignore client totalAmount to prevent doubles).
+  const total = round2(pricePerKg * netWeight);
 
   return {
     chickenType,

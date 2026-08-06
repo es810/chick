@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.3] — 2026-08-06
+
+### Stock loading total
+- Fix load cost doubling (50k → 100k): server always uses **price/kg × net**
+- Net weight auto-fills from gross − tare; total formula shown on the form
+- Prevent double-tap on Add/Save while the request is in flight
+
 ## [1.8.2] — 2026-08-06
 
 ### Profits & stock edits

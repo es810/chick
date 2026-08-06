@@ -144,40 +144,57 @@ class StockScreen extends ConsumerWidget {
   void _showAddStockDialog(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final formKey = GlobalKey<StockEntryFormState>();
+    var submitting = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.addStockMovement),
-        content: SingleChildScrollView(
-          child: StockEntryForm(key: formKey),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
-          ElevatedButton(
-            onPressed: () async {
-              final form = formKey.currentState;
-              if (form == null || !form.validate(context)) return;
-              try {
-                final payload = form.toPayload();
-                payload['reason'] = 'Manual stock replenishment';
-                await ref.read(stockRepositoryProvider).addStock(payload);
-                ref.invalidate(stockProvider);
-                if (context.mounted) Navigator.pop(ctx);
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(apiErrorMessage(e)),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text(l10n.add),
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.addStockMovement),
+          content: SingleChildScrollView(
+            child: StockEntryForm(key: formKey),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: submitting ? null : () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: submitting
+                  ? null
+                  : () async {
+                      final form = formKey.currentState;
+                      if (form == null || !form.validate(context)) return;
+                      setDialogState(() => submitting = true);
+                      try {
+                        final payload = form.toPayload();
+                        payload['reason'] = 'Manual stock replenishment';
+                        await ref.read(stockRepositoryProvider).addStock(payload);
+                        ref.invalidate(stockProvider);
+                        if (context.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        setDialogState(() => submitting = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(apiErrorMessage(e)),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.add),
+            ),
+          ],
+        ),
       ),
     );
   }
