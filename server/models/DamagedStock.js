@@ -11,12 +11,13 @@ const damagedStockSchema = new mongoose.Schema(
     reason: { type: String, trim: true, default: '' },
     source: {
       type: String,
-      enum: ['manual', 'distribution_surplus'],
+      enum: ['manual', 'distribution_surplus', 'distribution_remainder'],
       default: 'manual',
     },
     /**
-     * open = surplus still reduces "عندي مخزون" until confirmed هلك.
-     * written_off = settled; no longer reduces usable stock.
+     * open = needs تأكيد الهلاك (surplus still reduces usable stock;
+     *        remainder is already off the books but awaiting confirmation).
+     * written_off = settled.
      */
     status: {
       type: String,

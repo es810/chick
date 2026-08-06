@@ -256,13 +256,25 @@ class AppLocalizations {
     'en': 'Distribution surplus (count/weight)',
     'ar': 'زيادة التوزيع (عدد/وزن)',
   },
+  'distributionWeightRemainder': {
+    'en': 'Leftover weight after distribution',
+    'ar': 'متبقي وزن التوزيع',
+  },
   'pendingSurplusOpen': {
     'en': 'Pending write-off — reduces on-hand until confirmed',
     'ar': 'زيادة معلّقة — تخصم من «عندي مخزون» حتى تأكيد الهلاك',
   },
+  'remainderOpenHint': {
+    'en': 'Leftover from distribution — confirm write-off',
+    'ar': 'متبقي من التوزيع — أكّد الهلاك',
+  },
   'confirmWriteOffSurplus': {
     'en': 'Confirm write-off',
     'ar': 'تأكيد الهلاك',
+  },
+  'onHandWeightLabel': {
+    'en': 'On-hand weight',
+    'ar': 'الوزن عندي',
   },
   'writeOffSurplusDone': {
     'en': 'Surplus written off — on-hand restored',
@@ -698,8 +710,11 @@ class AppLocalizations {
   String get damagedStock => _get('damagedStock');
   String get damagedStockTreasuryNote => _get('damagedStockTreasuryNote');
   String get distributionWeightSurplus => _get('distributionWeightSurplus');
+  String get distributionWeightRemainder => _get('distributionWeightRemainder');
   String get pendingSurplusOpen => _get('pendingSurplusOpen');
+  String get remainderOpenHint => _get('remainderOpenHint');
   String get confirmWriteOffSurplus => _get('confirmWriteOffSurplus');
+  String get onHandWeightLabel => _get('onHandWeightLabel');
   String get writeOffSurplusDone => _get('writeOffSurplusDone');
   String get surplusAlreadyWrittenOff => _get('surplusAlreadyWrittenOff');
   String get onHandStock => _get('onHandStock');

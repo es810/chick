@@ -308,6 +308,11 @@ const deductStockForInvoice = async (
   const stockId = stock._id;
 
   if (deductQty > 0) {
+    const leftoverKg =
+      deductQty === beforeQty && weight > 0 && weight < beforeNet
+        ? Math.round((beforeNet - weight) * 100) / 100
+        : 0;
+
     const delta =
       deductQty === beforeQty
         ? {
@@ -329,6 +334,23 @@ const deductStockForInvoice = async (
       invoiceId,
       strict: true,
     });
+
+    // All birds sold but sold kg < book kg → leftover must appear under هالك.
+    if (leftoverKg > 0) {
+      const { recordDistributionRemainder } = require('./damagedStockService');
+      await recordDistributionRemainder({
+        session,
+        stockId,
+        chickenType,
+        netWeight: leftoverKg,
+        quantity: 0,
+        invoiceId,
+        user,
+        reason: reason
+          ? `متبقي وزن التوزيع — ${reason}`
+          : 'متبقي وزن التوزيع',
+      });
+    }
   }
 
   if (qtySurplus > 0 || surplusKg > 0) {

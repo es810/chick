@@ -245,7 +245,7 @@ class DamagedStockScreen extends ConsumerWidget {
                   (entry) => _DamagedEntryCard(
                     entry: entry,
                     isAdmin: isAdmin,
-                    onWriteOff: isAdmin && entry.isOpenSurplus
+                    onWriteOff: isAdmin && entry.isOpenVariance
                         ? () => _writeOff(context, ref, entry)
                         : null,
                   ),
@@ -278,7 +278,7 @@ class DamagedStockScreen extends ConsumerWidget {
           '${entry.chickenType}\n'
           '${entry.quantity > 0 ? '${l10n.itemCount}: ${entry.quantity}\n' : ''}'
           '${entry.netWeight > 0 ? '${l10n.damagedWeightKg}: ${entry.netWeight.toStringAsFixed(1)}\n' : ''}'
-          '${l10n.pendingSurplusOpen}',
+          '${entry.isDistributionRemainder ? l10n.remainderOpenHint : l10n.pendingSurplusOpen}',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
@@ -335,11 +335,11 @@ class _DamagedEntryCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: ListTile(
           leading: CircleAvatar(
-            backgroundColor: (entry.isOpenSurplus ? AppColors.warning : AppColors.error)
+            backgroundColor: (entry.isOpenVariance ? AppColors.warning : AppColors.error)
                 .withValues(alpha: 0.12),
             child: Icon(
-              entry.isDistributionSurplus ? Icons.scale : Icons.delete_sweep_outlined,
-              color: entry.isOpenSurplus ? AppColors.warning : AppColors.error,
+              entry.isDistributionVariance ? Icons.scale : Icons.delete_sweep_outlined,
+              color: entry.isOpenVariance ? AppColors.warning : AppColors.error,
             ),
           ),
           title: Text(entry.chickenType),
@@ -348,11 +348,22 @@ class _DamagedEntryCard extends StatelessWidget {
             children: [
               if (entry.isDistributionSurplus)
                 Text(
-                  entry.isOpenSurplus
+                  entry.isOpenVariance
                       ? l10n.pendingSurplusOpen
                       : '${l10n.distributionWeightSurplus} — ${l10n.surplusAlreadyWrittenOff}',
                   style: TextStyle(
-                    color: entry.isOpenSurplus ? AppColors.warning : AppColors.success,
+                    color: entry.isOpenVariance ? AppColors.warning : AppColors.success,
+                    fontWeight: FontWeight.w600,
+                    fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                  ),
+                ),
+              if (entry.isDistributionRemainder)
+                Text(
+                  entry.isOpenVariance
+                      ? l10n.remainderOpenHint
+                      : '${l10n.distributionWeightRemainder} — ${l10n.surplusAlreadyWrittenOff}',
+                  style: TextStyle(
+                    color: entry.isOpenVariance ? AppColors.warning : AppColors.success,
                     fontWeight: FontWeight.w600,
                     fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                   ),

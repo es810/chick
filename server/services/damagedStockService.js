@@ -89,12 +89,6 @@ const reconcileDistributionSurplus = async () => {
   let created = false;
 
   for (const inv of invoices) {
-    const existing = await DamagedStock.exists({
-      invoiceId: inv._id,
-      source: 'distribution_surplus',
-    });
-    if (existing) continue;
-
     for (const item of inv.items || []) {
       const mov = await StockMovement.findOne({
         invoiceId: inv._id,
@@ -106,36 +100,75 @@ const reconcileDistributionSurplus = async () => {
 
       const bookNet = mov?.netWeight ?? 0;
       const bookQty = mov?.quantity ?? 0;
-      const surplusKg = round2((item.weight || 0) - bookNet);
-      const surplusQty = Math.max(0, (item.quantity || 0) - bookQty);
-      if (surplusKg <= 0 && surplusQty <= 0) continue;
+      const soldKg = item.weight || 0;
+      const soldQty = item.quantity || 0;
+      const surplusKg = round2(soldKg - bookNet);
+      const surplusQty = Math.max(0, soldQty - bookQty);
+      const remainderKg = round2(bookNet - soldKg);
 
       const stock =
         (item.stockId && (await Stock.findById(item.stockId))) ||
         (await Stock.findOne({ chickenType: item.chickenType }));
       if (!stock || !inv.employeeId) continue;
 
-      let reason = `زيادة التوزيع — Invoice #${inv.invoiceNumber}`;
-      if (surplusQty > 0 && surplusKg > 0) {
-        reason = `زيادة عدد/وزن التوزيع — Invoice #${inv.invoiceNumber}`;
-      } else if (surplusQty > 0) {
-        reason = `زيادة عدد التوزيع — Invoice #${inv.invoiceNumber}`;
-      } else {
-        reason = `زيادة وزن التوزيع — Invoice #${inv.invoiceNumber}`;
+      if (surplusKg > 0 || surplusQty > 0) {
+        const existingSurplus = await DamagedStock.exists({
+          invoiceId: inv._id,
+          chickenType: item.chickenType,
+          source: 'distribution_surplus',
+        });
+        if (!existingSurplus) {
+          let reason = `زيادة التوزيع — Invoice #${inv.invoiceNumber}`;
+          if (surplusQty > 0 && surplusKg > 0) {
+            reason = `زيادة عدد/وزن التوزيع — Invoice #${inv.invoiceNumber}`;
+          } else if (surplusQty > 0) {
+            reason = `زيادة عدد التوزيع — Invoice #${inv.invoiceNumber}`;
+          } else {
+            reason = `زيادة وزن التوزيع — Invoice #${inv.invoiceNumber}`;
+          }
+
+          await DamagedStock.create({
+            stockId: stock._id,
+            chickenType: item.chickenType,
+            quantity: surplusQty,
+            netWeight: Math.max(0, surplusKg),
+            reason,
+            source: 'distribution_surplus',
+            status: 'open',
+            invoiceId: inv._id,
+            recordedBy: inv.employeeId,
+          });
+          created = true;
+        }
       }
 
-      await DamagedStock.create({
-        stockId: stock._id,
-        chickenType: item.chickenType,
-        quantity: surplusQty,
-        netWeight: Math.max(0, surplusKg),
-        reason,
-        source: 'distribution_surplus',
-        status: 'open',
-        invoiceId: inv._id,
-        recordedBy: inv.employeeId,
-      });
-      created = true;
+      // Full bird clear with sold kg < book kg wiped on OUT.
+      if (
+        remainderKg > 0 &&
+        soldKg > 0 &&
+        bookQty > 0 &&
+        soldQty >= bookQty
+      ) {
+        const existingRemainder = await DamagedStock.exists({
+          invoiceId: inv._id,
+          chickenType: item.chickenType,
+          source: 'distribution_remainder',
+        });
+        if (!existingRemainder) {
+          await DamagedStock.create({
+            stockId: stock._id,
+            chickenType: item.chickenType,
+            quantity: 0,
+            netWeight: remainderKg,
+            reason: `متبقي وزن التوزيع — Invoice #${inv.invoiceNumber}`,
+            source: 'distribution_remainder',
+            status: 'open',
+            invoiceId: inv._id,
+            recordedBy: inv.employeeId,
+          });
+          created = true;
+        }
+      }
     }
   }
 
@@ -169,7 +202,12 @@ const getDamagedStockSummary = async () => {
             $cond: [
               {
                 $and: [
-                  { $eq: ['$source', 'distribution_surplus'] },
+                  {
+                    $in: [
+                      '$source',
+                      ['distribution_surplus', 'distribution_remainder'],
+                    ],
+                  },
                   { $ne: ['$status', 'written_off'] },
                 ],
               },
@@ -183,7 +221,12 @@ const getDamagedStockSummary = async () => {
             $cond: [
               {
                 $and: [
-                  { $eq: ['$source', 'distribution_surplus'] },
+                  {
+                    $in: [
+                      '$source',
+                      ['distribution_surplus', 'distribution_remainder'],
+                    ],
+                  },
                   { $ne: ['$status', 'written_off'] },
                 ],
               },
@@ -250,11 +293,51 @@ const recordDistributionSurplus = async ({
   return entry;
 };
 
+/**
+ * Leftover book weight when all birds are sold but sold kg < book kg
+ * (e.g. load 1000, distribute all birds as 995 → 5 kg remainder).
+ * Stock is already cleared; this only creates an open هلك row for confirmation.
+ * Does NOT raise pending surplus.
+ */
+const recordDistributionRemainder = async ({
+  session,
+  stockId,
+  chickenType,
+  netWeight = 0,
+  quantity = 0,
+  invoiceId,
+  user,
+  reason,
+}) => {
+  const kg = round2(netWeight);
+  const qty = Math.max(0, parseInt(quantity, 10) || 0);
+  if (kg <= 0 && qty <= 0) return null;
+
+  const [entry] = await DamagedStock.create(
+    [
+      {
+        stockId,
+        chickenType,
+        quantity: qty,
+        netWeight: kg,
+        reason: reason || 'متبقي وزن التوزيع',
+        source: 'distribution_remainder',
+        status: 'open',
+        invoiceId: invoiceId || null,
+        recordedBy: user._id,
+      },
+    ],
+    { session }
+  );
+
+  return entry;
+};
+
 const removeSurplusForInvoice = async (session, invoiceId) => {
   if (!invoiceId) return;
   const entries = await DamagedStock.find({
     invoiceId,
-    source: 'distribution_surplus',
+    source: { $in: ['distribution_surplus', 'distribution_remainder'] },
   }).session(session);
 
   for (const entry of entries) {
@@ -265,13 +348,14 @@ const removeSurplusForInvoice = async (session, invoiceId) => {
 
   await DamagedStock.deleteMany({
     invoiceId,
-    source: 'distribution_surplus',
+    source: { $in: ['distribution_surplus', 'distribution_remainder'] },
   }).session(session);
 };
 
 /**
- * Confirm هلك of distribution surplus: clear pending so new loads are not reduced.
- * Does NOT deduct book stock again (oversell was never in book stock).
+ * Confirm هلك for distribution surplus or remainder.
+ * Surplus: clears pending so new loads are not reduced.
+ * Remainder: stock already cleared; just marks written_off.
  */
 const writeOffSurplus = async (entryId, user) => {
   const session = await mongoose.startSession();
@@ -280,15 +364,20 @@ const writeOffSurplus = async (entryId, user) => {
   try {
     const entry = await DamagedStock.findById(entryId).session(session);
     if (!entry) throw new ApiError(404, 'Damaged stock entry not found');
-    if (entry.source !== 'distribution_surplus') {
-      throw new ApiError(400, 'Only distribution surplus can be written off this way');
+    if (
+      entry.source !== 'distribution_surplus' &&
+      entry.source !== 'distribution_remainder'
+    ) {
+      throw new ApiError(400, 'Only distribution variance can be written off this way');
     }
     if (entry.status === 'written_off') {
       await session.commitTransaction();
       return DamagedStock.findById(entry._id).populate('recordedBy', 'name');
     }
 
-    await reducePendingSurplus(session, entry.stockId, entry.quantity, entry.netWeight);
+    if (entry.source === 'distribution_surplus') {
+      await reducePendingSurplus(session, entry.stockId, entry.quantity, entry.netWeight);
+    }
     entry.status = 'written_off';
     await entry.save({ session });
 
@@ -297,6 +386,7 @@ const writeOffSurplus = async (entryId, user) => {
     await logAction(user._id, user.name, 'WRITE_OFF_SURPLUS', entry.chickenType, {
       quantity: entry.quantity,
       netWeight: entry.netWeight,
+      source: entry.source,
       entryId: entry._id,
     });
 
@@ -418,6 +508,7 @@ module.exports = {
   getDamagedStockSummary,
   recordDamagedStock,
   recordDistributionSurplus,
+  recordDistributionRemainder,
   removeSurplusForInvoice,
   reconcileDistributionSurplus,
   writeOffSurplus,

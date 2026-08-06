@@ -358,7 +358,11 @@ class _StockCard extends StatelessWidget {
                 Expanded(
                   child: StatCard(
                     title: l10n.onHandStock,
-                    value: '${item.usableQuantity}',
+                    value: item.usableQuantity > 0
+                        ? '${item.usableQuantity}'
+                        : item.usableNetWeight > 0
+                            ? '${item.usableNetWeight.toStringAsFixed(1)} kg'
+                            : '0',
                     icon: Icons.inventory_2,
                   ),
                 ),
@@ -372,6 +376,16 @@ class _StockCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (item.usableQuantity == 0 && item.usableNetWeight > 0) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${l10n.onHandWeightLabel}: ${item.usableNetWeight.toStringAsFixed(2)} kg',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.warning,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
             if (item.hasPendingSurplus) ...[
               const SizedBox(height: 8),
               Text(

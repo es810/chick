@@ -25,15 +25,25 @@ class DamagedStockEntry extends Equatable {
 
   bool get isDistributionSurplus => source == 'distribution_surplus';
 
-  bool get isOpenSurplus =>
-      isDistributionSurplus && (status == 'open' || status.isEmpty);
+  bool get isDistributionRemainder => source == 'distribution_remainder';
+
+  bool get isDistributionVariance =>
+      isDistributionSurplus || isDistributionRemainder;
+
+  bool get isOpenVariance =>
+      isDistributionVariance && (status == 'open' || status.isEmpty);
+
+  /// Back-compat alias used by older call sites.
+  bool get isOpenSurplus => isOpenVariance;
 
   factory DamagedStockEntry.fromJson(Map<String, dynamic> json) {
     final recordedBy = json['recordedBy'] as Map<String, dynamic>?;
     final source = json['source'] as String? ?? 'manual';
     final rawStatus = json['status'] as String?;
     final status = rawStatus ??
-        (source == 'distribution_surplus' ? 'open' : 'written_off');
+        (source == 'distribution_surplus' || source == 'distribution_remainder'
+            ? 'open'
+            : 'written_off');
 
     return DamagedStockEntry(
       id: json['_id'] as String? ?? json['id'] as String? ?? '',
