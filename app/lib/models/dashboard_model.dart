@@ -39,6 +39,7 @@ class MonthlyProfitSummary extends Equatable {
     required this.salaries,
     required this.year,
     required this.month,
+    this.loading = 0,
   });
 
   final double profit;
@@ -46,14 +47,19 @@ class MonthlyProfitSummary extends Equatable {
   final double salaries;
   final int year;
   final int month;
+  final double loading;
 
   factory MonthlyProfitSummary.fromJson(Map<String, dynamic> json) {
+    final breakdown = json['breakdown'] as Map<String, dynamic>? ?? {};
     return MonthlyProfitSummary(
       profit: (json['profit'] as num?)?.toDouble() ?? 0,
       dailyProfitsTotal: (json['dailyProfitsTotal'] as num?)?.toDouble() ?? 0,
-      salaries: (json['salaries'] as num?)?.toDouble() ?? 0,
+      salaries: (json['salaries'] as num?)?.toDouble() ??
+          (json['salaryAdvances'] as num?)?.toDouble() ??
+          0,
       year: (json['year'] as num?)?.toInt() ?? DateTime.now().year,
       month: (json['month'] as num?)?.toInt() ?? DateTime.now().month,
+      loading: (breakdown['loading'] as num?)?.toDouble() ?? 0,
     );
   }
 

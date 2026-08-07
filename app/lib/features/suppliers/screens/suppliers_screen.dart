@@ -142,6 +142,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: l10n.supplierDebt,
+                    helperText: l10n.supplierDebtHint,
                     prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
                   ),
                   validator: (v) {

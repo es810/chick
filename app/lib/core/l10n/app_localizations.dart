@@ -140,6 +140,11 @@ class AppLocalizations {
     'en': 'Sales − net goods cost (load ± stock edits) − expenses − discounts',
     'ar': 'المبيعات − صافي تكلفة التحميل (مع تعديلات المخزون) − المصروفات − الخصومات',
   },
+  'profitLoadCost': {'en': 'Load cost', 'ar': 'تكلفة التحميل'},
+  'supplierDebtHint': {
+    'en': 'Old debt only — does not affect profit. Add goods from supplier stock for load cost.',
+    'ar': 'دين قديم فقط — لا يدخل الأرباح. تكلفة التحميل تُحسب عند إضافة البضاعة من مخزون المورد',
+  },
   'monthlyProfit': {'en': 'Monthly Profit', 'ar': 'أرباح شهرية'},
   'selectMonth': {'en': 'Select month', 'ar': 'اختيار الشهر'},
   'afterSalariesDeduction': {'en': 'After advances', 'ar': 'بعد خصم السلف'},
@@ -617,6 +622,7 @@ class AppLocalizations {
   String get monthlyRevenue => _get('monthlyRevenue');
   String get dailyProfit => _get('dailyProfit');
   String get dailyProfitHint => _get('dailyProfitHint');
+  String get profitLoadCost => _get('profitLoadCost');
   String get monthlyProfit => _get('monthlyProfit');
   String get selectMonth => _get('selectMonth');
   String get afterSalariesDeduction => _get('afterSalariesDeduction');
@@ -770,6 +776,7 @@ class AppLocalizations {
   String get address => _get('address');
   String get clientDebt => _get('clientDebt');
   String get supplierDebt => _get('supplierDebt');
+  String get supplierDebtHint => _get('supplierDebtHint');
   String get accountStatement => _get('accountStatement');
   String get debit => _get('debit');
   String get credit => _get('credit');

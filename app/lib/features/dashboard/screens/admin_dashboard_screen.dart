@@ -62,7 +62,8 @@ class AdminDashboardScreen extends ConsumerWidget {
                     value: context.formatCurrencyCompact(dashboard.dailyProfit.profit),
                     icon: Icons.today,
                     color: AppColors.primaryGreen,
-                    subtitle: l10n.dailyProfitHint,
+                    subtitle:
+                        '${l10n.profitLoadCost}: ${context.formatCurrencyCompact(dashboard.dailyProfit.loading)}',
                   ),
                   _MonthlyProfitCard(monthlyProfit: dashboard.monthlyProfit),
                   StatCard(
@@ -202,7 +203,7 @@ class _MonthlyProfitCard extends ConsumerWidget {
       icon: Icons.calendar_month,
       color: AppColors.lightGreen,
       subtitle:
-          '$monthLabel · ${l10n.afterSalariesDeduction}: ${context.formatCurrencyCompact(monthlyProfit.salaries)}',
+          '$monthLabel · ${l10n.profitLoadCost}: ${context.formatCurrencyCompact(monthlyProfit.loading)}',
       onTap: () => _pickMonth(context, ref),
     );
   }

@@ -1,5 +1,5 @@
-/** Business day boundaries (default: Africa/Cairo, UTC+2). */
-const CAIRO_OFFSET_MS = 2 * 60 * 60 * 1000;
+/** Business day boundaries (Africa/Cairo — Egypt is UTC+3 year-round). */
+const CAIRO_OFFSET_MS = 3 * 60 * 60 * 1000;
 
 const toCairoWallClock = (date) => new Date(date.getTime() + CAIRO_OFFSET_MS);
 

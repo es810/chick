@@ -88,7 +88,11 @@ const addSupplierStock = async (supplierId, data, user) => {
       stock.tareWeight = (stock.tareWeight || 0) + (batch.tareWeight || 0);
       stock.netWeight = (stock.netWeight || 0) + (batch.netWeight || 0);
       stock.totalAmount = (stock.totalAmount || 0) + (batch.totalAmount || 0);
-      stock.pricePerKg = batch.pricePerKg ?? stock.pricePerKg;
+      // Keep price × net aligned with accumulated total (avoids edit wiping P&L cost).
+      stock.pricePerKg =
+        stock.netWeight > 0
+          ? Math.round((stock.totalAmount / stock.netWeight) * 10000) / 10000
+          : batch.pricePerKg ?? stock.pricePerKg;
       stock.averageWeight =
         stock.quantity > 0 ? stock.netWeight / stock.quantity : batch.averageWeight;
       await stock.save({ session });

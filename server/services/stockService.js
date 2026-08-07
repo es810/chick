@@ -66,7 +66,11 @@ const applyStockIn = async (session, data, user, reason) => {
     stock.tareWeight = (stock.tareWeight || 0) + (tareWeight || 0);
     stock.netWeight = (stock.netWeight || 0) + (netWeight || 0);
     stock.totalAmount = (stock.totalAmount || 0) + (totalAmount || 0);
-    stock.pricePerKg = pricePerKg ?? stock.pricePerKg;
+    // Weighted average so price × net stays equal to accumulated money.
+    stock.pricePerKg =
+      stock.netWeight > 0
+        ? Math.round((stock.totalAmount / stock.netWeight) * 10000) / 10000
+        : pricePerKg ?? stock.pricePerKg;
     stock.averageWeight =
       stock.quantity > 0 ? stock.netWeight / stock.quantity : averageWeight;
     await stock.save({ session });
@@ -149,7 +153,12 @@ const applyStockIncrement = async (session, chickenType, delta, user, reason) =>
     stock.tareWeight = Math.max(0, stock.tareWeight + (delta.tareWeight || 0));
     stock.netWeight = Math.max(0, stock.netWeight + (delta.netWeight || 0));
     stock.totalAmount = Math.max(0, stock.totalAmount + (delta.totalAmount || 0));
-    if (delta.pricePerKg != null) stock.pricePerKg = delta.pricePerKg;
+    stock.pricePerKg =
+      stock.netWeight > 0
+        ? Math.round((stock.totalAmount / stock.netWeight) * 10000) / 10000
+        : delta.pricePerKg != null
+          ? delta.pricePerKg
+          : stock.pricePerKg;
     if (delta.location) stock.location = delta.location;
     if (stock.quantity > 0) {
       stock.averageWeight = stock.netWeight / stock.quantity;
