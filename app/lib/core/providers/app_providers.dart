@@ -11,6 +11,7 @@ import '../../repositories/damaged_stock_repository.dart';
 import '../../repositories/employee_repository.dart';
 import '../../repositories/collection_repository.dart';
 import '../../repositories/treasury_repository.dart';
+import '../../repositories/stock_load_repository.dart';
 import '../../services/api_client.dart';
 import '../../services/cache_service.dart';
 import '../../services/storage_service.dart';
@@ -53,6 +54,10 @@ final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
 
 final damagedStockRepositoryProvider = Provider<DamagedStockRepository>((ref) {
   return DamagedStockRepository(ref.watch(apiClientProvider));
+});
+
+final stockLoadRepositoryProvider = Provider<StockLoadRepository>((ref) {
+  return StockLoadRepository(ref.watch(apiClientProvider));
 });
 
 final clientsProvider = FutureProvider((ref) async {
@@ -106,6 +111,13 @@ final damagedStockProvider = FutureProvider((ref) async {
   return ref.watch(damagedStockRepositoryProvider).list();
 });
 
+final stockLoadsProvider = FutureProvider((ref) async {
+  ref.keepAlive();
+  return ref.watch(stockLoadRepositoryProvider).list(
+        status: 'open,pending_writeoff',
+      );
+});
+
 final dashboardMonthProvider = StateProvider<DateTime>((ref) {
   final now = DateTime.now();
   return DateTime(now.year, now.month);
@@ -152,6 +164,7 @@ void invalidateAllAppData(Ref ref) {
   ref.invalidate(myLedgerProvider);
   ref.invalidate(myTreasuryProvider);
   ref.invalidate(damagedStockProvider);
+  ref.invalidate(stockLoadsProvider);
   ref.invalidate(dashboardProvider);
   ref.invalidate(treasurySummaryProvider);
   ref.invalidate(salesReportProvider);

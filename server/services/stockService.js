@@ -113,6 +113,17 @@ const applyStockIn = async (session, data, user, reason) => {
     { session }
   );
 
+  // Each STOCK_IN batch gets its own قيد تهليك session.
+  if (quantity > 0 || netWeight > 0) {
+    const { createStockLoad } = require('./stockLoadService');
+    await createStockLoad(session, {
+      stock,
+      quantity,
+      netWeight,
+      user,
+    });
+  }
+
   return stock;
 };
 
@@ -346,10 +357,19 @@ const deductStockForInvoice = async (
       strict: true,
     });
 
+    // FIFO: reduce قيد التهليك loads by what was actually deducted from books.
+    const { consumeFromLoads, attachVarianceToLoad } = require('./stockLoadService');
+    const touchedLoad = await consumeFromLoads(
+      session,
+      chickenType,
+      deductQty,
+      weight > 0 ? Math.min(weight, beforeNet) : bookNet
+    );
+
     // All birds sold but sold kg < book kg → leftover must appear under هالك.
     if (leftoverKg > 0) {
       const { recordDistributionRemainder } = require('./damagedStockService');
-      await recordDistributionRemainder({
+      const remainderEntry = await recordDistributionRemainder({
         session,
         stockId,
         chickenType,
@@ -360,9 +380,57 @@ const deductStockForInvoice = async (
         reason: reason
           ? `متبقي وزن التوزيع — ${reason}`
           : 'متبقي وزن التوزيع',
+        stockLoadId: touchedLoad?._id || null,
       });
+      if (remainderEntry && touchedLoad) {
+        await attachVarianceToLoad(session, touchedLoad, remainderEntry);
+      }
     }
+
+    if (qtySurplus > 0 || surplusKg > 0) {
+      const { recordDistributionSurplus } = require('./damagedStockService');
+      const bookLabel = Math.round(beforeNet * 100) / 100;
+      const soldLabel = Math.round(weight * 100) / 100;
+      let surplusReason = 'زيادة التوزيع';
+      if (qtySurplus > 0 && surplusKg > 0) {
+        surplusReason =
+          `زيادة عدد/وزن التوزيع (العدد +${qtySurplus}، الوزن الموزّع ${soldLabel} والمخزون ${bookLabel})`;
+      } else if (qtySurplus > 0) {
+        surplusReason = `زيادة عدد التوزيع (+${qtySurplus})`;
+      } else {
+        surplusReason =
+          `زيادة وزن التوزيع (وزّعت ${soldLabel} كجم والمخزون كان ${bookLabel} كجم)`;
+      }
+
+      const surplusEntry = await recordDistributionSurplus({
+        session,
+        stockId,
+        chickenType,
+        quantity: qtySurplus,
+        netWeight: surplusKg,
+        invoiceId,
+        user,
+        reason: reason ? `${surplusReason} — ${reason}` : surplusReason,
+        stockLoadId: touchedLoad?._id || null,
+      });
+      if (surplusEntry && touchedLoad) {
+        await attachVarianceToLoad(session, touchedLoad, surplusEntry);
+      }
+    }
+
+    return { surplusKg, qtySurplus };
   }
+
+  // Oversell with no book stock left to deduct — still record surplus.
+  const { attachVarianceToLoad } = require('./stockLoadService');
+  const StockLoad = require('../models/StockLoad');
+  const touchedLoad =
+    (await StockLoad.findOne({
+      chickenType,
+      status: { $in: ['open', 'pending_writeoff', 'closed'] },
+    })
+      .sort({ createdAt: -1 })
+      .session(session)) || null;
 
   if (qtySurplus > 0 || surplusKg > 0) {
     const { recordDistributionSurplus } = require('./damagedStockService');
@@ -379,7 +447,7 @@ const deductStockForInvoice = async (
         `زيادة وزن التوزيع (وزّعت ${soldLabel} كجم والمخزون كان ${bookLabel} كجم)`;
     }
 
-    await recordDistributionSurplus({
+    const surplusEntry = await recordDistributionSurplus({
       session,
       stockId,
       chickenType,
@@ -388,7 +456,11 @@ const deductStockForInvoice = async (
       invoiceId,
       user,
       reason: reason ? `${surplusReason} — ${reason}` : surplusReason,
+      stockLoadId: touchedLoad?._id || null,
     });
+    if (surplusEntry && touchedLoad) {
+      await attachVarianceToLoad(session, touchedLoad, surplusEntry);
+    }
   }
 
   return { surplusKg, qtySurplus };
@@ -396,6 +468,7 @@ const deductStockForInvoice = async (
 
 const restoreStockForInvoice = async (session, invoiceId, user, reason) => {
   const movements = await StockMovement.find({ invoiceId, type: 'OUT' }).session(session);
+  const { restoreToLoads } = require('./stockLoadService');
   for (const mov of movements) {
     await applyStockIncrement(session, mov.chickenType, {
       quantity: mov.quantity,
@@ -404,6 +477,12 @@ const restoreStockForInvoice = async (session, invoiceId, user, reason) => {
       netWeight: mov.netWeight || 0,
       totalAmount: mov.totalAmount || 0,
     }, user, reason);
+    await restoreToLoads(
+      session,
+      mov.chickenType,
+      mov.quantity || 0,
+      mov.netWeight || 0
+    );
   }
   await StockMovement.deleteMany({ invoiceId }).session(session);
 
@@ -490,6 +569,10 @@ const deleteStockType = async (stockId, user) => {
     }
 
     await Stock.findByIdAndDelete(stock._id, { session });
+
+    const { closeLoadsForStock } = require('./stockLoadService');
+    await closeLoadsForStock(session, stock._id);
+
     await session.commitTransaction();
 
     await logAction(user._id, user.name, 'DELETE_STOCK', stock.chickenType, {
@@ -561,6 +644,8 @@ const updateStockSnapshot = async (stockId, data, user) => {
         user,
         'Stock type changed — removed'
       );
+      const { closeLoadsForStock } = require('./stockLoadService');
+      await closeLoadsForStock(session, existing._id);
       await applyStockIn(session, after, user, 'Stock type changed — added');
       await Stock.findByIdAndDelete(existing._id, { session });
     } else {

@@ -27,8 +27,10 @@ class DamagedStockEntry extends Equatable {
 
   bool get isDistributionRemainder => source == 'distribution_remainder';
 
+  bool get isLoadDeficit => source == 'load_deficit';
+
   bool get isDistributionVariance =>
-      isDistributionSurplus || isDistributionRemainder;
+      isDistributionSurplus || isDistributionRemainder || isLoadDeficit;
 
   bool get isOpenVariance =>
       isDistributionVariance && (status == 'open' || status.isEmpty);
@@ -41,7 +43,9 @@ class DamagedStockEntry extends Equatable {
     final source = json['source'] as String? ?? 'manual';
     final rawStatus = json['status'] as String?;
     final status = rawStatus ??
-        (source == 'distribution_surplus' || source == 'distribution_remainder'
+        (source == 'distribution_surplus' ||
+                source == 'distribution_remainder' ||
+                source == 'load_deficit'
             ? 'open'
             : 'written_off');
 

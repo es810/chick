@@ -20,5 +20,6 @@ class ApiConstants {
   static const String treasury = '/treasury';
   static const String collections = '/collections';
   static const String damagedStock = '/damaged-stock';
+  static const String stockLoads = '/stock-loads';
   static const String myAccount = '/me';
 }

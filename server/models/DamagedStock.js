@@ -11,12 +11,17 @@ const damagedStockSchema = new mongoose.Schema(
     reason: { type: String, trim: true, default: '' },
     source: {
       type: String,
-      enum: ['manual', 'distribution_surplus', 'distribution_remainder'],
+      enum: [
+        'manual',
+        'distribution_surplus',
+        'distribution_remainder',
+        'load_deficit',
+      ],
       default: 'manual',
     },
     /**
      * open = needs تأكيد الهلاك (surplus still reduces usable stock;
-     *        remainder is already off the books but awaiting confirmation).
+     *        remainder / load_deficit already off the books but awaiting confirmation).
      * written_off = settled.
      */
     status: {
@@ -25,6 +30,12 @@ const damagedStockSchema = new mongoose.Schema(
       default: 'open',
     },
     invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice', default: null },
+    /** Optional link to the StockLoad (قيد التهليك) that produced this variance. */
+    stockLoadId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'StockLoad',
+      default: null,
+    },
     recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
@@ -33,6 +44,7 @@ const damagedStockSchema = new mongoose.Schema(
 damagedStockSchema.index({ createdAt: -1 });
 damagedStockSchema.index({ stockId: 1 });
 damagedStockSchema.index({ invoiceId: 1 });
+damagedStockSchema.index({ stockLoadId: 1 });
 damagedStockSchema.index({ status: 1, source: 1 });
 
 module.exports = mongoose.model('DamagedStock', damagedStockSchema);

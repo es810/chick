@@ -7,6 +7,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/stock_model.dart';
+import '../../../models/stock_load_model.dart';
 import '../../../models/user_model.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -26,6 +27,7 @@ class StockScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final isAdmin = _isAdmin(ref);
     final stockAsync = ref.watch(stockProvider);
+    final loadsAsync = ref.watch(stockLoadsProvider);
 
     final body = Column(
         children: [
@@ -67,24 +69,38 @@ class StockScreen extends ConsumerWidget {
                   );
                 }
 
+                final loads = loadsAsync.valueOrNull ?? [];
+
                 return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(stockProvider),
+                  onRefresh: () async {
+                    ref.invalidate(stockProvider);
+                    ref.invalidate(stockLoadsProvider);
+                  },
                   child: ListView.builder(
                     padding: EdgeInsets.fromLTRB(16, 16, 16, embedded && isAdmin ? 88 : 16),
                     itemCount: stock.length,
-                    itemBuilder: (_, i) => _StockCard(
-                      item: stock[i],
-                      isAdmin: isAdmin,
-                      onEdit: isAdmin ? () => _showEditStockDialog(context, ref, stock[i]) : null,
-                      onDelete: isAdmin ? () => _confirmDelete(context, ref, stock[i]) : null,
-                      onWriteOff: isAdmin
-                          ? () => showWriteOffStockDialog(
-                                context: context,
-                                ref: ref,
-                                item: stock[i],
-                              )
-                          : null,
-                    ),
+                    itemBuilder: (_, i) {
+                      final itemLoads = loads
+                          .where((l) => l.chickenType == stock[i].chickenType)
+                          .toList();
+                      return _StockCard(
+                        item: stock[i],
+                        loads: itemLoads,
+                        isAdmin: isAdmin,
+                        onEdit: isAdmin ? () => _showEditStockDialog(context, ref, stock[i]) : null,
+                        onDelete: isAdmin ? () => _confirmDelete(context, ref, stock[i]) : null,
+                        onWriteOff: isAdmin
+                            ? () => showWriteOffStockDialog(
+                                  context: context,
+                                  ref: ref,
+                                  item: stock[i],
+                                )
+                            : null,
+                        onFinishLoad: isAdmin
+                            ? (load) => _finishLoad(context, ref, load)
+                            : null,
+                      );
+                    },
                   ),
                 );
               },
@@ -180,6 +196,7 @@ class StockScreen extends ConsumerWidget {
                         payload['reason'] = 'Manual stock replenishment';
                         await ref.read(stockRepositoryProvider).addStock(payload);
                         ref.invalidate(stockProvider);
+                        ref.invalidate(stockLoadsProvider);
                         if (context.mounted) Navigator.pop(ctx);
                       } catch (e) {
                         setDialogState(() => submitting = false);
@@ -238,6 +255,7 @@ class StockScreen extends ConsumerWidget {
                 final payload = form.toPayload();
                 await ref.read(stockRepositoryProvider).updateStock(item.id, payload);
                 ref.invalidate(stockProvider);
+                ref.invalidate(stockLoadsProvider);
                 if (context.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -289,6 +307,7 @@ class StockScreen extends ConsumerWidget {
     try {
       await ref.read(stockRepositoryProvider).deleteStock(item.id);
       ref.invalidate(stockProvider);
+      ref.invalidate(stockLoadsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.stockDeleted), backgroundColor: AppColors.success),
@@ -305,28 +324,83 @@ class StockScreen extends ConsumerWidget {
       }
     }
   }
+
+  Future<void> _finishLoad(
+    BuildContext context,
+    WidgetRef ref,
+    StockLoadModel load,
+  ) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.finishDistribution),
+        content: Text(
+          '${load.chickenType}\n'
+          '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
+          '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}\n\n'
+          '${l10n.finishDistributionConfirm}',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.finishDistribution),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(stockLoadRepositoryProvider).finish(load.id);
+      ref.invalidate(stockLoadsProvider);
+      ref.invalidate(damagedStockProvider);
+      ref.invalidate(stockProvider);
+      ref.invalidate(dashboardProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.finishDistributionDone),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e)), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
 }
 
 class _StockCard extends StatelessWidget {
   const _StockCard({
     required this.item,
+    required this.loads,
     required this.isAdmin,
     this.onEdit,
     this.onDelete,
     this.onWriteOff,
+    this.onFinishLoad,
   });
 
   final StockModel item;
+  final List<StockLoadModel> loads;
   final bool isAdmin;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onWriteOff;
+  final void Function(StockLoadModel load)? onFinishLoad;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final canWriteOff =
         onWriteOff != null && (item.usableQuantity > 0 || item.usableNetWeight > 0);
+    final openLoads = loads.where((l) => l.isOpen || l.isPendingWriteOff).toList();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -433,6 +507,64 @@ class _StockCard extends StatelessWidget {
                     color: AppColors.primaryGreen,
                   ),
             ),
+            if (openLoads.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                l10n.pendingWriteOffLoads,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              ...openLoads.map(
+                (load) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreen.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: load.isPendingWriteOff
+                            ? AppColors.warning.withValues(alpha: 0.5)
+                            : AppColors.primaryGreen.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          load.isPendingWriteOff
+                              ? l10n.loadPendingWriteOff
+                              : '${l10n.loadedLabel}: ${load.loadedQuantity}'
+                                  '${load.loadedNetWeight > 0 ? ' — ${load.loadedNetWeight.toStringAsFixed(1)} kg' : ''}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        if (load.isOpen)
+                          Text(
+                            '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
+                            '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}',
+                          ),
+                        if (onFinishLoad != null && load.canFinish) ...[
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: TextButton.icon(
+                              onPressed: () => onFinishLoad!(load),
+                              icon: const Icon(Icons.flag_outlined, size: 18),
+                              label: Text(l10n.finishDistribution),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (canWriteOff) ...[
               const SizedBox(height: 12),
               SizedBox(
@@ -455,3 +587,4 @@ class _StockCard extends StatelessWidget {
     );
   }
 }
+

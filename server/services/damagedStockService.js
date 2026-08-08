@@ -205,7 +205,11 @@ const getDamagedStockSummary = async () => {
                   {
                     $in: [
                       '$source',
-                      ['distribution_surplus', 'distribution_remainder'],
+                      [
+                        'distribution_surplus',
+                        'distribution_remainder',
+                        'load_deficit',
+                      ],
                     ],
                   },
                   { $ne: ['$status', 'written_off'] },
@@ -224,7 +228,11 @@ const getDamagedStockSummary = async () => {
                   {
                     $in: [
                       '$source',
-                      ['distribution_surplus', 'distribution_remainder'],
+                      [
+                        'distribution_surplus',
+                        'distribution_remainder',
+                        'load_deficit',
+                      ],
                     ],
                   },
                   { $ne: ['$status', 'written_off'] },
@@ -261,6 +269,7 @@ const recordDistributionSurplus = async ({
   invoiceId,
   user,
   reason,
+  stockLoadId = null,
 }) => {
   const kg = round2(netWeight);
   const qty = Math.max(0, parseInt(quantity, 10) || 0);
@@ -282,6 +291,7 @@ const recordDistributionSurplus = async ({
         source: 'distribution_surplus',
         status: 'open',
         invoiceId: invoiceId || null,
+        stockLoadId: stockLoadId || null,
         recordedBy: user._id,
       },
     ],
@@ -308,6 +318,7 @@ const recordDistributionRemainder = async ({
   invoiceId,
   user,
   reason,
+  stockLoadId = null,
 }) => {
   const kg = round2(netWeight);
   const qty = Math.max(0, parseInt(quantity, 10) || 0);
@@ -324,6 +335,7 @@ const recordDistributionRemainder = async ({
         source: 'distribution_remainder',
         status: 'open',
         invoiceId: invoiceId || null,
+        stockLoadId: stockLoadId || null,
         recordedBy: user._id,
       },
     ],
@@ -353,9 +365,9 @@ const removeSurplusForInvoice = async (session, invoiceId) => {
 };
 
 /**
- * Confirm هلك for distribution surplus or remainder.
+ * Confirm هلك for distribution surplus, remainder, or load deficit.
  * Surplus: clears pending so new loads are not reduced.
- * Remainder: stock already cleared; just marks written_off.
+ * Remainder / load_deficit: stock already cleared; just marks written_off.
  */
 const writeOffSurplus = async (entryId, user) => {
   const session = await mongoose.startSession();
@@ -366,7 +378,8 @@ const writeOffSurplus = async (entryId, user) => {
     if (!entry) throw new ApiError(404, 'Damaged stock entry not found');
     if (
       entry.source !== 'distribution_surplus' &&
-      entry.source !== 'distribution_remainder'
+      entry.source !== 'distribution_remainder' &&
+      entry.source !== 'load_deficit'
     ) {
       throw new ApiError(400, 'Only distribution variance can be written off this way');
     }
@@ -380,6 +393,9 @@ const writeOffSurplus = async (entryId, user) => {
     }
     entry.status = 'written_off';
     await entry.save({ session });
+
+    const { closeLoadIfSettled } = require('./stockLoadService');
+    await closeLoadIfSettled(session, entry.stockLoadId);
 
     await session.commitTransaction();
 

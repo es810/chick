@@ -315,6 +315,35 @@ class AppLocalizations {
     'en': 'Weight exceeds remaining stock',
     'ar': 'الوزن أكبر من المتبقي في المخزون',
   },
+  'pendingWriteOffLoads': {
+    'en': 'Pending write-off loads',
+    'ar': 'قيد التهليك',
+  },
+  'finishDistribution': {
+    'en': 'Finish distribution',
+    'ar': 'إنهاء التوزيع',
+  },
+  'finishDistributionConfirm': {
+    'en':
+        'Remaining birds/weight will be recorded as load deficit awaiting write-off confirmation.',
+    'ar':
+        'المتبقي هيتسجّل كعجز حمولة ويستنى تأكيد الهلاك.',
+  },
+  'finishDistributionDone': {
+    'en': 'Distribution finished — deficit recorded',
+    'ar': 'تم إنهاء التوزيع وتسجيل العجز',
+  },
+  'loadedLabel': {'en': 'Loaded', 'ar': 'محمّل'},
+  'loadRemainingLabel': {'en': 'Remaining in load', 'ar': 'متبقي في القيد'},
+  'loadDeficitLabel': {'en': 'Load deficit', 'ar': 'عجز الحمولة'},
+  'loadPendingWriteOff': {
+    'en': 'Awaiting write-off confirmation',
+    'ar': 'بانتظار تأكيد الهلاك',
+  },
+  'noPendingLoads': {
+    'en': 'No loads under write-off tracking',
+    'ar': 'لا توجد حمولات تحت قيد التهليك',
+  },
   'damagedStockReason': {'en': 'Reason (optional)', 'ar': 'السبب (اختياري)'},
   'noDamagedStock': {'en': 'No damaged stock recorded', 'ar': 'لا يوجد مخزون هالك مسجّل'},
   'damagedStockRecorded': {'en': 'Damaged stock recorded', 'ar': 'تم تسجيل المخزون الهالك'},
@@ -747,6 +776,15 @@ class AppLocalizations {
   String get confirmWriteOff => _get('confirmWriteOff');
   String get noStockLeftToWriteOff => _get('noStockLeftToWriteOff');
   String get weightExceedsStock => _get('weightExceedsStock');
+  String get pendingWriteOffLoads => _get('pendingWriteOffLoads');
+  String get finishDistribution => _get('finishDistribution');
+  String get finishDistributionConfirm => _get('finishDistributionConfirm');
+  String get finishDistributionDone => _get('finishDistributionDone');
+  String get loadedLabel => _get('loadedLabel');
+  String get loadRemainingLabel => _get('loadRemainingLabel');
+  String get loadDeficitLabel => _get('loadDeficitLabel');
+  String get loadPendingWriteOff => _get('loadPendingWriteOff');
+  String get noPendingLoads => _get('noPendingLoads');
   String get damagedStockReason => _get('damagedStockReason');
   String get noDamagedStock => _get('noDamagedStock');
   String get damagedStockRecorded => _get('damagedStockRecorded');

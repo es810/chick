@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/damaged_stock_model.dart';
+import '../../../models/stock_load_model.dart';
 import '../../../models/stock_model.dart';
 import '../../../models/user_model.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
@@ -139,6 +140,7 @@ class DamagedStockScreen extends ConsumerWidget {
       weightController.dispose();
       reasonController.dispose();
       ref.invalidate(damagedStockProvider);
+      ref.invalidate(stockLoadsProvider);
       ref.invalidate(stockProvider);
       ref.invalidate(dashboardProvider);
       if (context.mounted) {
@@ -162,6 +164,7 @@ class DamagedStockScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final damagedAsync = ref.watch(damagedStockProvider);
+    final loadsAsync = ref.watch(stockLoadsProvider);
     final isAdmin = ref.watch(currentUserProvider)?.role == UserRole.admin;
 
     return Scaffold(
@@ -182,10 +185,17 @@ class DamagedStockScreen extends ConsumerWidget {
         loading: () => const LoadingShimmer(),
         error: (e, _) => ErrorStateWidget(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(damagedStockProvider),
+          onRetry: () {
+            ref.invalidate(damagedStockProvider);
+            ref.invalidate(stockLoadsProvider);
+          },
         ),
         data: (result) {
-          if (result.entries.isEmpty) {
+          final loads = loadsAsync.valueOrNull ?? [];
+          final hasLoads = loads.isNotEmpty;
+          final hasEntries = result.entries.isNotEmpty;
+
+          if (!hasLoads && !hasEntries) {
             return EmptyStateWidget(
               icon: Icons.delete_sweep_outlined,
               title: l10n.noDamagedStock,
@@ -203,6 +213,7 @@ class DamagedStockScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(damagedStockProvider);
+              ref.invalidate(stockLoadsProvider);
               ref.invalidate(stockProvider);
               ref.invalidate(dashboardProvider);
             },
@@ -240,16 +251,56 @@ class DamagedStockScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                ...result.entries.map(
-                  (entry) => _DamagedEntryCard(
-                    entry: entry,
-                    isAdmin: isAdmin,
-                    onWriteOff: isAdmin && entry.isOpenVariance
-                        ? () => _writeOff(context, ref, entry)
-                        : null,
-                  ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.pendingWriteOffLoads,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
+                const SizedBox(height: 8),
+                if (loadsAsync.isLoading && !hasLoads)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (!hasLoads)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      l10n.noPendingLoads,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  )
+                else
+                  ...loads.map(
+                    (load) => _StockLoadCard(
+                      load: load,
+                      isAdmin: isAdmin,
+                      onFinish: isAdmin && load.canFinish
+                          ? () => _finishLoad(context, ref, load)
+                          : null,
+                    ),
+                  ),
+                if (hasEntries) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.damagedStock,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...result.entries.map(
+                    (entry) => _DamagedEntryCard(
+                      entry: entry,
+                      isAdmin: isAdmin,
+                      onWriteOff: isAdmin && entry.isOpenVariance
+                          ? () => _writeOff(context, ref, entry)
+                          : null,
+                    ),
+                  ),
+                ],
               ],
             ),
           );
@@ -262,6 +313,56 @@ class DamagedStockScreen extends ConsumerWidget {
             )
           : null,
     );
+  }
+
+  Future<void> _finishLoad(
+    BuildContext context,
+    WidgetRef ref,
+    StockLoadModel load,
+  ) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.finishDistribution),
+        content: Text(
+          '${load.chickenType}\n'
+          '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
+          '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}\n\n'
+          '${l10n.finishDistributionConfirm}',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.finishDistribution),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(stockLoadRepositoryProvider).finish(load.id);
+      ref.invalidate(stockLoadsProvider);
+      ref.invalidate(damagedStockProvider);
+      ref.invalidate(stockProvider);
+      ref.invalidate(dashboardProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.finishDistributionDone),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e)), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   Future<void> _writeOff(
@@ -278,7 +379,7 @@ class DamagedStockScreen extends ConsumerWidget {
           '${entry.chickenType}\n'
           '${entry.quantity > 0 ? '${l10n.itemCount}: ${entry.quantity}\n' : ''}'
           '${entry.netWeight > 0 ? '${l10n.damagedWeightKg}: ${entry.netWeight.toStringAsFixed(1)}\n' : ''}'
-          '${entry.isDistributionRemainder ? l10n.remainderOpenHint : l10n.pendingSurplusOpen}',
+          '${entry.isLoadDeficit ? l10n.loadDeficitLabel : entry.isDistributionRemainder ? l10n.remainderOpenHint : l10n.pendingSurplusOpen}',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
@@ -294,6 +395,7 @@ class DamagedStockScreen extends ConsumerWidget {
     try {
       await ref.read(damagedStockRepositoryProvider).writeOff(entry.id);
       ref.invalidate(damagedStockProvider);
+      ref.invalidate(stockLoadsProvider);
       ref.invalidate(stockProvider);
       ref.invalidate(dashboardProvider);
       if (context.mounted) {
@@ -311,6 +413,77 @@ class DamagedStockScreen extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+class _StockLoadCard extends StatelessWidget {
+  const _StockLoadCard({
+    required this.load,
+    required this.isAdmin,
+    this.onFinish,
+  });
+
+  final StockLoadModel load;
+  final bool isAdmin;
+  final VoidCallback? onFinish;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: (load.isPendingWriteOff ? AppColors.warning : AppColors.primaryGreen)
+                .withValues(alpha: 0.12),
+            child: Icon(
+              Icons.inventory_2_outlined,
+              color: load.isPendingWriteOff ? AppColors.warning : AppColors.primaryGreen,
+            ),
+          ),
+          title: Text(load.chickenType),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                load.isPendingWriteOff
+                    ? l10n.loadPendingWriteOff
+                    : l10n.pendingWriteOffLoads,
+                style: TextStyle(
+                  color: load.isPendingWriteOff ? AppColors.warning : AppColors.primaryGreen,
+                  fontWeight: FontWeight.w600,
+                  fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                ),
+              ),
+              Text(
+                '${l10n.loadedLabel}: ${load.loadedQuantity}'
+                '${load.loadedNetWeight > 0 ? ' — ${load.loadedNetWeight.toStringAsFixed(1)} kg' : ''}',
+              ),
+              Text(
+                '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
+                '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}',
+              ),
+              if (load.createdAt != null)
+                Text(DateFormat.yMMMd().add_jm().format(load.createdAt!)),
+              if (onFinish != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    onPressed: onFinish,
+                    icon: const Icon(Icons.flag_outlined, size: 18),
+                    label: Text(l10n.finishDistribution),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -362,6 +535,17 @@ class _DamagedEntryCard extends StatelessWidget {
                   entry.isOpenVariance
                       ? l10n.remainderOpenHint
                       : '${l10n.distributionWeightRemainder} — ${l10n.surplusAlreadyWrittenOff}',
+                  style: TextStyle(
+                    color: entry.isOpenVariance ? AppColors.warning : AppColors.success,
+                    fontWeight: FontWeight.w600,
+                    fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                  ),
+                ),
+              if (entry.isLoadDeficit)
+                Text(
+                  entry.isOpenVariance
+                      ? l10n.loadDeficitLabel
+                      : '${l10n.loadDeficitLabel} — ${l10n.surplusAlreadyWrittenOff}',
                   style: TextStyle(
                     color: entry.isOpenVariance ? AppColors.warning : AppColors.success,
                     fontWeight: FontWeight.w600,

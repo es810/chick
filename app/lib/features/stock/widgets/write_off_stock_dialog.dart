@@ -188,6 +188,7 @@ Future<bool> showWriteOffStockDialog({
 
   if (ok == true) {
     ref.invalidate(damagedStockProvider);
+    ref.invalidate(stockLoadsProvider);
     ref.invalidate(stockProvider);
     ref.invalidate(dashboardProvider);
     if (context.mounted) {

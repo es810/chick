@@ -15,6 +15,7 @@ const employeeRoutes = require('./routes/employeeRoutes');
 const treasuryRoutes = require('./routes/treasuryRoutes');
 const collectionRoutes = require('./routes/collectionRoutes');
 const damagedStockRoutes = require('./routes/damagedStockRoutes');
+const stockLoadRoutes = require('./routes/stockLoadRoutes');
 const meRoutes = require('./routes/meRoutes');
 const setupRoutes = require('./routes/setupRoutes');
 
@@ -48,6 +49,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/stock', stockRoutes);
+app.use('/api/stock-loads', stockLoadRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/treasury', treasuryRoutes);
