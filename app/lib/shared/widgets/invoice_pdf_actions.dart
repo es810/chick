@@ -31,7 +31,7 @@ class _InvoicePdfActionsState extends State<InvoicePdfActions> {
     setState(() => _isLoading = true);
 
     try {
-      await action();
+      await action().timeout(const Duration(seconds: 45));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

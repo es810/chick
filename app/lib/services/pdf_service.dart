@@ -1,12 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/utils/currency_formatter.dart';
 import '../models/invoice_model.dart';
@@ -22,6 +21,18 @@ class PdfInvoiceResult {
 class PdfService {
   static const whatsAppGreen = 0xFF25D366;
 
+  pw.Font? _arabicRegular;
+  pw.Font? _arabicBold;
+
+  /// Bundled fonts — avoids hanging on PdfGoogleFonts network download.
+  Future<void> _ensureArabicFonts() async {
+    if (_arabicRegular != null && _arabicBold != null) return;
+    final regularData = await rootBundle.load('assets/fonts/NotoSansArabic-Regular.ttf');
+    final boldData = await rootBundle.load('assets/fonts/NotoSansArabic-Bold.ttf');
+    _arabicRegular = pw.Font.ttf(regularData);
+    _arabicBold = pw.Font.ttf(boldData);
+  }
+
   Future<PdfInvoiceResult> buildInvoicePdf(InvoiceModel invoice) async {
     final bytes = await generateInvoicePdf(invoice);
     final filename = '${invoice.invoiceNumber}.pdf';
@@ -36,13 +47,12 @@ class PdfService {
   }
 
   Future<Uint8List> generateInvoicePdf(InvoiceModel invoice) async {
-    final arabicRegular = await PdfGoogleFonts.notoSansArabicRegular();
-    final arabicBold = await PdfGoogleFonts.notoSansArabicBold();
+    await _ensureArabicFonts();
 
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
-        base: arabicRegular,
-        bold: arabicBold,
+        base: _arabicRegular!,
+        bold: _arabicBold!,
       ),
     );
 
@@ -99,13 +109,12 @@ class PdfService {
   }
 
   Future<Uint8List> generateCollectionPdf(TreasuryEntryItem entry) async {
-    final arabicRegular = await PdfGoogleFonts.notoSansArabicRegular();
-    final arabicBold = await PdfGoogleFonts.notoSansArabicBold();
+    await _ensureArabicFonts();
 
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
-        base: arabicRegular,
-        bold: arabicBold,
+        base: _arabicRegular!,
+        bold: _arabicBold!,
       ),
     );
 
@@ -282,10 +291,31 @@ class PdfService {
 
   String _num(double value) => value.toStringAsFixed(2);
 
+  /// Write PDF to a temp file — Android share often hangs with in-memory XFile.fromData.
+  Future<XFile> _pdfAsXFile(PdfInvoiceResult result) async {
+    final dir = await getTemporaryDirectory();
+    final path = '${dir.path}/${result.filename}';
+    final file = File(path);
+    await file.writeAsBytes(result.bytes, flush: true);
+    return XFile(path, mimeType: 'application/pdf', name: result.filename);
+  }
+
+  Future<void> _sharePdfFile(
+    PdfInvoiceResult result, {
+    required String message,
+  }) async {
+    final file = await _pdfAsXFile(result);
+    await Share.shareXFiles(
+      [file],
+      text: message,
+      subject: result.filename,
+    );
+  }
+
   /// Opens system share / save dialog (works on mobile & desktop).
   Future<void> downloadPdf(InvoiceModel invoice) async {
     final result = await buildInvoicePdf(invoice);
-    await Printing.sharePdf(bytes: result.bytes, filename: result.filename);
+    await _sharePdfFile(result, message: _shareMessage(invoice));
   }
 
   Future<String> savePdfToDevice(InvoiceModel invoice) async {
@@ -298,50 +328,18 @@ class PdfService {
 
   Future<void> sharePdf(InvoiceModel invoice) async {
     final result = await buildInvoicePdf(invoice);
-    final message = _shareMessage(invoice);
-    await Share.shareXFiles(
-      [
-        XFile.fromData(
-          result.bytes,
-          mimeType: 'application/pdf',
-          name: result.filename,
-        ),
-      ],
-      text: message,
-      subject: result.filename,
-    );
+    await _sharePdfFile(result, message: _shareMessage(invoice));
   }
 
   Future<void> shareViaWhatsApp(InvoiceModel invoice, {String? clientPhone}) async {
     final result = await buildInvoicePdf(invoice);
     final message = _shareMessage(invoice);
-    final file = XFile.fromData(
-      result.bytes,
-      mimeType: 'application/pdf',
-      name: result.filename,
-    );
-
-    if (!kIsWeb && clientPhone != null && clientPhone.trim().isNotEmpty) {
-      final phone = clientPhone.replaceAll(RegExp(r'\D'), '');
-      final waTextUri = Uri.parse(
-        'https://wa.me/$phone?text=${Uri.encodeComponent(message)}',
-      );
-      if (await canLaunchUrl(waTextUri)) {
-        await Share.shareXFiles([file], text: message, subject: result.filename);
-        return;
-      }
-    }
-
-    await Share.shareXFiles(
-      [file],
-      text: message,
-      subject: result.filename,
-    );
+    await _sharePdfFile(result, message: message);
   }
 
   Future<void> downloadCollectionPdf(TreasuryEntryItem entry) async {
     final result = await buildCollectionPdf(entry);
-    await Printing.sharePdf(bytes: result.bytes, filename: result.filename);
+    await _sharePdfFile(result, message: _collectionShareMessage(entry));
   }
 
   Future<void> shareCollectionViaWhatsApp(
@@ -349,30 +347,7 @@ class PdfService {
     String? clientPhone,
   }) async {
     final result = await buildCollectionPdf(entry);
-    final message = _collectionShareMessage(entry);
-    final file = XFile.fromData(
-      result.bytes,
-      mimeType: 'application/pdf',
-      name: result.filename,
-    );
-    final phone = (clientPhone ?? entry.clientPhone)?.trim();
-
-    if (!kIsWeb && phone != null && phone.isNotEmpty) {
-      final digits = phone.replaceAll(RegExp(r'\D'), '');
-      final waTextUri = Uri.parse(
-        'https://wa.me/$digits?text=${Uri.encodeComponent(message)}',
-      );
-      if (await canLaunchUrl(waTextUri)) {
-        await Share.shareXFiles([file], text: message, subject: result.filename);
-        return;
-      }
-    }
-
-    await Share.shareXFiles(
-      [file],
-      text: message,
-      subject: result.filename,
-    );
+    await _sharePdfFile(result, message: _collectionShareMessage(entry));
   }
 
   Future<Directory> _pdfDirectory() async {
