@@ -267,6 +267,21 @@ const applyStockDelta = async (session, chickenType, delta, user, reason, option
   }
   await stock.save({ session });
 
+  // Keep قيد التهليك in sync when stock is reduced outside invoice FIFO
+  // (e.g. edit/delete snapshot). Invoice path sets skipLoadConsume.
+  if (
+    !options.skipLoadConsume &&
+    (outQty > 0 || netDelta < 0)
+  ) {
+    const { consumeFromLoads } = require('./stockLoadService');
+    await consumeFromLoads(
+      session,
+      chickenType,
+      outQty,
+      Math.abs(Math.min(0, netDelta))
+    );
+  }
+
   // Record purchase-cost reduction even when only the money changes (qty unchanged).
   const amountOut = amountDelta < 0 ? Math.abs(amountDelta) : Math.abs(delta.totalAmount || 0);
   if (outQty > 0 || amountDelta < 0) {
@@ -355,6 +370,7 @@ const deductStockForInvoice = async (
     await applyStockDelta(session, chickenType, delta, user, reason, {
       invoiceId,
       strict: true,
+      skipLoadConsume: true,
     });
 
     // FIFO: reduce قيد التهليك loads by what was actually deducted from books.

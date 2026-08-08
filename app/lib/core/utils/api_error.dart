@@ -9,7 +9,11 @@ String apiErrorMessage(Object error, {String? fallback}) {
     }
     final data = error.response?.data;
     if (data is Map && data['message'] != null) {
-      return data['message'].toString();
+      final msg = data['message'].toString();
+      if (msg == 'Only open loads can be finished') {
+        return 'القيد ده اتقفل أو مستني تأكيد الهلاك — حدّث الصفحة';
+      }
+      return msg;
     }
     if (status == 500) {
       return fallback ?? 'Server error. Try again or contact support.';

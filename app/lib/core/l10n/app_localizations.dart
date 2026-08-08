@@ -325,13 +325,13 @@ class AppLocalizations {
   },
   'finishDistributionConfirm': {
     'en':
-        'Remaining birds/weight will be recorded as load deficit awaiting write-off confirmation.',
+        'Remaining stock will be written off immediately.',
     'ar':
-        'المتبقي هيتسجّل كعجز حمولة ويستنى تأكيد الهلاك.',
+        'المتبقي هيتهلك فورًا من غير تأكيد تاني.',
   },
   'finishDistributionDone': {
-    'en': 'Distribution finished — deficit recorded',
-    'ar': 'تم إنهاء التوزيع وتسجيل العجز',
+    'en': 'Distribution finished — written off',
+    'ar': 'تم إنهاء التوزيع والهلاك',
   },
   'loadedLabel': {'en': 'Loaded', 'ar': 'محمّل'},
   'loadRemainingLabel': {'en': 'Remaining in load', 'ar': 'متبقي في القيد'},

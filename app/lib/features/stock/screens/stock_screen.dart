@@ -331,26 +331,6 @@ class StockScreen extends ConsumerWidget {
     StockLoadModel load,
   ) async {
     final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.finishDistribution),
-        content: Text(
-          '${load.chickenType}\n'
-          '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
-          '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}\n\n'
-          '${l10n.finishDistributionConfirm}',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.finishDistribution),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
 
     try {
       await ref.read(stockLoadRepositoryProvider).finish(load.id);
@@ -367,6 +347,9 @@ class StockScreen extends ConsumerWidget {
         );
       }
     } catch (e) {
+      ref.invalidate(stockLoadsProvider);
+      ref.invalidate(damagedStockProvider);
+      ref.invalidate(stockProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(apiErrorMessage(e)), backgroundColor: AppColors.error),

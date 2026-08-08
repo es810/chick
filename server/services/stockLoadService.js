@@ -214,22 +214,91 @@ const closeLoadsForStock = async (session, stockId) => {
 };
 
 /**
- * Manual إنهاء التوزيع: remaining = عجز → open load_deficit + deduct book stock.
+ * Manual إنهاء التوزيع: remaining is written off immediately (no تأكيد الهلاك).
+ * Idempotent if already closed / pending_writeoff (legacy rows get closed).
  */
 const finishStockLoad = async (loadId, user) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
+  const reducePending = async (stockId, qty, kg) => {
+    const s = await Stock.findById(stockId).session(session);
+    if (!s) return;
+    s.pendingSurplusQuantity = Math.max(
+      0,
+      (s.pendingSurplusQuantity || 0) - (qty || 0)
+    );
+    s.pendingSurplusNetWeight = Math.max(
+      0,
+      round2((s.pendingSurplusNetWeight || 0) - (kg || 0))
+    );
+    await s.save({ session });
+  };
+
+  const writeOffOpenVariances = async (stock, loadDoc) => {
+    const openVariances = await DamagedStock.find({
+      $or: [
+        { stockLoadId: loadDoc._id },
+        {
+          stockId: stock._id,
+          chickenType: stock.chickenType,
+          source: { $in: OPEN_VARIANCE_SOURCES },
+          $or: [{ status: 'open' }, { status: { $exists: false } }, { status: null }],
+        },
+      ],
+    }).session(session);
+
+    let lastId = null;
+    for (const entry of openVariances) {
+      if (entry.status === 'written_off') continue;
+      if (entry.source === 'distribution_surplus') {
+        await reducePending(entry.stockId, entry.quantity, entry.netWeight);
+      }
+      entry.status = 'written_off';
+      if (!entry.stockLoadId) entry.stockLoadId = loadDoc._id;
+      await entry.save({ session });
+      lastId = entry._id;
+    }
+    return lastId;
+  };
+
   try {
     const load = await StockLoad.findById(loadId).session(session);
     if (!load) throw new ApiError(404, 'Stock load not found');
+
+    // Already settled — close legacy pending_writeoff quietly.
+    if (load.status === 'closed') {
+      await session.commitTransaction();
+      return StockLoad.findById(load._id)
+        .populate('createdBy', 'name')
+        .populate('damagedStockId');
+    }
+
+    if (load.status === 'pending_writeoff') {
+      const stock = await Stock.findById(load.stockId).session(session);
+      if (stock) {
+        const lastId = await writeOffOpenVariances(stock, load);
+        if (lastId) load.damagedStockId = lastId;
+      }
+      load.remainingQuantity = 0;
+      load.remainingNetWeight = 0;
+      load.status = 'closed';
+      await load.save({ session });
+      await session.commitTransaction();
+      return StockLoad.findById(load._id)
+        .populate('createdBy', 'name')
+        .populate('damagedStockId');
+    }
+
     if (load.status !== 'open') {
-      throw new ApiError(400, 'Only open loads can be finished');
+      throw new ApiError(400, 'لا يمكن إنهاء التوزيع إلا لقيد مفتوح');
     }
 
     const qty = Math.max(0, load.remainingQuantity || 0);
     const kg = round2(load.remainingNetWeight || 0);
     if (qty <= 0 && kg <= 0) {
+      const stock = await Stock.findById(load.stockId).session(session);
+      if (stock) await writeOffOpenVariances(stock, load);
       load.status = 'closed';
       await load.save({ session });
       await session.commitTransaction();
@@ -247,6 +316,27 @@ const finishStockLoad = async (loadId, user) => {
       0,
       round2((stock.netWeight || 0) - (stock.pendingSurplusNetWeight || 0))
     );
+
+    // Books already empty — sync load and write off any open variance immediately.
+    if (usableQty <= 0 && usableKg <= 0.001) {
+      load.remainingQuantity = 0;
+      load.remainingNetWeight = 0;
+      const lastId = await writeOffOpenVariances(stock, load);
+      if (lastId) load.damagedStockId = lastId;
+      load.status = 'closed';
+      await load.save({ session });
+      await session.commitTransaction();
+
+      await logAction(user._id, user.name, 'FINISH_STOCK_LOAD', load.chickenType, {
+        loadId: load._id,
+        syncedEmptyBooks: true,
+        writtenOffImmediately: true,
+      });
+
+      return StockLoad.findById(load._id)
+        .populate('createdBy', 'name')
+        .populate('damagedStockId');
+    }
 
     const deductQty = Math.min(qty, usableQty);
     const weightOut =
@@ -290,16 +380,19 @@ const finishStockLoad = async (loadId, user) => {
     }
     await stock.save({ session });
 
+    const deficitQty = deductQty;
+    const deficitKg = kg > 0 ? Math.min(kg, weightOut || kg) : weightOut;
+
     const [entry] = await DamagedStock.create(
       [
         {
           stockId: stock._id,
           chickenType: stock.chickenType,
-          quantity: deductQty,
-          netWeight: kg > 0 ? Math.min(kg, weightOut || kg) : weightOut,
+          quantity: deficitQty,
+          netWeight: deficitKg,
           reason: 'عجز الحمولة — إنهاء التوزيع',
           source: 'load_deficit',
-          status: 'open',
+          status: 'written_off',
           stockLoadId: load._id,
           recordedBy: user._id,
         },
@@ -313,8 +406,8 @@ const finishStockLoad = async (loadId, user) => {
           type: 'OUT',
           stockId: stock._id,
           chickenType: stock.chickenType,
-          quantity: deductQty || 0,
-          netWeight: kg > 0 ? Math.min(kg, weightOut || kg) : weightOut,
+          quantity: deficitQty || 0,
+          netWeight: deficitKg,
           location: stock.location,
           reason: 'Load deficit write-off (finish distribution)',
           employeeId: user._id,
@@ -323,9 +416,12 @@ const finishStockLoad = async (loadId, user) => {
       { session }
     );
 
+    // Also settle any leftover open surplus/remainder for this type.
+    await writeOffOpenVariances(stock, load);
+
     load.remainingQuantity = 0;
     load.remainingNetWeight = 0;
-    load.status = 'pending_writeoff';
+    load.status = 'closed';
     load.damagedStockId = entry._id;
     await load.save({ session });
 
@@ -333,8 +429,9 @@ const finishStockLoad = async (loadId, user) => {
 
     await logAction(user._id, user.name, 'FINISH_STOCK_LOAD', load.chickenType, {
       loadId: load._id,
-      quantity: deductQty,
-      netWeight: kg > 0 ? Math.min(kg, weightOut || kg) : weightOut,
+      quantity: deficitQty,
+      netWeight: deficitKg,
+      writtenOffImmediately: true,
     });
 
     return StockLoad.findById(load._id)
