@@ -12,6 +12,7 @@ import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/stat_card.dart';
 import '../widgets/stock_entry_form.dart';
+import '../widgets/write_off_stock_dialog.dart';
 
 class StockScreen extends ConsumerWidget {
   const StockScreen({super.key, this.embedded = false});
@@ -76,6 +77,13 @@ class StockScreen extends ConsumerWidget {
                       isAdmin: isAdmin,
                       onEdit: isAdmin ? () => _showEditStockDialog(context, ref, stock[i]) : null,
                       onDelete: isAdmin ? () => _confirmDelete(context, ref, stock[i]) : null,
+                      onWriteOff: isAdmin
+                          ? () => showWriteOffStockDialog(
+                                context: context,
+                                ref: ref,
+                                item: stock[i],
+                              )
+                          : null,
                     ),
                   ),
                 );
@@ -305,16 +313,20 @@ class _StockCard extends StatelessWidget {
     required this.isAdmin,
     this.onEdit,
     this.onDelete,
+    this.onWriteOff,
   });
 
   final StockModel item;
   final bool isAdmin;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onWriteOff;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final canWriteOff =
+        onWriteOff != null && (item.usableQuantity > 0 || item.usableNetWeight > 0);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -421,6 +433,22 @@ class _StockCard extends StatelessWidget {
                     color: AppColors.primaryGreen,
                   ),
             ),
+            if (canWriteOff) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onWriteOff,
+                  icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
+                  label: Text(l10n.writeOffStockAction),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

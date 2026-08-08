@@ -302,6 +302,19 @@ class AppLocalizations {
     'ar': 'رصيد الدفتر',
   },
   'recordDamagedStock': {'en': 'Record damaged stock', 'ar': 'تسجيل مخزون هالك'},
+  'writeOffStockTitle': {'en': 'Write off stock', 'ar': 'تسجيل هالك'},
+  'writeOffStockAction': {'en': 'Write off', 'ar': 'هلك'},
+  'remainingStockLabel': {'en': 'Remaining on hand', 'ar': 'المتبقي عندك'},
+  'maxLabel': {'en': 'Max', 'ar': 'الحد الأقصى'},
+  'confirmWriteOff': {'en': 'Confirm write-off', 'ar': 'تأكيد الهلاك'},
+  'noStockLeftToWriteOff': {
+    'en': 'No remaining stock to write off',
+    'ar': 'لا يوجد مخزون متبقي للهلاك',
+  },
+  'weightExceedsStock': {
+    'en': 'Weight exceeds remaining stock',
+    'ar': 'الوزن أكبر من المتبقي في المخزون',
+  },
   'damagedStockReason': {'en': 'Reason (optional)', 'ar': 'السبب (اختياري)'},
   'noDamagedStock': {'en': 'No damaged stock recorded', 'ar': 'لا يوجد مخزون هالك مسجّل'},
   'damagedStockRecorded': {'en': 'Damaged stock recorded', 'ar': 'تم تسجيل المخزون الهالك'},
@@ -727,6 +740,13 @@ class AppLocalizations {
   String get pendingSurplusLabel => _get('pendingSurplusLabel');
   String get bookStockLabel => _get('bookStockLabel');
   String get recordDamagedStock => _get('recordDamagedStock');
+  String get writeOffStockTitle => _get('writeOffStockTitle');
+  String get writeOffStockAction => _get('writeOffStockAction');
+  String get remainingStockLabel => _get('remainingStockLabel');
+  String get maxLabel => _get('maxLabel');
+  String get confirmWriteOff => _get('confirmWriteOff');
+  String get noStockLeftToWriteOff => _get('noStockLeftToWriteOff');
+  String get weightExceedsStock => _get('weightExceedsStock');
   String get damagedStockReason => _get('damagedStockReason');
   String get noDamagedStock => _get('noDamagedStock');
   String get damagedStockRecorded => _get('damagedStockRecorded');

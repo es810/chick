@@ -418,8 +418,20 @@ const recordDamagedStock = async ({ stockId, quantity, netWeight, reason = '' },
     const stock = await Stock.findById(stockId).session(session);
     if (!stock) throw new ApiError(404, 'Stock not found');
 
-    if (qty > 0 && stock.quantity < qty) {
+    const usableQty = Math.max(
+      0,
+      (stock.quantity || 0) - (stock.pendingSurplusQuantity || 0)
+    );
+    const usableKg = Math.max(
+      0,
+      round2((stock.netWeight || 0) - (stock.pendingSurplusNetWeight || 0))
+    );
+
+    if (qty > 0 && qty > usableQty) {
       throw new ApiError(400, 'Damaged quantity exceeds available stock');
+    }
+    if (kg > 0 && kg > usableKg + 0.001) {
+      throw new ApiError(400, 'Damaged weight exceeds available stock');
     }
 
     const weightOut =
