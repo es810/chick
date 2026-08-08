@@ -4,7 +4,7 @@ const Client = require('../models/Client');
 const AuditLog = require('../models/AuditLog');
 const { getTreasurySummary, computeDailyProfit, computeMonthlyProfit } = require('../services/treasuryService');
 const { getDamagedStockSummary } = require('../services/damagedStockService');
-const { getCairoDayRange } = require('../utils/businessCalendar');
+const { getCairoDayRange, getCairoMonthRange } = require('../utils/businessCalendar');
 const asyncHandler = require('../utils/asyncHandler');
 
 const getSalesReport = asyncHandler(async (req, res) => {
@@ -56,8 +56,8 @@ const getSalesReport = asyncHandler(async (req, res) => {
 
 const getRevenueReport = asyncHandler(async (req, res) => {
   const now = new Date();
-  const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const { start: startOfDay } = getCairoDayRange(now);
+  const { start: startOfMonth } = getCairoMonthRange(now.getFullYear(), now.getMonth() + 1);
 
   const [daily, monthly, byStatus] = await Promise.all([
     Invoice.aggregate([

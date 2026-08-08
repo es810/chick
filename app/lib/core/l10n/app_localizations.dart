@@ -137,8 +137,8 @@ class AppLocalizations {
   'monthlyRevenue': {'en': 'Monthly Revenue', 'ar': 'إيرادات الشهر'},
   'dailyProfit': {'en': 'Daily Profit', 'ar': 'أرباح يومية'},
   'dailyProfitHint': {
-    'en': 'Sales − net goods cost (load ± stock edits) − expenses − discounts',
-    'ar': 'المبيعات − صافي تكلفة التحميل (مع تعديلات المخزون) − المصروفات − الخصومات',
+    'en': 'Sales − load cost − expenses − discounts (business day: noon→noon Cairo)',
+    'ar': 'المبيعات − التحميل − المصروفات − الخصومات (اليوم التشغيلي: ١٢ ظهرًا → ١٢ ظهرًا)',
   },
   'profitLoadCost': {'en': 'Load cost', 'ar': 'تكلفة التحميل'},
   'supplierDebtHint': {
