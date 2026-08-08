@@ -266,12 +266,12 @@ class AppLocalizations {
     'ar': 'متبقي وزن التوزيع',
   },
   'pendingSurplusOpen': {
-    'en': 'Pending write-off — reduces on-hand until confirmed',
-    'ar': 'زيادة معلّقة — تخصم من «عندي مخزون» حتى تأكيد الهلاك',
+    'en': 'Oversell pending — sold more than book stock; confirm write-off',
+    'ar': 'زيادة توزيع معلّقة — وزّعت أكثر من وزن المخزون المسجّل؛ أكّد الهلاك',
   },
   'remainderOpenHint': {
-    'en': 'Leftover from distribution — confirm write-off',
-    'ar': 'متبقي من التوزيع — أكّد الهلاك',
+    'en': 'Leftover weight after selling all birds under book kg — confirm write-off',
+    'ar': 'متبقي وزن بعد بيع كل العدد بأقل من وزن المخزون — أكّد الهلاك',
   },
   'confirmWriteOffSurplus': {
     'en': 'Confirm write-off',

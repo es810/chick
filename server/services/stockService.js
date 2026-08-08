@@ -303,7 +303,7 @@ const deductStockForInvoice = async (
   const qtySurplus = Math.max(0, quantity - beforeQty);
   const deductQty = Math.min(quantity, beforeQty);
 
-  // Book weight for birds that actually exist in stock (surplus count has no book weight).
+  // Proportional book weight for the birds being removed (money / leftover math).
   const bookNet =
     deductQty <= 0
       ? 0
@@ -312,7 +312,9 @@ const deductStockForInvoice = async (
         : beforeQty > 0
           ? (beforeNet * deductQty) / beforeQty
           : 0;
-  const surplusKg = Math.max(0, Math.round((weight - bookNet) * 100) / 100);
+  // Weight oversell = sold kg above ALL remaining book kg (not proportional share).
+  // Selling heavier birds first is normal and must not create false surplus.
+  const surplusKg = Math.max(0, Math.round((weight - beforeNet) * 100) / 100);
 
   const stockId = stock._id;
 
@@ -364,10 +366,18 @@ const deductStockForInvoice = async (
 
   if (qtySurplus > 0 || surplusKg > 0) {
     const { recordDistributionSurplus } = require('./damagedStockService');
+    const bookLabel = Math.round(beforeNet * 100) / 100;
+    const soldLabel = Math.round(weight * 100) / 100;
     let surplusReason = 'زيادة التوزيع';
-    if (qtySurplus > 0 && surplusKg > 0) surplusReason = 'زيادة عدد/وزن التوزيع';
-    else if (qtySurplus > 0) surplusReason = 'زيادة عدد التوزيع';
-    else surplusReason = 'زيادة وزن التوزيع';
+    if (qtySurplus > 0 && surplusKg > 0) {
+      surplusReason =
+        `زيادة عدد/وزن التوزيع (العدد +${qtySurplus}، الوزن الموزّع ${soldLabel} والمخزون ${bookLabel})`;
+    } else if (qtySurplus > 0) {
+      surplusReason = `زيادة عدد التوزيع (+${qtySurplus})`;
+    } else {
+      surplusReason =
+        `زيادة وزن التوزيع (وزّعت ${soldLabel} كجم والمخزون كان ${bookLabel} كجم)`;
+    }
 
     await recordDistributionSurplus({
       session,
