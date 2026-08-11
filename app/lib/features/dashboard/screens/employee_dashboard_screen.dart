@@ -13,12 +13,129 @@ import '../../../shared/widgets/stat_card.dart';
 class EmployeeDashboardScreen extends ConsumerWidget {
   const EmployeeDashboardScreen({super.key});
 
+  Future<void> _showAddExpenseDialog(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final amountController = TextEditingController();
+    final descController = TextEditingController();
+    var submitting = false;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.addExpense),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: l10n.amount,
+                    prefixIcon: const Icon(Icons.payments),
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  decoration: InputDecoration(
+                    labelText: l10n.description,
+                    hintText: l10n.expenseDescriptionHint,
+                    prefixIcon: const Icon(Icons.description_outlined),
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.deductedFromMainTreasury,
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: submitting ? null : () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: submitting
+                  ? null
+                  : () async {
+                      final amount = double.tryParse(
+                        amountController.text.trim().replaceAll(',', ''),
+                      );
+                      final description = descController.text.trim();
+                      if (amount == null || amount <= 0 || description.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.invalidAmount),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                        return;
+                      }
+                      setDialogState(() => submitting = true);
+                      try {
+                        await ref
+                            .read(employeeRepositoryProvider)
+                            .addMyExpense(amount, description);
+                        if (ctx.mounted) Navigator.pop(ctx, true);
+                      } catch (e) {
+                        setDialogState(() => submitting = false);
+                        if (context.mounted) {
+                          final msg = e.toString().contains('Insufficient')
+                              ? l10n.insufficientTreasury
+                              : '$e';
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(msg),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.add),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    amountController.dispose();
+    descController.dispose();
+
+    if (ok == true && context.mounted) {
+      ref.invalidate(myLedgerProvider);
+      ref.invalidate(myTreasuryProvider);
+      ref.invalidate(myTreasuryStatementProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.expenseRecorded),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final user = ref.watch(currentUserProvider);
     final invoicesAsync = ref.watch(invoicesProvider);
-    final stockAsync = ref.watch(stockProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.employeeDashboard)),
@@ -27,9 +144,19 @@ class EmployeeDashboardScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           FloatingActionButton.extended(
+            heroTag: 'expense',
+            onPressed: () => _showAddExpenseDialog(context, ref),
+            backgroundColor: const Color(0xFFE65100),
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.receipt_long),
+            label: Text(l10n.addExpense),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
             heroTag: 'collection',
             onPressed: () => context.go('/employee/collection-invoices'),
             backgroundColor: const Color(0xFF2E7D32),
+            foregroundColor: Colors.white,
             icon: const Icon(Icons.payments),
             label: Text(l10n.collectionInvoice),
           ),
@@ -46,7 +173,6 @@ class EmployeeDashboardScreen extends ConsumerWidget {
         onRefresh: () async {
           await ref.read(authProvider.notifier).refreshUser();
           ref.invalidate(invoicesProvider);
-          ref.invalidate(stockProvider);
           ref.invalidate(myLedgerProvider);
           ref.invalidate(myTreasuryProvider);
         },
@@ -62,41 +188,6 @@ class EmployeeDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             const EmployeeLedgerSection(),
-            const SizedBox(height: 24),
-            Text(l10n.stock, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            stockAsync.when(
-              loading: () => const LoadingShimmerColumn(itemCount: 2, itemHeight: 100),
-              error: (e, _) => ErrorStateWidget(
-                message: e.toString(),
-                onRetry: () => ref.invalidate(stockProvider),
-              ),
-              data: (stock) {
-                final lowStock = stock.where((s) => s.isLowStock).length;
-                return GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.3,
-                  children: [
-                    StatCard(
-                      title: l10n.stockTypes,
-                      value: '${stock.length}',
-                      icon: Icons.inventory_2,
-                      color: AppColors.primaryGreen,
-                    ),
-                    StatCard(
-                      title: l10n.lowStock,
-                      value: '$lowStock',
-                      icon: Icons.warning,
-                      color: lowStock > 0 ? AppColors.error : AppColors.success,
-                    ),
-                  ],
-                );
-              },
-            ),
             const SizedBox(height: 24),
             Text(l10n.collectionInvoices, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
@@ -148,7 +239,7 @@ class EmployeeDashboardScreen extends ConsumerWidget {
                 );
               },
             ),
-            const SizedBox(height: 80),
+            const SizedBox(height: 160),
           ],
         ),
       ),

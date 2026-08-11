@@ -28,17 +28,20 @@ import '../../models/user_model.dart';
 import '../../shared/widgets/app_shell.dart';
 import 'router_refresh.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
-final _adminShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'adminShell');
-final _employeeShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'employeeShell');
-final _clientShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'clientShell');
-
 final routerProvider = Provider<GoRouter>((ref) {
+  // Keys must live with this GoRouter instance. Module-level keys collide on
+  // Chrome hot reload when a new GoRouter mounts before the old tree is gone
+  // (go_router keys Navigators with GlobalObjectKey(navigatorKey.hashCode)).
+  final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+  final adminShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'adminShell');
+  final employeeShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'employeeShell');
+  final clientShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'clientShell');
+
   final refreshListenable = RouterRefreshNotifier(ref);
   ref.onDispose(refreshListenable.dispose);
 
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: refreshListenable,
     redirect: (context, state) {
@@ -90,7 +93,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/admin/employees/:id',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) => EmployeeDetailScreen(
           employeeId: state.pathParameters['id']!,
           employeeName: state.uri.queryParameters['name'] ?? '',
@@ -99,19 +102,19 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/admin/collection-invoices',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, __) => const CollectionInvoicesScreen(),
       ),
 
       GoRoute(
         path: '/admin/damaged-stock',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, __) => const DamagedStockScreen(),
       ),
 
       GoRoute(
         path: '/admin/suppliers/:id/stock',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) => SupplierStockScreen(
           supplierId: state.pathParameters['id']!,
           supplierName: state.uri.queryParameters['name'] ?? '',
@@ -120,7 +123,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/admin/clients/:id/statement',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) => AccountStatementScreen(
           entityId: state.pathParameters['id']!,
           entityName: state.uri.queryParameters['name'] ?? '',
@@ -130,7 +133,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/admin/suppliers/:id/statement',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) => AccountStatementScreen(
           entityId: state.pathParameters['id']!,
           entityName: state.uri.queryParameters['name'] ?? '',
@@ -140,7 +143,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/employee/suppliers/:id/stock',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) => SupplierStockScreen(
           supplierId: state.pathParameters['id']!,
           supplierName: state.uri.queryParameters['name'] ?? '',
@@ -149,7 +152,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/employee/suppliers/:id/statement',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) => AccountStatementScreen(
           entityId: state.pathParameters['id']!,
           entityName: state.uri.queryParameters['name'] ?? '',
@@ -158,7 +161,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       ShellRoute(
-        navigatorKey: _adminShellNavigatorKey,
+        navigatorKey: adminShellNavigatorKey,
         builder: (context, state, child) => AppShell(
           basePath: '/admin',
           navigationItems: const [
@@ -198,19 +201,18 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/employee/treasury/statement',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, __) => const EmployeeTreasuryStatementScreen(),
       ),
 
       ShellRoute(
-        navigatorKey: _employeeShellNavigatorKey,
+        navigatorKey: employeeShellNavigatorKey,
         builder: (context, state, child) => AppShell(
           basePath: '/employee',
           navigationItems: const [
             (icon: Icons.dashboard, path: '/employee/dashboard'),
             (icon: Icons.receipt_long, path: '/employee/invoices'),
             (icon: Icons.payments, path: '/employee/collection-invoices'),
-            (icon: Icons.inventory, path: '/employee/stock'),
             (icon: Icons.local_shipping, path: '/employee/suppliers'),
             (icon: Icons.settings, path: '/employee/settings'),
           ],
@@ -231,7 +233,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/employee/invoices/:id',
             builder: (_, state) => InvoiceDetailScreen(invoiceId: state.pathParameters['id']!, basePath: '/employee'),
           ),
-          GoRoute(path: '/employee/stock', builder: (_, __) => const StockScreen()),
           GoRoute(
             path: '/employee/suppliers',
             builder: (_, __) => const SuppliersScreen(basePath: '/employee'),
@@ -241,7 +242,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       ShellRoute(
-        navigatorKey: _clientShellNavigatorKey,
+        navigatorKey: clientShellNavigatorKey,
         builder: (context, state, child) => AppShell(
           basePath: '/client',
           navigationItems: const [

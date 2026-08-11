@@ -9,64 +9,11 @@ import '../../../models/employee_ledger_model.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/stat_card.dart';
 
-class EmployeeLedgerSection extends ConsumerStatefulWidget {
+class EmployeeLedgerSection extends ConsumerWidget {
   const EmployeeLedgerSection({super.key});
 
   @override
-  ConsumerState<EmployeeLedgerSection> createState() => _EmployeeLedgerSectionState();
-}
-
-class _EmployeeLedgerSectionState extends ConsumerState<EmployeeLedgerSection> {
-  final _amountController = TextEditingController();
-  final _descController = TextEditingController();
-  bool _isSubmitting = false;
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    _descController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submitExpense() async {
-    final l10n = context.l10n;
-    final amount = double.tryParse(_amountController.text.trim().replaceAll(',', ''));
-    final description = _descController.text.trim();
-
-    if (amount == null || amount <= 0 || description.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.invalidAmount), backgroundColor: AppColors.error),
-      );
-      return;
-    }
-
-    setState(() => _isSubmitting = true);
-    try {
-      await ref.read(employeeRepositoryProvider).addMyExpense(amount, description);
-      _amountController.clear();
-      _descController.clear();
-      ref.invalidate(myLedgerProvider);
-      ref.invalidate(myTreasuryProvider);
-      ref.invalidate(myTreasuryStatementProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.expenseRecorded), backgroundColor: AppColors.success),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        final msg = e.toString().contains('Insufficient') ? l10n.insufficientTreasury : '$e';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: AppColors.error),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final treasuryAsync = ref.watch(myTreasuryProvider);
     final ledgerAsync = ref.watch(myLedgerProvider);
@@ -122,54 +69,6 @@ class _EmployeeLedgerSectionState extends ConsumerState<EmployeeLedgerSection> {
                         color: AppColors.warning,
                         fontWeight: FontWeight.bold,
                       ),
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(l10n.recordExpense, style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _amountController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: InputDecoration(
-                            labelText: l10n.amount,
-                            prefixIcon: const Icon(Icons.payments),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _descController,
-                          decoration: InputDecoration(
-                            labelText: l10n.description,
-                            hintText: l10n.expenseDescriptionHint,
-                            prefixIcon: const Icon(Icons.description_outlined),
-                          ),
-                          maxLines: 2,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          l10n.deductedFromMainTreasury,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.warning),
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: _isSubmitting ? null : _submitExpense,
-                          icon: _isSubmitting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.save),
-                          label: Text(l10n.recordExpense),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
                 if (expenses.isNotEmpty) ...[
                   const SizedBox(height: 16),

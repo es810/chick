@@ -67,28 +67,10 @@ class AdminDashboardScreen extends ConsumerWidget {
                   ),
                   _MonthlyProfitCard(monthlyProfit: dashboard.monthlyProfit),
                   StatCard(
-                    title: l10n.invoices,
-                    value: '${dashboard.monthlyInvoices}',
-                    icon: Icons.receipt_long,
-                    color: AppColors.primaryGreen,
-                  ),
-                  StatCard(
                     title: l10n.receivables,
                     value: context.formatCurrencyCompact(dashboard.receivables),
                     icon: Icons.account_balance_wallet,
                     color: AppColors.warning,
-                  ),
-                  StatCard(
-                    title: l10n.damagedStock,
-                    value: dashboard.damagedStockNetWeight > 0
-                        ? '${dashboard.damagedStockNetWeight.toStringAsFixed(1)} كجم'
-                        : '${dashboard.damagedStockQuantity}',
-                    icon: Icons.delete_sweep_outlined,
-                    color: AppColors.error,
-                    subtitle: dashboard.damagedStockNetWeight > 0
-                        ? l10n.distributionWeightSurplus
-                        : l10n.damagedStockTreasuryNote,
-                    onTap: () => context.push('/admin/damaged-stock'),
                   ),
                 ],
               ),
