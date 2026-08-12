@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.8] — 2026-08-13
+
+### Collection & suppliers
+- Collection invoices open like distribution (detail, edit, delete, PDF)
+- Fix collection edit balance restore (paid + discount)
+- Optional **discount** when paying supplier debt (same idea as client collection)
+
 ## [1.8.3] — 2026-08-06
 
 ### Stock loading total
