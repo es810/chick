@@ -103,6 +103,37 @@ const getClientStatement = async (clientId) => {
 
   entries.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+  const movementNet = entries.reduce(
+    (sum, entry) => sum + (entry.debit || 0) - (entry.credit || 0),
+    0
+  );
+  const currentBalance = Math.max(0, client.balance || 0);
+  const openingBalance = Math.max(0, currentBalance - movementNet);
+
+  if (openingBalance > 0.001) {
+    entries.unshift({
+      id: `${client._id.toString()}-prior-debt`,
+      type: 'distribution',
+      date:
+        invoices[0]?.createdAt ||
+        collections[0]?.collectionDate ||
+        client.createdAt ||
+        new Date(),
+      description: 'مديونية سابقة',
+      subtitle: '',
+      debit: openingBalance,
+      credit: 0,
+      balanceAfter: null,
+      reference: null,
+    });
+  }
+
+  let running = 0;
+  for (const entry of entries) {
+    running += (entry.debit || 0) - (entry.credit || 0);
+    entry.balanceAfter = Math.max(0, running);
+  }
+
   return {
     entity: {
       id: client._id.toString(),
