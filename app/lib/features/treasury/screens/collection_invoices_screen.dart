@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/l10n/app_localizations.dart';
@@ -13,10 +14,14 @@ import '../../../shared/widgets/loading_widget.dart';
 import '../widgets/collection_invoice_form.dart';
 
 class CollectionInvoicesScreen extends ConsumerStatefulWidget {
-  const CollectionInvoicesScreen({super.key});
+  const CollectionInvoicesScreen({super.key, this.basePath});
+
+  /// `/admin` or `/employee`. Inferred from route when null.
+  final String? basePath;
 
   @override
-  ConsumerState<CollectionInvoicesScreen> createState() => _CollectionInvoicesScreenState();
+  ConsumerState<CollectionInvoicesScreen> createState() =>
+      _CollectionInvoicesScreenState();
 }
 
 class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScreen> {
@@ -24,6 +29,12 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
   bool _loading = true;
   bool _submitting = false;
   String? _error;
+
+  String get _basePath {
+    if (widget.basePath != null) return widget.basePath!;
+    final location = GoRouterState.of(context).matchedLocation;
+    return location.startsWith('/employee') ? '/employee' : '/admin';
+  }
 
   @override
   void initState() {
@@ -57,29 +68,31 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
   Future<void> _refreshAll() async {
     ref.invalidate(treasurySummaryProvider);
     ref.invalidate(clientsProvider);
+    ref.invalidate(dashboardProvider);
     await _load();
   }
 
-  Future<void> _openForm({TreasuryEntryItem? existing}) async {
+  Future<void> _openCreateForm() async {
     final l10n = context.l10n;
     final saved = await showCollectionInvoiceDialog(
       context: context,
       ref: ref,
-      existing: existing,
     );
     if (saved != null && mounted) {
       await _refreshAll();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(existing == null ? l10n.entryAdded : l10n.entryUpdated),
+          content: Text(l10n.entryAdded),
           backgroundColor: AppColors.success,
         ),
       );
-      if (existing == null) {
-        await showCollectionShareDialog(context: context, entry: saved);
-      }
+      await showCollectionShareDialog(context: context, entry: saved);
     }
+  }
+
+  void _openDetail(TreasuryEntryItem entry) {
+    context.push('$_basePath/collection-invoices/${entry.id}');
   }
 
   Future<void> _confirmDelete(TreasuryEntryItem entry) async {
@@ -104,6 +117,9 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
     setState(() => _submitting = true);
     try {
       await ref.read(collectionRepositoryProvider).deleteInvoice(entry.id);
+      if (entry.clientId != null) {
+        ref.invalidate(clientStatementProvider(entry.clientId!));
+      }
       await _refreshAll();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -136,20 +152,20 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _submitting ? null : () => _openForm(),
+        onPressed: _submitting ? null : _openCreateForm,
         icon: const Icon(Icons.payments),
         label: Text(l10n.collectionInvoice),
       ),
       body: _loading
           ? const LoadingShimmer()
           : _error != null
-              ? Center(child: Text(_error!))
+              ? ErrorStateWidget(message: _error!, onRetry: _load)
               : _entries.isEmpty
                   ? EmptyStateWidget(
                       icon: Icons.payments,
                       title: l10n.noCollectionInvoices,
                       action: ElevatedButton.icon(
-                        onPressed: () => _openForm(),
+                        onPressed: _openCreateForm,
                         icon: const Icon(Icons.add),
                         label: Text(l10n.collectionInvoice),
                       ),
@@ -164,9 +180,10 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
-                              onTap: _submitting ? null : () => _openForm(existing: entry),
+                              onTap: _submitting ? null : () => _openDetail(entry),
                               leading: CircleAvatar(
-                                backgroundColor: const Color(0xFF66BB6A).withValues(alpha: 0.15),
+                                backgroundColor:
+                                    const Color(0xFF66BB6A).withValues(alpha: 0.15),
                                 child: const Icon(Icons.payments, color: Color(0xFF66BB6A)),
                               ),
                               title: Text(entry.clientName ?? entry.description),
@@ -196,17 +213,26 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
                                           entry: entry,
                                         );
                                       } else if (action == 'edit') {
-                                        _openForm(existing: entry);
+                                        _openDetail(entry);
                                       } else if (action == 'delete') {
                                         _confirmDelete(entry);
                                       }
                                     },
                                     itemBuilder: (_) => [
-                                      PopupMenuItem(value: 'share', child: Text(l10n.shareInvoice)),
-                                      PopupMenuItem(value: 'edit', child: Text(l10n.editEntry)),
+                                      PopupMenuItem(
+                                        value: 'share',
+                                        child: Text(l10n.shareInvoice),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text(l10n.editEntry),
+                                      ),
                                       PopupMenuItem(
                                         value: 'delete',
-                                        child: Text(l10n.delete, style: const TextStyle(color: AppColors.error)),
+                                        child: Text(
+                                          l10n.delete,
+                                          style: const TextStyle(color: AppColors.error),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -220,4 +246,3 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
     );
   }
 }
-

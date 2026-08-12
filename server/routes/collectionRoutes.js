@@ -1,7 +1,8 @@
 const express = require('express');
-const { body } = require('express-validator');
+const { body, param } = require('express-validator');
 const {
   listCollectionInvoicesHandler,
+  getCollectionInvoiceHandler,
   listCollectionEmployeesHandler,
   createCollectionInvoiceHandler,
   updateCollectionInvoiceHandler,
@@ -27,6 +28,12 @@ const collectionBodyValidation = [
 
 router.get('/', listCollectionInvoicesHandler);
 router.get('/employees', listCollectionEmployeesHandler);
+router.get(
+  '/:id',
+  [param('id').isMongoId()],
+  validate,
+  getCollectionInvoiceHandler
+);
 router.post('/', collectionBodyValidation, validate, createCollectionInvoiceHandler);
 router.patch('/:id', collectionBodyValidation, validate, updateCollectionInvoiceHandler);
 router.delete('/:id', deleteCollectionInvoiceHandler);

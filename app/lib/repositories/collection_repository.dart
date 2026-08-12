@@ -22,6 +22,12 @@ class CollectionRepository {
     return list.map((e) => TreasuryEntryItem.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  Future<TreasuryEntryItem> getInvoice(String id) async {
+    final response = await _api.get('${ApiConstants.collections}/$id');
+    final data = response.data as Map<String, dynamic>;
+    return TreasuryEntryItem.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
   Future<List<Map<String, dynamic>>> listEmployees() async {
     final response = await _api.get('${ApiConstants.collections}/employees');
     final data = response.data as Map<String, dynamic>;

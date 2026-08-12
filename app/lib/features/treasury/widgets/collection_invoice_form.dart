@@ -98,6 +98,12 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
         _clients = clients;
         _employees = employees;
         _selectedClient = selectedClient;
+        if (widget.existing != null && selectedClient != null) {
+          final restored = selectedClient.balance +
+              (widget.existing!.amountPaid ?? 0) +
+              (widget.existing!.amountDeducted ?? 0);
+          _balanceBeforeController.text = restored.toStringAsFixed(2);
+        }
         _loadingData = false;
       });
     } catch (e) {
@@ -185,7 +191,17 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       final clients = await ref.read(clientRepositoryProvider).getClients();
       final freshClient = clients.firstWhere((c) => c.id == _selectedClient!.id);
       _selectedClient = freshClient;
-      _balanceBeforeController.text = freshClient.balance.toStringAsFixed(2);
+
+      // Create: use live client debt.
+      // Edit: restore debt as it was before this collection (live + old paid/discount).
+      if (widget.existing == null) {
+        _balanceBeforeController.text = freshClient.balance.toStringAsFixed(2);
+      } else {
+        final restored = freshClient.balance +
+            (widget.existing!.amountPaid ?? 0) +
+            (widget.existing!.amountDeducted ?? 0);
+        _balanceBeforeController.text = restored.toStringAsFixed(2);
+      }
 
       final repo = ref.read(collectionRepositoryProvider);
       final body = {
@@ -252,6 +268,9 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       ref.invalidate(treasurySummaryProvider);
       ref.invalidate(myTreasuryProvider);
       ref.invalidate(myTreasuryStatementProvider);
+      if (_selectedClient != null) {
+        ref.invalidate(clientStatementProvider(_selectedClient!.id));
+      }
 
       if (mounted) Navigator.pop(context, saved);
     } catch (e) {

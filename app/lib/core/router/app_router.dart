@@ -10,6 +10,7 @@ import '../../features/suppliers/screens/supplier_stock_screen.dart';
 import '../../features/account_statement/screens/account_statement_screen.dart';
 import '../../features/dashboard/screens/admin_dashboard_screen.dart';
 import '../../features/treasury/screens/collection_invoices_screen.dart';
+import '../../features/treasury/screens/collection_invoice_detail_screen.dart';
 import '../../features/treasury/screens/employee_treasury_statement_screen.dart';
 import '../../features/treasury/screens/admin_treasury_screen.dart';
 import '../../features/dashboard/screens/client_dashboard_screen.dart';
@@ -103,7 +104,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/collection-invoices',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const CollectionInvoicesScreen(),
+        builder: (_, __) => const CollectionInvoicesScreen(basePath: '/admin'),
+      ),
+      GoRoute(
+        path: '/admin/collection-invoices/:id',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => CollectionInvoiceDetailScreen(
+          invoiceId: state.pathParameters['id']!,
+          basePath: '/admin',
+        ),
       ),
 
       GoRoute(
@@ -222,7 +231,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/employee/dashboard', builder: (_, __) => const EmployeeDashboardScreen()),
           GoRoute(
             path: '/employee/collection-invoices',
-            builder: (_, __) => const CollectionInvoicesScreen(),
+            builder: (_, __) =>
+                const CollectionInvoicesScreen(basePath: '/employee'),
+          ),
+          GoRoute(
+            path: '/employee/collection-invoices/:id',
+            builder: (_, state) => CollectionInvoiceDetailScreen(
+              invoiceId: state.pathParameters['id']!,
+              basePath: '/employee',
+            ),
           ),
           GoRoute(path: '/employee/invoices', builder: (_, __) => const InvoicesListScreen(basePath: '/employee')),
           GoRoute(

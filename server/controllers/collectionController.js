@@ -1,6 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const {
   listCollectionInvoices,
+  getCollectionInvoice,
   createCollectionInvoice,
   updateCollectionInvoice,
   deleteCollectionInvoice,
@@ -10,6 +11,11 @@ const { getTreasurySummary } = require('../services/treasuryService');
 
 const listCollectionInvoicesHandler = asyncHandler(async (req, res) => {
   const data = await listCollectionInvoices();
+  res.json({ success: true, data });
+});
+
+const getCollectionInvoiceHandler = asyncHandler(async (req, res) => {
+  const data = await getCollectionInvoice(req.params.id);
   res.json({ success: true, data });
 });
 
@@ -38,6 +44,7 @@ const deleteCollectionInvoiceHandler = asyncHandler(async (req, res) => {
 
 module.exports = {
   listCollectionInvoicesHandler,
+  getCollectionInvoiceHandler,
   listCollectionEmployeesHandler,
   createCollectionInvoiceHandler,
   updateCollectionInvoiceHandler,
