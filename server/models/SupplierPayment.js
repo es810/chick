@@ -5,6 +5,8 @@ const supplierPaymentSchema = new mongoose.Schema(
     supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
     paymentDate: { type: Date, required: true },
     amount: { type: Number, required: true, min: 0.01 },
+    /** Extra discount off supplier debt — does not leave the treasury. */
+    amountDeducted: { type: Number, required: true, min: 0, default: 0 },
     balanceBefore: { type: Number, required: true, min: 0 },
     balanceAfter: { type: Number, required: true, min: 0 },
     notes: { type: String, default: '', trim: true },

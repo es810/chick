@@ -93,7 +93,8 @@ const reverseSupplierPaymentFromLedger = async (session, ledgerEntryId) => {
 
   const supplier = await Supplier.findById(payment.supplierId).session(session);
   if (supplier) {
-    supplier.balance = (supplier.balance || 0) + payment.amount;
+    supplier.balance =
+      (supplier.balance || 0) + payment.amount + (payment.amountDeducted || 0);
     await supplier.save({ session });
   }
 

@@ -175,18 +175,24 @@ const getSupplierStatement = async (supplierId) => {
   }
 
   for (const payment of payments) {
+    const discount = payment.amountDeducted || 0;
+    const credit = payment.amount + discount;
+    const baseSubtitle =
+      payment.notes ||
+      payment.employeeId?.name ||
+      payment.createdBy?.name ||
+      '';
+    const discountNote = discount > 0 ? `خصم ${discount.toFixed(2)}` : '';
+    const subtitle = [baseSubtitle, discountNote].filter(Boolean).join(' — ');
+
     entries.push({
       id: payment._id.toString(),
       type: 'payment',
       date: payment.paymentDate,
       description: 'دفع دين',
-      subtitle:
-        payment.notes ||
-        payment.employeeId?.name ||
-        payment.createdBy?.name ||
-        '',
+      subtitle,
       debit: 0,
-      credit: payment.amount,
+      credit,
       balanceAfter: payment.balanceAfter,
       reference: null,
     });
@@ -198,7 +204,10 @@ const getSupplierStatement = async (supplierId) => {
     (sum, item) => sum + lineTotal(item.totalAmount, item.pricePerKg, item.netWeight),
     0
   );
-  const paidTotal = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const paidTotal = payments.reduce(
+    (sum, payment) => sum + payment.amount + (payment.amountDeducted || 0),
+    0
+  );
   const ledgerDebt = Math.max(0, stockTotal - paidTotal);
   const currentBalance = supplier.balance || 0;
 

@@ -81,6 +81,7 @@ class AccountStatementScreen extends ConsumerWidget {
   ) async {
     final l10n = context.l10n;
     final amountController = TextEditingController();
+    final discountController = TextEditingController();
     final notesController = TextEditingController();
     var paymentDate = DateTime.now();
     final formKey = GlobalKey<FormState>();
@@ -128,11 +129,39 @@ class AccountStatementScreen extends ConsumerWidget {
                       labelText: l10n.paymentAmount,
                       prefixIcon: const Icon(Icons.payments_outlined),
                     ),
+                    onChanged: (_) => setState(() {}),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return l10n.fieldRequired;
                       final amount = double.tryParse(v.trim());
                       if (amount == null || amount <= 0) return l10n.invalidAmount;
-                      if (amount > maxDebt) return l10n.paymentExceedsSupplierDebt;
+                      final discount =
+                          double.tryParse(discountController.text.trim()) ?? 0;
+                      if (discount < 0) return l10n.invalidAmount;
+                      if (amount + discount > maxDebt) {
+                        return l10n.paymentExceedsBalance;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: discountController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: l10n.amountDeducted,
+                      helperText: l10n.discountOptionalHint,
+                      prefixIcon: const Icon(Icons.discount_outlined),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return null;
+                      final discount = double.tryParse(v.trim());
+                      if (discount == null || discount < 0) return l10n.invalidAmount;
+                      final amount =
+                          double.tryParse(amountController.text.trim()) ?? 0;
+                      if (amount > 0 && amount + discount > maxDebt) {
+                        return l10n.paymentExceedsBalance;
+                      }
                       return null;
                     },
                   ),
@@ -166,12 +195,16 @@ class AccountStatementScreen extends ConsumerWidget {
     if (ok != true || !context.mounted) return;
 
     final amount = double.parse(amountController.text.trim());
+    final amountDeducted = discountController.text.trim().isEmpty
+        ? 0.0
+        : (double.tryParse(discountController.text.trim()) ?? 0);
 
     try {
       await ref.read(supplierRepositoryProvider).payDebt(
             supplierId: entityId,
             paymentDate: paymentDate,
             amount: amount,
+            amountDeducted: amountDeducted,
             notes: notesController.text.trim(),
           );
       ref.invalidate(supplierStatementProvider(entityId));

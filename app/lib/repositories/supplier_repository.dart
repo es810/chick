@@ -59,6 +59,7 @@ class SupplierRepository {
     required String supplierId,
     required DateTime paymentDate,
     required double amount,
+    double amountDeducted = 0,
     String notes = '',
   }) async {
     await _api.post(
@@ -66,6 +67,7 @@ class SupplierRepository {
       data: {
         'paymentDate': paymentDate.toIso8601String(),
         'amount': amount,
+        'amountDeducted': amountDeducted,
         if (notes.isNotEmpty) 'notes': notes,
       },
     );
