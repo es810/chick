@@ -5,6 +5,7 @@ import '../../../core/constants/invoice_constants.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../models/client_model.dart';
 import '../../../models/invoice_model.dart';
 import '../../../models/stock_model.dart';
@@ -299,7 +300,10 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.pdfError}: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(apiErrorMessage(e, fallback: l10n.serverError)),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {

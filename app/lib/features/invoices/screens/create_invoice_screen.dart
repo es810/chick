@@ -5,6 +5,7 @@ import '../../../core/constants/invoice_constants.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../models/client_model.dart';
 import '../../../models/stock_model.dart';
 import '../../../shared/widgets/client_picker_field.dart';
@@ -304,7 +305,10 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(apiErrorMessage(e, fallback: l10n.serverError)),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {

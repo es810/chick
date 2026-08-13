@@ -14,11 +14,23 @@ const resolveTareWeight = (itemCount, inputTare) => {
   return count * TARE_KG_PER_UNIT;
 };
 
-const generateInvoiceNumber = async () => {
-  const count = await Invoice.countDocuments();
+/** Next INV-YYYYMM-##### from the highest existing number (safe after deletes). */
+const generateInvoiceNumber = async (session) => {
   const date = new Date();
   const prefix = `INV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`;
-  return `${prefix}-${String(count + 1).padStart(5, '0')}`;
+  const query = Invoice.findOne({ invoiceNumber: new RegExp(`^${prefix}-`) })
+    .sort({ invoiceNumber: -1 })
+    .select('invoiceNumber')
+    .lean();
+  if (session) query.session(session);
+  const latest = await query;
+
+  let seq = 1;
+  if (latest?.invoiceNumber) {
+    const last = parseInt(String(latest.invoiceNumber).split('-').pop(), 10);
+    if (!Number.isNaN(last)) seq = last + 1;
+  }
+  return `${prefix}-${String(seq).padStart(5, '0')}`;
 };
 
 const createInvoice = async (data, employee) => {
@@ -68,12 +80,12 @@ const createInvoice = async (data, employee) => {
       totalPrice += total;
     }
 
-    const invoiceNumber = await generateInvoiceNumber();
-
     const itemCount =
       inputItemCount ?? processedItems.reduce((sum, i) => sum + i.quantity, 0);
     const tareWeight = resolveTareWeight(itemCount, inputTare);
     const grossWeight = inputGross ?? totalWeight + tareWeight;
+
+    const invoiceNumber = await generateInvoiceNumber(session);
 
     const [invoice] = await Invoice.create(
       [
@@ -96,7 +108,7 @@ const createInvoice = async (data, employee) => {
       { session }
     );
 
-    const invoiceReason = `Invoice #${invoiceNumber}`;
+    const invoiceReason = `Invoice #${invoice.invoiceNumber}`;
     for (const item of processedItems) {
       await deductStockForInvoice(
         session,
@@ -121,7 +133,7 @@ const createInvoice = async (data, employee) => {
 
     await session.commitTransaction();
 
-    await logAction(employee._id, employee.name, 'CREATE_INVOICE', invoiceNumber, {
+    await logAction(employee._id, employee.name, 'CREATE_INVOICE', invoice.invoiceNumber, {
       clientId,
       totalPrice,
     });
