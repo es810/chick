@@ -38,6 +38,24 @@ const errorHandler = (err, req, res, next) => {
     message = 'Invalid token';
   }
 
+  if (
+    err.name === 'MongoServerError' &&
+    /WriteConflict|TransientTransactionError/i.test(err.message || '')
+  ) {
+    statusCode = 409;
+    message = 'تعارض أثناء الحفظ. حاول مرة أخرى.';
+  }
+
+  if (
+    statusCode === 500 &&
+    /NoTransactionInProgress|Cannot call abortTransaction|transaction number/i.test(
+      err.message || ''
+    )
+  ) {
+    statusCode = 409;
+    message = 'تعارض أثناء الحفظ. حاول مرة أخرى.';
+  }
+
   if (statusCode === 500) {
     logger.error(`${err.stack || err.message}`);
   }

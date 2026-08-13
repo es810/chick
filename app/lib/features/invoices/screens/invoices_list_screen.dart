@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
@@ -72,7 +73,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
             child: invoicesAsync.when(
               loading: () => const LoadingShimmer(),
               error: (e, _) => ErrorStateWidget(
-                message: e.toString(),
+                message: apiErrorMessage(e, fallback: l10n.serverError),
                 onRetry: () => ref.invalidate(invoicesProvider),
               ),
               data: (result) {

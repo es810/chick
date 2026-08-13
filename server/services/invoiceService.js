@@ -15,22 +15,28 @@ const resolveTareWeight = (itemCount, inputTare) => {
 };
 
 /** Next INV-YYYYMM-##### from the highest existing number (safe after deletes). */
-const generateInvoiceNumber = async (session) => {
+const generateInvoiceNumber = async () => {
   const date = new Date();
   const prefix = `INV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`;
-  const query = Invoice.findOne({ invoiceNumber: new RegExp(`^${prefix}-`) })
+  const latest = await Invoice.findOne({ invoiceNumber: new RegExp(`^${prefix}-`) })
     .sort({ invoiceNumber: -1 })
     .select('invoiceNumber')
     .lean();
-  if (session) query.session(session);
-  const latest = await query;
 
   let seq = 1;
   if (latest?.invoiceNumber) {
     const last = parseInt(String(latest.invoiceNumber).split('-').pop(), 10);
-    if (!Number.isNaN(last)) seq = last + 1;
+    if (!Number.isNaN(last) && last >= 0) seq = last + 1;
   }
   return `${prefix}-${String(seq).padStart(5, '0')}`;
+};
+
+const safeAbort = async (session) => {
+  try {
+    if (session.inTransaction()) await session.abortTransaction();
+  } catch (_) {
+    /* already committed/aborted */
+  }
 };
 
 const createInvoice = async (data, employee) => {
@@ -85,7 +91,7 @@ const createInvoice = async (data, employee) => {
     const tareWeight = resolveTareWeight(itemCount, inputTare);
     const grossWeight = inputGross ?? totalWeight + tareWeight;
 
-    const invoiceNumber = await generateInvoiceNumber(session);
+    const invoiceNumber = await generateInvoiceNumber();
 
     const [invoice] = await Invoice.create(
       [
@@ -142,7 +148,7 @@ const createInvoice = async (data, employee) => {
       .populate('clientId', 'name phone address')
       .populate('employeeId', 'name email');
   } catch (error) {
-    await session.abortTransaction();
+    await safeAbort(session);
     throw error;
   } finally {
     session.endSession();
@@ -269,7 +275,7 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
       .populate('clientId', 'name phone address')
       .populate('employeeId', 'name email');
   } catch (error) {
-    await session.abortTransaction();
+    await safeAbort(session);
     throw error;
   } finally {
     session.endSession();
@@ -331,7 +337,7 @@ const deleteInvoice = async (invoiceId, user) => {
 
     return { invoiceNumber: invoice.invoiceNumber };
   } catch (error) {
-    await session.abortTransaction();
+    await safeAbort(session);
     throw error;
   } finally {
     session.endSession();
