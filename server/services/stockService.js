@@ -282,9 +282,9 @@ const applyStockDelta = async (session, chickenType, delta, user, reason, option
     );
   }
 
-  // Record purchase-cost reduction even when only the money changes (qty unchanged).
+  // Record purchase-cost reduction even when only the money/weight changes (qty unchanged).
   const amountOut = amountDelta < 0 ? Math.abs(amountDelta) : Math.abs(delta.totalAmount || 0);
-  if (outQty > 0 || amountDelta < 0) {
+  if (outQty > 0 || amountDelta < 0 || netDelta < 0) {
     await StockMovement.create(
       [
         {
@@ -345,27 +345,41 @@ const deductStockForInvoice = async (
   const stockId = stock._id;
 
   if (deductQty > 0) {
+    const soldKg =
+      weight > 0 ? Math.min(weight, beforeNet) : bookNet > 0 ? bookNet : 0;
+    // All cages out but birds were lighter → keep leftover kg on books (usable stock).
     const leftoverKg =
-      deductQty === beforeQty && weight > 0 && weight < beforeNet
-        ? Math.round((beforeNet - weight) * 100) / 100
+      deductQty === beforeQty && beforeNet > 0 && soldKg < beforeNet - 0.0001
+        ? Math.round((beforeNet - soldKg) * 100) / 100
         : 0;
 
-    const delta =
-      deductQty === beforeQty
-        ? {
-            quantity: -beforeQty,
-            grossWeight: -(stock.grossWeight || 0),
-            tareWeight: -(stock.tareWeight || 0),
-            netWeight: -beforeNet,
-            totalAmount: -(stock.totalAmount || 0),
-          }
-        : {
-            quantity: -deductQty,
-            grossWeight: -((stock.grossWeight || 0) * deductQty) / beforeQty,
-            tareWeight: -((stock.tareWeight || 0) * deductQty) / beforeQty,
-            netWeight: -(weight > 0 ? Math.min(weight, beforeNet) : bookNet),
-            totalAmount: -((stock.totalAmount || 0) * deductQty) / beforeQty,
-          };
+    let delta;
+    if (deductQty === beforeQty && leftoverKg > 0) {
+      const soldRatio = beforeNet > 0 ? soldKg / beforeNet : 1;
+      delta = {
+        quantity: -beforeQty,
+        grossWeight: -((stock.grossWeight || 0) * soldRatio),
+        tareWeight: -((stock.tareWeight || 0) * soldRatio),
+        netWeight: -soldKg,
+        totalAmount: -((stock.totalAmount || 0) * soldRatio),
+      };
+    } else if (deductQty === beforeQty) {
+      delta = {
+        quantity: -beforeQty,
+        grossWeight: -(stock.grossWeight || 0),
+        tareWeight: -(stock.tareWeight || 0),
+        netWeight: -beforeNet,
+        totalAmount: -(stock.totalAmount || 0),
+      };
+    } else {
+      delta = {
+        quantity: -deductQty,
+        grossWeight: -((stock.grossWeight || 0) * deductQty) / beforeQty,
+        tareWeight: -((stock.tareWeight || 0) * deductQty) / beforeQty,
+        netWeight: -(weight > 0 ? Math.min(weight, beforeNet) : bookNet),
+        totalAmount: -((stock.totalAmount || 0) * deductQty) / beforeQty,
+      };
+    }
 
     await applyStockDelta(session, chickenType, delta, user, reason, {
       invoiceId,
@@ -373,35 +387,14 @@ const deductStockForInvoice = async (
       skipLoadConsume: true,
     });
 
-    // FIFO: reduce قيد التهليك loads by what was actually deducted from books.
+    // FIFO: reduce قيد التهليك by birds/kg actually taken from books (not leftover).
     const { consumeFromLoads, attachVarianceToLoad } = require('./stockLoadService');
     const touchedLoad = await consumeFromLoads(
       session,
       chickenType,
       deductQty,
-      weight > 0 ? Math.min(weight, beforeNet) : bookNet
+      soldKg
     );
-
-    // All birds sold but sold kg < book kg → leftover must appear under هالك.
-    if (leftoverKg > 0) {
-      const { recordDistributionRemainder } = require('./damagedStockService');
-      const remainderEntry = await recordDistributionRemainder({
-        session,
-        stockId,
-        chickenType,
-        netWeight: leftoverKg,
-        quantity: 0,
-        invoiceId,
-        user,
-        reason: reason
-          ? `متبقي وزن التوزيع — ${reason}`
-          : 'متبقي وزن التوزيع',
-        stockLoadId: touchedLoad?._id || null,
-      });
-      if (remainderEntry && touchedLoad) {
-        await attachVarianceToLoad(session, touchedLoad, remainderEntry);
-      }
-    }
 
     if (qtySurplus > 0 || surplusKg > 0) {
       const { recordDistributionSurplus } = require('./damagedStockService');
@@ -434,7 +427,48 @@ const deductStockForInvoice = async (
       }
     }
 
-    return { surplusKg, qtySurplus };
+    return { surplusKg, qtySurplus, leftoverKg };
+  }
+
+  // Birds already at 0 but leftover kg still on books — allow weight-only OUT.
+  if (beforeQty <= 0 && beforeNet > 0 && weight > 0) {
+    const takeKg = Math.min(weight, beforeNet);
+    const soldRatio = beforeNet > 0 ? takeKg / beforeNet : 1;
+    await applyStockDelta(
+      session,
+      chickenType,
+      {
+        quantity: 0,
+        grossWeight: -((stock.grossWeight || 0) * soldRatio),
+        tareWeight: -((stock.tareWeight || 0) * soldRatio),
+        netWeight: -takeKg,
+        totalAmount: -((stock.totalAmount || 0) * soldRatio),
+      },
+      user,
+      reason,
+      { invoiceId, strict: false, skipLoadConsume: true }
+    );
+    const { consumeFromLoads, attachVarianceToLoad } = require('./stockLoadService');
+    const touchedLoad = await consumeFromLoads(session, chickenType, 0, takeKg);
+    const weightSurplus = Math.max(0, Math.round((weight - beforeNet) * 100) / 100);
+    if (weightSurplus > 0 || qtySurplus > 0) {
+      const { recordDistributionSurplus } = require('./damagedStockService');
+      const surplusEntry = await recordDistributionSurplus({
+        session,
+        stockId,
+        chickenType,
+        quantity: qtySurplus,
+        netWeight: weightSurplus,
+        invoiceId,
+        user,
+        reason: reason || 'زيادة التوزيع',
+        stockLoadId: touchedLoad?._id || null,
+      });
+      if (surplusEntry && touchedLoad) {
+        await attachVarianceToLoad(session, touchedLoad, surplusEntry);
+      }
+    }
+    return { surplusKg: weightSurplus, qtySurplus, leftoverKg: 0 };
   }
 
   // Oversell with no book stock left to deduct — still record surplus.

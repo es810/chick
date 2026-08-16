@@ -304,10 +304,8 @@ const recordDistributionSurplus = async ({
 };
 
 /**
- * Leftover book weight when all birds are sold but sold kg < book kg
- * (e.g. load 1000, distribute all birds as 995 → 5 kg remainder).
- * Stock is already cleared; this only creates an open هلك row for confirmation.
- * Does NOT raise pending surplus.
+ * Legacy helper: leftover book weight when all birds sold lighter than book.
+ * New invoice flow keeps leftover kg on stock instead of creating هلك rows.
  */
 const recordDistributionRemainder = async ({
   session,

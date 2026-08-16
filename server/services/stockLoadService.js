@@ -65,6 +65,12 @@ const listStockLoads = async (filters = {}) => {
 const settleDepletedLoad = async (session, load) => {
   if (!load || load.status !== 'open') return load;
   if ((load.remainingQuantity || 0) > 0) return load;
+  // Still have leftover kg on this load — keep it open as usable remainder weight.
+  if ((load.remainingNetWeight || 0) > 0.001) {
+    load.remainingQuantity = 0;
+    await load.save({ session });
+    return load;
+  }
 
   load.remainingQuantity = 0;
   load.remainingNetWeight = 0;
@@ -127,14 +133,10 @@ const consumeFromLoads = async (session, chickenType, quantity, netWeight) => {
     kgLeft = round2(kgLeft - takeKg);
     lastTouched = load;
 
-    if (load.remainingQuantity <= 0) {
-      // Birds gone on this load — clear leftover kg on the load row
-      // (book-level remainder/surplus handles variance confirmation).
-      load.remainingNetWeight = 0;
-      await load.save({ session });
+    // Keep leftover kg when cages are gone (lighter birds) — do not force zero.
+    await load.save({ session });
+    if ((load.remainingQuantity || 0) <= 0 && (load.remainingNetWeight || 0) <= 0.001) {
       await settleDepletedLoad(session, load);
-    } else {
-      await load.save({ session });
     }
   }
 
