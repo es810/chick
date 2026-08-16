@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../models/invoice_model.dart';
 import '../../../shared/widgets/invoice_pdf_actions.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -58,7 +59,10 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(apiErrorMessage(e, fallback: l10n.serverError)),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
@@ -69,14 +73,14 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final isAdmin = widget.basePath.contains('admin');
+    final canManage = widget.basePath.contains('admin') || widget.basePath.contains('employee');
     final invoiceFuture = ref.watch(invoiceRepositoryProvider).getInvoice(widget.invoiceId);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.invoiceDetails),
         actions: [
-          if (isAdmin && !_isDeleting)
+          if (canManage && !_isDeleting)
             IconButton(
               icon: const Icon(Icons.delete_outline),
               tooltip: l10n.deleteInvoice,
@@ -85,7 +89,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                 if (mounted) await _confirmDelete(inv);
               },
             ),
-          if (isAdmin)
+          if (canManage)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: l10n.editInvoice,
@@ -172,7 +176,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                 invoice: invoice,
                 clientPhone: invoice.clientPhone,
               ),
-              if (isAdmin) ...[
+              if (canManage) ...[
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: _isDeleting ? null : () => _confirmDelete(invoice),

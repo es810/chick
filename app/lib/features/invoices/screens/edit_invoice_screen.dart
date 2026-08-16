@@ -13,9 +13,14 @@ import '../../../shared/widgets/client_picker_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
 class EditInvoiceScreen extends ConsumerStatefulWidget {
-  const EditInvoiceScreen({super.key, required this.invoiceId});
+  const EditInvoiceScreen({
+    super.key,
+    required this.invoiceId,
+    this.basePath = '/admin',
+  });
 
   final String invoiceId;
+  final String basePath;
 
   @override
   ConsumerState<EditInvoiceScreen> createState() => _EditInvoiceScreenState();
@@ -295,7 +300,7 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.invoiceUpdated)),
         );
-        context.go('/admin/invoices/${widget.invoiceId}');
+        context.go('${widget.basePath}/invoices/${widget.invoiceId}');
       }
     } catch (e) {
       if (mounted) {

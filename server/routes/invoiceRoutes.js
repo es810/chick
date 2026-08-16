@@ -52,6 +52,6 @@ router.patch(
   updateInvoice
 );
 
-router.delete('/:id', authorize('admin'), deleteInvoiceHandler);
+router.delete('/:id', authorize('admin', 'employee'), deleteInvoiceHandler);
 
 module.exports = router;

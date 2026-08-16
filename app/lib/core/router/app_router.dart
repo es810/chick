@@ -193,7 +193,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/invoices/:id/edit',
-            builder: (_, state) => EditInvoiceScreen(invoiceId: state.pathParameters['id']!),
+            builder: (_, state) => EditInvoiceScreen(
+              invoiceId: state.pathParameters['id']!,
+              basePath: '/admin',
+            ),
           ),
           GoRoute(
             path: '/admin/invoices/:id',
@@ -245,6 +248,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/employee/invoices/create',
             builder: (_, __) => const CreateInvoiceScreen(basePath: '/employee'),
+          ),
+          GoRoute(
+            path: '/employee/invoices/:id/edit',
+            builder: (_, state) => EditInvoiceScreen(
+              invoiceId: state.pathParameters['id']!,
+              basePath: '/employee',
+            ),
           ),
           GoRoute(
             path: '/employee/invoices/:id',

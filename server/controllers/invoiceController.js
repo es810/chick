@@ -76,8 +76,13 @@ const updateInvoice = asyncHandler(async (req, res) => {
   const { paymentStatus, items, clientId, notes } = req.body;
 
   if (items?.length) {
-    if (req.user.role !== 'admin') {
-      throw new ApiError(403, 'Only admin can edit invoice details');
+    const existing = await Invoice.findById(req.params.id);
+    if (!existing) throw new ApiError(404, 'Invoice not found');
+    if (
+      req.user.role === 'employee' &&
+      existing.employeeId?.toString() !== req.user._id.toString()
+    ) {
+      throw new ApiError(403, 'Not authorized to edit this invoice');
     }
     const updated = await updateInvoiceFull(req.params.id, req.body, req.user);
     return res.json({ success: true, data: updated });
@@ -86,12 +91,19 @@ const updateInvoice = asyncHandler(async (req, res) => {
   const invoice = await Invoice.findById(req.params.id);
   if (!invoice) throw new ApiError(404, 'Invoice not found');
 
+  if (
+    req.user.role === 'employee' &&
+    invoice.employeeId?.toString() !== req.user._id.toString()
+  ) {
+    throw new ApiError(403, 'Not authorized to edit this invoice');
+  }
+
   if (paymentStatus) {
     const updated = await updatePaymentStatus(req.params.id, paymentStatus, req.user);
     return res.json({ success: true, data: updated });
   }
 
-  if (notes !== undefined && req.user.role === 'admin') {
+  if (notes !== undefined && (req.user.role === 'admin' || req.user.role === 'employee')) {
     invoice.notes = notes;
     await invoice.save();
   }
@@ -100,8 +112,16 @@ const updateInvoice = asyncHandler(async (req, res) => {
 });
 
 const deleteInvoiceHandler = asyncHandler(async (req, res) => {
+  const invoice = await Invoice.findById(req.params.id);
+  if (!invoice) throw new ApiError(404, 'Invoice not found');
+  if (
+    req.user.role === 'employee' &&
+    invoice.employeeId?.toString() !== req.user._id.toString()
+  ) {
+    throw new ApiError(403, 'Not authorized to delete this invoice');
+  }
   const result = await deleteInvoice(req.params.id, req.user);
-  res.json({ success: true, data: result });
+  res.status(200).json({ success: true, data: result });
 });
 
 module.exports = {
