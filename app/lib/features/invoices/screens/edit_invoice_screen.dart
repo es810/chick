@@ -29,20 +29,29 @@ class EditInvoiceScreen extends ConsumerStatefulWidget {
 class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
   InvoiceModel? _invoice;
   ClientModel? _selectedClient;
+  String? _chickenType;
   final _notesController = TextEditingController();
   final _countController = TextEditingController();
   final _grossController = TextEditingController();
+  final _priceController = TextEditingController();
   bool _isSubmitting = false;
   bool _initialized = false;
-  final List<_InvoiceLineItem> _items = [];
 
   @override
   void dispose() {
     _notesController.dispose();
     _countController.dispose();
     _grossController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
+
+  double get _gross => double.tryParse(_grossController.text) ?? 0;
+  int get _count => int.tryParse(_countController.text) ?? 0;
+  double get _tare => invoiceTareWeight(_count);
+  double get _net => (_gross - _tare).clamp(0, double.infinity);
+  double get _price => double.tryParse(_priceController.text) ?? 0;
+  double get _mealTotal => _net * _price;
 
   void _initFromInvoice(InvoiceModel invoice, List<ClientModel> clients) {
     if (_initialized) return;
@@ -51,17 +60,9 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
     _notesController.text = invoice.notes;
     _countController.text = '${invoice.itemCount}';
     _grossController.text = invoice.displayGrossWeight.toStringAsFixed(2);
+    _priceController.text = invoice.pricePerKg.toStringAsFixed(2);
     _selectedClient = clients.where((c) => c.id == invoice.clientId).firstOrNull;
-    _items.clear();
-    for (final item in invoice.items) {
-      _items.add(_InvoiceLineItem(
-        chickenType: item.chickenType,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        avgWeight: item.quantity > 0 ? item.weight / item.quantity : 2.5,
-      ));
-    }
-    if (_items.isEmpty) _items.add(_InvoiceLineItem());
+    _chickenType = invoice.items.isNotEmpty ? invoice.items.first.chickenType : null;
   }
 
   @override
@@ -79,15 +80,15 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
             return const LoadingOverlay();
           }
           if (invoiceSnapshot.hasError) {
-            return Center(child: Text('${l10n.pdfError}: ${invoiceSnapshot.error}'));
+            return Center(child: Text(apiErrorMessage(invoiceSnapshot.error!)));
           }
 
           return clientsAsync.when(
             loading: () => const LoadingOverlay(),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => Center(child: Text(apiErrorMessage(e))),
             data: (clients) => stockAsync.when(
               loading: () => const LoadingOverlay(),
-              error: (e, _) => Center(child: Text('Error: $e')),
+              error: (e, _) => Center(child: Text(apiErrorMessage(e))),
               data: (stock) {
                 _initFromInvoice(invoiceSnapshot.data!, clients);
                 return _buildForm(context, l10n, clients, stock);
@@ -123,6 +124,34 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
           onSelected: (v) => setState(() => _selectedClient = v),
         ),
         const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          initialValue: _chickenType != null &&
+                  stock.any((s) => s.chickenType == _chickenType)
+              ? _chickenType
+              : null,
+          decoration: InputDecoration(labelText: l10n.chickenType),
+          items: stock
+              .map(
+                (s) => DropdownMenuItem(
+                  value: s.chickenType,
+                  child: Text(s.chickenType),
+                ),
+              )
+              .toList(),
+          onChanged: (v) {
+            setState(() {
+              _chickenType = v;
+              if (v != null) {
+                final s = stock.firstWhere((s) => s.chickenType == v);
+                // Keep existing price unless field is empty.
+                if (_priceController.text.trim().isEmpty) {
+                  _priceController.text = s.pricePerKg.toStringAsFixed(2);
+                }
+              }
+            });
+          },
+        ),
+        const SizedBox(height: 16),
         TextFormField(
           controller: _countController,
           decoration: InputDecoration(labelText: l10n.itemCount),
@@ -137,21 +166,22 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
-        Builder(
-          builder: (context) {
-            final count = int.tryParse(_countController.text) ?? 0;
-            final tare = invoiceTareWeight(count);
-            return InputDecorator(
-              decoration: InputDecoration(
-                labelText: l10n.tareWeight,
-                helperText: l10n.tareWeightFormula,
-              ),
-              child: Text(
-                tare.toStringAsFixed(2),
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            );
-          },
+        InputDecorator(
+          decoration: InputDecoration(
+            labelText: l10n.tareWeight,
+            helperText: l10n.tareWeightFormula,
+          ),
+          child: Text(
+            _tare.toStringAsFixed(2),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _priceController,
+          decoration: InputDecoration(labelText: l10n.pricePerKg),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
         TextFormField(
@@ -159,78 +189,26 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
           decoration: InputDecoration(labelText: l10n.notes),
           maxLines: 2,
         ),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(l10n.items, style: Theme.of(context).textTheme.titleMedium),
-            TextButton.icon(
-              onPressed: () => setState(() => _items.add(_InvoiceLineItem())),
-              icon: const Icon(Icons.add),
-              label: Text(l10n.addItem),
+        const SizedBox(height: 20),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(l10n.receiptPreview, style: Theme.of(context).textTheme.titleMedium),
+                const Divider(),
+                if (_chickenType != null) _previewRow('نوع الصنف', _chickenType!),
+                _previewRow(l10n.netWeight, _net.toStringAsFixed(2)),
+                _previewRow(l10n.pricePerKg, _price.toStringAsFixed(2)),
+                _previewRow(l10n.mealTotal, _mealTotal.toStringAsFixed(2)),
+              ],
             ),
-          ],
+          ),
         ),
-        ..._items.asMap().entries.map((entry) {
-          final index = entry.key;
-          final item = entry.value;
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: item.chickenType,
-                    decoration: InputDecoration(labelText: l10n.chickenType),
-                    items: stock
-                        .map((s) => DropdownMenuItem(
-                              value: s.chickenType,
-                              child: Text(s.chickenType),
-                            ))
-                        .toList(),
-                    onChanged: (v) {
-                      setState(() {
-                        item.chickenType = v;
-                        final s = stock.firstWhere((s) => s.chickenType == v);
-                        item.unitPrice = s.pricePerKg;
-                        item.avgWeight = s.averageWeight;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: item.quantity.toString(),
-                          decoration: InputDecoration(labelText: l10n.quantity),
-                          keyboardType: TextInputType.number,
-                          onChanged: (v) => item.quantity = int.tryParse(v) ?? 1,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '${l10n.estWeight}: ${(item.quantity * item.avgWeight).toStringAsFixed(2)} kg',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                      if (_items.length > 1)
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: AppColors.error),
-                          onPressed: () => setState(() => _items.removeAt(index)),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: _isSubmitting ? null : () => _submit(stock),
+          onPressed: _isSubmitting ? null : _submit,
           child: _isSubmitting
               ? const SizedBox(
                   height: 20,
@@ -243,7 +221,20 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
     );
   }
 
-  Future<void> _submit(List<StockModel> stock) async {
+  Widget _previewRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(label)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
     final l10n = context.l10n;
     if (_selectedClient == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -251,26 +242,22 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
       );
       return;
     }
-
-    for (final item in _items) {
-      if (item.chickenType == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.selectChickenType)),
-        );
-        return;
-      }
+    if (_chickenType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.selectChickenType)),
+      );
+      return;
     }
-
-    final gross = double.tryParse(_grossController.text) ?? 0;
-    final itemCount = int.tryParse(_countController.text) ?? 0;
-    if (itemCount <= 0) {
+    if (_count <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.fieldRequired)));
       return;
     }
-    final tare = invoiceTareWeight(itemCount);
-    final net = gross - tare;
-    if (net <= 0) {
+    if (_net <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.invalidWeights)));
+      return;
+    }
+    if (_price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.invalidAmount)));
       return;
     }
 
@@ -280,17 +267,17 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
       final payload = {
         'clientId': _selectedClient!.id,
         'notes': _notesController.text.trim(),
-        'itemCount': itemCount,
-        'grossWeight': gross,
-        'tareWeight': tare,
-        'items': _items
-            .map((item) => {
-                  'chickenType': item.chickenType,
-                  'quantity': item.quantity,
-                  'weight': net,
-                  'unitPrice': item.unitPrice,
-                })
-            .toList(),
+        'itemCount': _count,
+        'grossWeight': _gross,
+        'tareWeight': _tare,
+        'items': [
+          {
+            'chickenType': _chickenType,
+            'quantity': _count,
+            'weight': _net,
+            'unitPrice': _price,
+          },
+        ],
       };
 
       await ref.read(invoiceRepositoryProvider).updateInvoice(widget.invoiceId, payload);
@@ -315,18 +302,4 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
-}
-
-class _InvoiceLineItem {
-  _InvoiceLineItem({
-    this.chickenType,
-    this.quantity = 1,
-    this.unitPrice = 0,
-    this.avgWeight = 2.5,
-  });
-
-  String? chickenType;
-  int quantity;
-  double unitPrice;
-  double avgWeight;
 }
