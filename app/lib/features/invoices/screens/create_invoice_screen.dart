@@ -214,6 +214,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
               children: [
                 Text(l10n.receiptPreview, style: Theme.of(context).textTheme.titleMedium),
                 const Divider(),
+                if (_chickenType != null) _previewRow('نوع الصنف', _chickenType!),
                 _previewRow(l10n.tareWeight, _tare.toStringAsFixed(2)),
                 _previewRow(l10n.netWeight, _net.toStringAsFixed(2)),
                 _previewRow(l10n.mealTotal, _mealTotal.toStringAsFixed(2)),

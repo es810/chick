@@ -187,6 +187,8 @@ class PdfService {
     final after = invoice.balanceAfter;
 
     final rows = <(String, String)>[
+      if (invoice.chickenTypesLabel.isNotEmpty)
+        ('نوع الصنف', invoice.chickenTypesLabel),
       ('العدد', '${invoice.itemCount}'),
       ('وزن القائم (كجم)', _num(gross)),
       ('الوزن الفارغ (كجم)', _num(tare)),
@@ -371,8 +373,12 @@ class PdfService {
 
   String _shareMessage(InvoiceModel invoice) {
     final total = CurrencyFormatter.format(invoice.totalPrice, languageCode: 'ar');
+    final typeLine = invoice.chickenTypesLabel.isNotEmpty
+        ? 'نوع الصنف: ${invoice.chickenTypesLabel}\n'
+        : '';
     return 'إيصال توزيع ${invoice.invoiceNumber}\n'
         'العميل: ${invoice.clientName ?? ''}\n'
+        '$typeLine'
         'حساب الوجبة: $total';
   }
 

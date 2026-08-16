@@ -143,6 +143,8 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                     children: [
                       Text(l10n.distributionReceipt, style: Theme.of(context).textTheme.titleMedium),
                       const Divider(),
+                      if (invoice.chickenTypesLabel.isNotEmpty)
+                        _detailRow('نوع الصنف', invoice.chickenTypesLabel),
                       _detailRow(l10n.itemCount, '${invoice.itemCount}'),
                       _detailRow(l10n.grossWeight, invoice.displayGrossWeight.toStringAsFixed(2)),
                       _detailRow(l10n.tareWeight, invoice.displayTareWeight.toStringAsFixed(2)),
@@ -157,7 +159,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                   ),
                 ),
               ),
-              if (invoice.items.isNotEmpty) ...[
+              if (invoice.items.length > 1) ...[
                 const SizedBox(height: 16),
                 Text(l10n.chickenType, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),

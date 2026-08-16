@@ -122,6 +122,17 @@ class InvoiceModel extends Equatable {
     return totalPrice / netWeight;
   }
 
+  /// Types shown on the distribution receipt (comma-separated if multiple).
+  String get chickenTypesLabel {
+    final types = items
+        .map((e) => e.chickenType.trim())
+        .where((t) => t.isNotEmpty)
+        .toSet()
+        .toList();
+    if (types.isEmpty) return '';
+    return types.join('، ');
+  }
+
   @override
   List<Object?> get props => [id, invoiceNumber];
 }
