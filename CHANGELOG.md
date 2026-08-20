@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.8.9] — 2026-08-20
+
+### Invoices & stock
+- Employee can edit/delete own distribution invoices; price editable on edit
+- Chicken type on distribution receipt PDF and detail
+- Clean number inputs (no trailing zeros or keyboard suggestions)
+- Keep leftover kg when all cages distributed at lower weight (e.g. 500→450 kg)
+- Stock write-off: تأكيد الهلاك button for pending loads; employees can confirm
+
 ## [1.8.8] — 2026-08-13
 
 ### Collection & suppliers
