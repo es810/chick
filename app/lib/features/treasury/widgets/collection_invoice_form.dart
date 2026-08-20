@@ -6,11 +6,13 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
+import '../../../core/utils/number_input_utils.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/client_model.dart';
 import '../../../models/treasury_entry_item.dart';
 import '../../../models/user_model.dart';
 import '../../../shared/widgets/client_picker_field.dart';
+import '../../../shared/widgets/invoice_number_field.dart';
 
 Future<TreasuryEntryItem?> showCollectionInvoiceDialog({
   required BuildContext context,
@@ -56,9 +58,10 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
 
     if (existing != null) {
       _selectedEmployeeId = existing.employeeId;
-      _amountPaidController.text = existing.amountPaid?.toStringAsFixed(2) ?? '';
-      _amountDeductedController.text = existing.amountDeducted?.toStringAsFixed(2) ?? '';
-      _balanceBeforeController.text = existing.balanceBefore?.toStringAsFixed(2) ?? '';
+      _amountPaidController.text = formatInputNumber(existing.amountPaid, emptyIfZero: true);
+      _amountDeductedController.text =
+          formatInputNumber(existing.amountDeducted, emptyIfZero: true);
+      _balanceBeforeController.text = formatInputNumber(existing.balanceBefore);
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
@@ -102,7 +105,7 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
           final restored = selectedClient.balance +
               (widget.existing!.amountPaid ?? 0) +
               (widget.existing!.amountDeducted ?? 0);
-          _balanceBeforeController.text = restored.toStringAsFixed(2);
+          _balanceBeforeController.text = formatInputNumber(restored);
         }
         _loadingData = false;
       });
@@ -124,14 +127,11 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
     super.dispose();
   }
 
-  double get _balanceBefore =>
-      double.tryParse(_balanceBeforeController.text.trim().replaceAll(',', '')) ?? 0;
+  double get _balanceBefore => parseInputNumber(_balanceBeforeController.text);
 
-  double get _amountPaid =>
-      double.tryParse(_amountPaidController.text.trim().replaceAll(',', '')) ?? 0;
+  double get _amountPaid => parseInputNumber(_amountPaidController.text);
 
-  double get _amountDeducted =>
-      double.tryParse(_amountDeductedController.text.trim().replaceAll(',', '')) ?? 0;
+  double get _amountDeducted => parseInputNumber(_amountDeductedController.text);
 
   double get _balanceAfter =>
       (_balanceBefore - _amountPaid - _amountDeducted).clamp(0, double.infinity);
@@ -140,7 +140,7 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
     setState(() {
       _selectedClient = client;
       if (widget.existing == null && client != null) {
-        _balanceBeforeController.text = client.balance.toStringAsFixed(2);
+        _balanceBeforeController.text = formatInputNumber(client.balance);
         _amountPaidController.clear();
         _amountDeductedController.clear();
       }
@@ -172,8 +172,8 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       return;
     }
 
-    final amountPaid = double.tryParse(_amountPaidController.text.trim().replaceAll(',', ''));
-    if (amountPaid == null || amountPaid <= 0) {
+    final amountPaid = parseInputNumber(_amountPaidController.text);
+    if (amountPaid <= 0) {
       _showError(l10n.invalidAmount);
       return;
     }
@@ -195,12 +195,12 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       // Create: use live client debt.
       // Edit: restore debt as it was before this collection (live + old paid/discount).
       if (widget.existing == null) {
-        _balanceBeforeController.text = freshClient.balance.toStringAsFixed(2);
+        _balanceBeforeController.text = formatInputNumber(freshClient.balance);
       } else {
         final restored = freshClient.balance +
             (widget.existing!.amountPaid ?? 0) +
             (widget.existing!.amountDeducted ?? 0);
-        _balanceBeforeController.text = restored.toStringAsFixed(2);
+        _balanceBeforeController.text = formatInputNumber(restored);
       }
 
       final repo = ref.read(collectionRepositoryProvider);
@@ -340,6 +340,9 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
           controller: _balanceBeforeController,
           readOnly: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          autofillHints: const [],
+          enableSuggestions: false,
+          autocorrect: false,
           decoration: InputDecoration(
             labelText: l10n.balanceBeforePayment,
             filled: true,
@@ -347,35 +350,25 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
           ),
         ),
         const SizedBox(height: 12),
-        TextField(
+        InvoiceNumberField(
           key: const ValueKey('collection_amount_paid'),
           controller: _amountPaidController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          autofillHints: const [],
-          enableSuggestions: false,
-          autocorrect: false,
-          decoration: InputDecoration(labelText: l10n.amountPaid),
+          labelText: l10n.amountPaid,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
-        TextField(
+        InvoiceNumberField(
           key: const ValueKey('collection_amount_discount'),
           controller: _amountDeductedController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          autofillHints: const [],
-          enableSuggestions: false,
-          autocorrect: false,
-          decoration: InputDecoration(
-            labelText: l10n.amountDeducted,
-            helperText: l10n.discountOptionalHint,
-          ),
+          labelText: l10n.amountDeducted,
+          helperText: l10n.discountOptionalHint,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
         InputDecorator(
           decoration: InputDecoration(labelText: l10n.balanceAfterPayment),
           child: Text(
-            _balanceAfter.toStringAsFixed(2),
+            formatInputNumber(_balanceAfter),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryGreen,

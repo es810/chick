@@ -6,9 +6,11 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
+import '../../../core/utils/number_input_utils.dart';
 import '../../../models/client_model.dart';
 import '../../../models/stock_model.dart';
 import '../../../shared/widgets/client_picker_field.dart';
+import '../../../shared/widgets/invoice_number_field.dart';
 
 class CreateInvoiceScreen extends ConsumerStatefulWidget {
   const CreateInvoiceScreen({super.key, this.basePath = '/employee'});
@@ -36,11 +38,11 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     super.dispose();
   }
 
-  double get _gross => double.tryParse(_grossController.text) ?? 0;
-  int get _count => int.tryParse(_countController.text) ?? 0;
+  double get _gross => parseInputNumber(_grossController.text);
+  int get _count => parseInputInt(_countController.text);
   double get _tare => invoiceTareWeight(_count);
   double get _net => (_gross - _tare).clamp(0, double.infinity);
-  double get _price => double.tryParse(_priceController.text) ?? 0;
+  double get _price => parseInputNumber(_priceController.text);
   double get _mealTotal => _net * _price;
 
   double get _balanceBefore => _selectedClient?.balance ?? 0;
@@ -83,7 +85,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                   ),
                   if (selected.usableNetWeight > 0)
                     Text(
-                      '${l10n.netWeight}: ${selected.usableNetWeight.toStringAsFixed(2)} kg',
+                      '${l10n.netWeight}: ${formatInputNumber(selected.usableNetWeight)} kg',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   if (selected.hasPendingSurplus)
@@ -159,7 +161,9 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
             setState(() {
               _chickenType = v;
               final s = stock.firstWhere((s) => s.chickenType == v);
-              _priceController.text = s.pricePerKg.toStringAsFixed(2);
+              if (_priceController.text.trim().isEmpty) {
+                _priceController.text = formatInputNumber(s.pricePerKg);
+              }
             });
           },
         ),
@@ -168,23 +172,19 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
           _stockAvailabilityCard(l10n, selectedStock),
         ],
         const SizedBox(height: 16),
-        TextFormField(
+        InvoiceNumberField(
           controller: _countController,
-          decoration: InputDecoration(
-            labelText: l10n.itemCount,
-            helperText: selectedStock != null
-                ? '${l10n.onHandStock}: ${selectedStock.usableQuantity}'
-                : null,
-            helperMaxLines: 2,
-          ),
-          keyboardType: TextInputType.number,
+          labelText: l10n.itemCount,
+          helperText: selectedStock != null
+              ? '${l10n.onHandStock}: ${selectedStock.usableQuantity}'
+              : null,
+          decimal: false,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
-        TextFormField(
+        InvoiceNumberField(
           controller: _grossController,
-          decoration: InputDecoration(labelText: l10n.grossWeight),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          labelText: l10n.grossWeight,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
@@ -194,15 +194,14 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
             helperText: l10n.tareWeightFormula,
           ),
           child: Text(
-            _tare.toStringAsFixed(2),
+            formatInputNumber(_tare),
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
         const SizedBox(height: 12),
-        TextFormField(
+        InvoiceNumberField(
           controller: _priceController,
-          decoration: InputDecoration(labelText: l10n.pricePerKg),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          labelText: l10n.pricePerKg,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 20),
@@ -215,12 +214,12 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                 Text(l10n.receiptPreview, style: Theme.of(context).textTheme.titleMedium),
                 const Divider(),
                 if (_chickenType != null) _previewRow('نوع الصنف', _chickenType!),
-                _previewRow(l10n.tareWeight, _tare.toStringAsFixed(2)),
-                _previewRow(l10n.netWeight, _net.toStringAsFixed(2)),
-                _previewRow(l10n.mealTotal, _mealTotal.toStringAsFixed(2)),
+                _previewRow(l10n.tareWeight, formatInputNumber(_tare)),
+                _previewRow(l10n.netWeight, formatInputNumber(_net)),
+                _previewRow(l10n.mealTotal, formatInputNumber(_mealTotal)),
                 if (_selectedClient != null) ...[
-                  _previewRow(l10n.balanceBefore, _balanceBefore.toStringAsFixed(2)),
-                  _previewRow(l10n.balanceAfter, _balanceAfter.toStringAsFixed(2)),
+                  _previewRow(l10n.balanceBefore, formatInputNumber(_balanceBefore)),
+                  _previewRow(l10n.balanceAfter, formatInputNumber(_balanceAfter)),
                 ],
               ],
             ),

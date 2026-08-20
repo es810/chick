@@ -6,8 +6,10 @@ import 'package:intl/intl.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/api_error.dart';
+import '../../../core/utils/number_input_utils.dart';
 import '../../../models/account_statement_model.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/invoice_number_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
 enum AccountStatementKind { client, supplier }
@@ -122,20 +124,15 @@ class AccountStatementScreen extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
+                  InvoiceNumberField(
                     controller: amountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      labelText: l10n.paymentAmount,
-                      prefixIcon: const Icon(Icons.payments_outlined),
-                    ),
+                    labelText: l10n.paymentAmount,
                     onChanged: (_) => setState(() {}),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return l10n.fieldRequired;
-                      final amount = double.tryParse(v.trim());
-                      if (amount == null || amount <= 0) return l10n.invalidAmount;
-                      final discount =
-                          double.tryParse(discountController.text.trim()) ?? 0;
+                      final amount = parseInputNumber(v);
+                      if (amount <= 0) return l10n.invalidAmount;
+                      final discount = parseInputNumber(discountController.text);
                       if (discount < 0) return l10n.invalidAmount;
                       if (amount + discount > maxDebt) {
                         return l10n.paymentExceedsBalance;
@@ -144,21 +141,16 @@ class AccountStatementScreen extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
+                  InvoiceNumberField(
                     controller: discountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      labelText: l10n.amountDeducted,
-                      helperText: l10n.discountOptionalHint,
-                      prefixIcon: const Icon(Icons.discount_outlined),
-                    ),
+                    labelText: l10n.amountDeducted,
+                    helperText: l10n.discountOptionalHint,
                     onChanged: (_) => setState(() {}),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return null;
-                      final discount = double.tryParse(v.trim());
-                      if (discount == null || discount < 0) return l10n.invalidAmount;
-                      final amount =
-                          double.tryParse(amountController.text.trim()) ?? 0;
+                      final discount = parseInputNumber(v);
+                      if (discount < 0) return l10n.invalidAmount;
+                      final amount = parseInputNumber(amountController.text);
                       if (amount > 0 && amount + discount > maxDebt) {
                         return l10n.paymentExceedsBalance;
                       }
@@ -194,10 +186,8 @@ class AccountStatementScreen extends ConsumerWidget {
 
     if (ok != true || !context.mounted) return;
 
-    final amount = double.parse(amountController.text.trim());
-    final amountDeducted = discountController.text.trim().isEmpty
-        ? 0.0
-        : (double.tryParse(discountController.text.trim()) ?? 0);
+    final amount = parseInputNumber(amountController.text);
+    final amountDeducted = parseInputNumber(discountController.text);
 
     try {
       await ref.read(supplierRepositoryProvider).payDebt(
