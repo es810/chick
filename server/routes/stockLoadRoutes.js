@@ -12,7 +12,7 @@ router.use(authorize('admin', 'employee'));
 router.get('/', listHandler);
 router.post(
   '/:id/finish',
-  authorize('admin'),
+  authorize('admin', 'employee'),
   [param('id').isMongoId()],
   validate,
   finishHandler

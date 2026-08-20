@@ -16,7 +16,9 @@ import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
 class DamagedStockScreen extends ConsumerWidget {
-  const DamagedStockScreen({super.key});
+  const DamagedStockScreen({super.key, this.basePath = '/admin'});
+
+  final String basePath;
 
   Future<void> _showRecordDialog(BuildContext context, WidgetRef ref) async {
     final l10n = context.l10n;
@@ -175,7 +177,7 @@ class DamagedStockScreen extends ConsumerWidget {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/admin/dashboard');
+              context.go('$basePath/dashboard');
             }
           },
         ),
@@ -277,7 +279,7 @@ class DamagedStockScreen extends ConsumerWidget {
                     (load) => _StockLoadCard(
                       load: load,
                       isAdmin: isAdmin,
-                      onFinish: isAdmin && load.canFinish
+                      onFinish: load.hasLoadAction
                           ? () => _finishLoad(context, ref, load)
                           : null,
                     ),
@@ -295,7 +297,7 @@ class DamagedStockScreen extends ConsumerWidget {
                     (entry) => _DamagedEntryCard(
                       entry: entry,
                       isAdmin: isAdmin,
-                      onWriteOff: isAdmin && entry.isOpenVariance
+                      onWriteOff: entry.isOpenVariance
                           ? () => _writeOff(context, ref, entry)
                           : null,
                     ),
@@ -331,7 +333,11 @@ class DamagedStockScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.finishDistributionDone),
+            content: Text(
+              load.canConfirmWriteOff
+                  ? l10n.confirmWriteOffSurplus
+                  : l10n.finishDistributionDone,
+            ),
             backgroundColor: AppColors.success,
           ),
         );
@@ -457,8 +463,17 @@ class _StockLoadCard extends StatelessWidget {
                   alignment: AlignmentDirectional.centerStart,
                   child: TextButton.icon(
                     onPressed: onFinish,
-                    icon: const Icon(Icons.flag_outlined, size: 18),
-                    label: Text(l10n.finishDistribution),
+                    icon: Icon(
+                      load.canConfirmWriteOff
+                          ? Icons.check_circle_outline
+                          : Icons.flag_outlined,
+                      size: 18,
+                    ),
+                    label: Text(
+                      load.canConfirmWriteOff
+                          ? l10n.confirmWriteOff
+                          : l10n.finishDistribution,
+                    ),
                   ),
                 ),
               ],

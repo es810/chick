@@ -36,7 +36,7 @@ router.post(
 );
 router.patch(
   '/:id/write-off',
-  authorize('admin'),
+  authorize('admin', 'employee'),
   [param('id').isMongoId()],
   validate,
   writeOffHandler

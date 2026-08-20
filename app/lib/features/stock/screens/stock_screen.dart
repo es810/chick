@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/api_error.dart';
 import '../../../core/l10n/app_localizations.dart';
@@ -22,12 +23,18 @@ class StockScreen extends ConsumerWidget {
 
   bool _isAdmin(WidgetRef ref) => ref.watch(currentUserProvider)?.role == UserRole.admin;
 
+  String _basePath(WidgetRef ref) =>
+      _isAdmin(ref) ? '/admin' : '/employee';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final isAdmin = _isAdmin(ref);
+    final basePath = _basePath(ref);
     final stockAsync = ref.watch(stockProvider);
     final loadsAsync = ref.watch(stockLoadsProvider);
+    final loads = loadsAsync.valueOrNull ?? [];
+    final hasPendingLoads = loads.any((l) => l.hasLoadAction);
 
     final body = Column(
         children: [
@@ -96,9 +103,7 @@ class StockScreen extends ConsumerWidget {
                                   item: stock[i],
                                 )
                             : null,
-                        onFinishLoad: isAdmin
-                            ? (load) => _finishLoad(context, ref, load)
-                            : null,
+                        onFinishLoad: (load) => _finishLoad(context, ref, load),
                       );
                     },
                   ),
@@ -148,6 +153,12 @@ class StockScreen extends ConsumerWidget {
             : null,
         title: Text(isAdmin ? l10n.stockManagement : l10n.stock),
         actions: [
+          if (hasPendingLoads || isAdmin)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined),
+              tooltip: l10n.damagedStock,
+              onPressed: () => context.push('$basePath/damaged-stock'),
+            ),
           if (isAdmin)
             IconButton(
               icon: const Icon(Icons.add),
@@ -341,7 +352,11 @@ class StockScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.finishDistributionDone),
+            content: Text(
+              load.canConfirmWriteOff
+                  ? l10n.confirmWriteOff
+                  : l10n.finishDistributionDone,
+            ),
             backgroundColor: AppColors.success,
           ),
         );
@@ -531,7 +546,7 @@ class _StockCard extends StatelessWidget {
                             '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
                             '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}',
                           ),
-                        if (onFinishLoad != null && load.canFinish) ...[
+                        if (onFinishLoad != null && load.canFinishDistribution) ...[
                           const SizedBox(height: 6),
                           Align(
                             alignment: AlignmentDirectional.centerStart,
@@ -539,6 +554,18 @@ class _StockCard extends StatelessWidget {
                               onPressed: () => onFinishLoad!(load),
                               icon: const Icon(Icons.flag_outlined, size: 18),
                               label: Text(l10n.finishDistribution),
+                            ),
+                          ),
+                        ],
+                        if (onFinishLoad != null && load.canConfirmWriteOff) ...[
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: TextButton.icon(
+                              onPressed: () => onFinishLoad!(load),
+                              icon: const Icon(Icons.check_circle_outline, size: 18),
+                              label: Text(l10n.confirmWriteOff),
+                              style: TextButton.styleFrom(foregroundColor: AppColors.warning),
                             ),
                           ),
                         ],

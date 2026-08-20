@@ -31,8 +31,17 @@ class StockLoadModel extends Equatable {
 
   bool get isPendingWriteOff => status == 'pending_writeoff';
 
-  bool get canFinish =>
+  /// Open load still has birds/kg on the قيد — use «إنهاء التوزيع».
+  bool get canFinishDistribution =>
       isOpen && (remainingQuantity > 0 || remainingNetWeight > 0);
+
+  /// Distribution done but variance needs closing — use «تأكيد الهلاك».
+  bool get canConfirmWriteOff => isPendingWriteOff;
+
+  bool get hasLoadAction => canFinishDistribution || canConfirmWriteOff;
+
+  @Deprecated('Use canFinishDistribution')
+  bool get canFinish => canFinishDistribution;
 
   factory StockLoadModel.fromJson(Map<String, dynamic> json) {
     final createdBy = json['createdBy'] as Map<String, dynamic>?;

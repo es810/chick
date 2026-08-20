@@ -118,7 +118,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/damaged-stock',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const DamagedStockScreen(),
+        builder: (_, __) => const DamagedStockScreen(basePath: '/admin'),
       ),
 
       GoRoute(
@@ -157,6 +157,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           supplierId: state.pathParameters['id']!,
           supplierName: state.uri.queryParameters['name'] ?? '',
         ),
+      ),
+
+      GoRoute(
+        path: '/employee/damaged-stock',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const DamagedStockScreen(basePath: '/employee'),
       ),
 
       GoRoute(
