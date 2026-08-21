@@ -24,20 +24,26 @@ const getClients = asyncHandler(async (req, res) => {
     ];
   }
 
-  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 20));
+  const skip = (pageNum - 1) * limitNum;
   const [clients, total] = await Promise.all([
     Client.find(query)
       .populate('userId', 'email')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit)),
+      .limit(limitNum),
     Client.countDocuments(query),
   ]);
 
   res.json({
     success: true,
     data: clients.map(formatClient),
-    pagination: { total, page: parseInt(page), pages: Math.ceil(total / limit) },
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.max(1, Math.ceil(total / limitNum)),
+    },
   });
 });
 

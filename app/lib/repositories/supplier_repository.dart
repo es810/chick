@@ -10,18 +10,38 @@ class SupplierRepository {
   final ApiClient _api;
   final CacheService _cache;
 
-  Future<List<SupplierModel>> getSuppliers({String? search, int page = 1}) async {
+  /// Loads every supplier page so the list is not capped at 50.
+  Future<List<SupplierModel>> getSuppliers({String? search}) async {
     try {
-      final response = await _api.get(
-        ApiConstants.suppliers,
-        queryParameters: {'search': search, 'page': page, 'limit': 50},
-      );
-      final data = response.data as Map<String, dynamic>;
-      final list = (data['data'] as List)
-          .map((e) => SupplierModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      await _cache.cacheData('suppliers', {'items': list.map((s) => s.toJson()).toList()});
-      return list;
+      const limit = 100;
+      var page = 1;
+      var totalPages = 1;
+      final all = <SupplierModel>[];
+
+      do {
+        final response = await _api.get(
+          ApiConstants.suppliers,
+          queryParameters: {
+            if (search != null && search.isNotEmpty) 'search': search,
+            'page': page,
+            'limit': limit,
+          },
+        );
+        final data = response.data as Map<String, dynamic>;
+        final list = (data['data'] as List)
+            .map((e) => SupplierModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+        all.addAll(list);
+
+        final pagination = data['pagination'] as Map<String, dynamic>?;
+        totalPages = (pagination?['pages'] as num?)?.toInt() ?? 1;
+        page++;
+      } while (page <= totalPages);
+
+      await _cache.cacheData('suppliers', {
+        'items': all.map((s) => s.toJson()).toList(),
+      });
+      return all;
     } catch (e) {
       final cached = _cache.getCached('suppliers');
       if (cached != null) {

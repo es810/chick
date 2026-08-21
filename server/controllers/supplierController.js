@@ -18,16 +18,22 @@ const getSuppliers = asyncHandler(async (req, res) => {
     ];
   }
 
-  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 50));
+  const skip = (pageNum - 1) * limitNum;
   const [suppliers, total] = await Promise.all([
-    Supplier.find(query).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit, 10)),
+    Supplier.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum),
     Supplier.countDocuments(query),
   ]);
 
   res.json({
     success: true,
     data: suppliers,
-    pagination: { total, page: parseInt(page, 10), pages: Math.ceil(total / limit) },
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.max(1, Math.ceil(total / limitNum)),
+    },
   });
 });
 
