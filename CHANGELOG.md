@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.8.10] — 2026-08-21
+
+### Clients & suppliers
+- Fix list capped at 50: load all pages so older clients/suppliers stay visible after adding new ones
+
 ## [1.8.9] — 2026-08-20
 
 ### Invoices & stock
