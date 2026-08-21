@@ -189,7 +189,8 @@ const listDamagedStock = async () => {
 };
 
 const getDamagedStockSummary = async () => {
-  await reconcileDistributionSurplus();
+  // Do not run reconcileDistributionSurplus here — it scans thousands of invoices
+  // and is too slow for the admin dashboard (app 15s timeout → "server error").
   const [agg] = await DamagedStock.aggregate([
     {
       $group: {

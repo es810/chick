@@ -7,6 +7,14 @@ String apiErrorMessage(Object error, {String? fallback}) {
     if (status == 401) {
       return fallback ?? 'انتهت الجلسة. سجّل الدخول مرة أخرى.';
     }
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout) {
+      return 'الاتصال بالخادم استغرق وقتاً طويلاً. أعد المحاولة.';
+    }
+    if (error.type == DioExceptionType.connectionError) {
+      return 'تعذر الاتصال بالخادم. تحقق من الإنترنت وأعد المحاولة.';
+    }
     final data = error.response?.data;
     if (data is Map && data['message'] != null) {
       return _localizeServerMessage(

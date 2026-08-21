@@ -131,7 +131,6 @@ const getDashboard = asyncHandler(async (req, res) => {
     clientBalances,
     dailyProfit,
     monthlyProfit,
-    damagedStockSummary,
   ] = await Promise.all([
     Invoice.aggregate([
       { $match: { createdAt: { $gte: startOfMonth } } },
@@ -155,8 +154,20 @@ const getDashboard = asyncHandler(async (req, res) => {
     Client.aggregate([{ $group: { _id: null, total: { $sum: '$balance' } } }]),
     computeDailyProfit(startOfDay, endOfDay),
     computeMonthlyProfit(profitYear, profitMonth),
-    getDamagedStockSummary(),
   ]);
+
+  let damagedStockSummary = {
+    totalQuantity: 0,
+    totalNetWeight: 0,
+    entryCount: 0,
+    openQuantity: 0,
+    openNetWeight: 0,
+  };
+  try {
+    damagedStockSummary = await getDamagedStockSummary();
+  } catch (_) {
+    // Dashboard must still load if damaged-stock summary fails.
+  }
 
   res.json({
     success: true,
