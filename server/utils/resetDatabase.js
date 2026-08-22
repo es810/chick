@@ -15,6 +15,7 @@ const EmployeeTreasuryTransfer = require('../models/EmployeeTreasuryTransfer');
 const SalaryAdvance = require('../models/SalaryAdvance');
 const SupplierPayment = require('../models/SupplierPayment');
 const AuditLog = require('../models/AuditLog');
+const StockLoad = require('../models/StockLoad');
 const { bootstrapInitialAdmin } = require('./bootstrapAdmin');
 
 const COLLECTIONS = [
@@ -27,6 +28,7 @@ const COLLECTIONS = [
   CollectionInvoice,
   DamagedStock,
   StockMovement,
+  StockLoad,
   Invoice,
   Stock,
   SupplierStock,
