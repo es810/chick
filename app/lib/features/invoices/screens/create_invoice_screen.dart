@@ -157,15 +157,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                 ),
               )
               .toList(),
-          onChanged: (v) {
-            setState(() {
-              _chickenType = v;
-              final s = stock.firstWhere((s) => s.chickenType == v);
-              if (_priceController.text.trim().isEmpty) {
-                _priceController.text = formatInputNumber(s.pricePerKg);
-              }
-            });
-          },
+          onChanged: (v) => setState(() => _chickenType = v),
         ),
         if (selectedStock != null) ...[
           const SizedBox(height: 12),

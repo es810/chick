@@ -140,18 +140,7 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
                 ),
               )
               .toList(),
-          onChanged: (v) {
-            setState(() {
-              _chickenType = v;
-              if (v != null) {
-                final s = stock.firstWhere((s) => s.chickenType == v);
-                // Keep existing price unless field is empty.
-                if (_priceController.text.trim().isEmpty) {
-                  _priceController.text = formatInputNumber(s.pricePerKg);
-                }
-              }
-            });
-          },
+          onChanged: (v) => setState(() => _chickenType = v),
         ),
         const SizedBox(height: 16),
         InvoiceNumberField(
