@@ -46,6 +46,18 @@ String _localizeServerMessage(String message, Object? errors) {
     if (detail != null) return detail;
     return 'بيانات غير مكتملة أو غير صحيحة';
   }
+  if (message == 'Insufficient employee treasury balance') {
+    return 'رصيد خزنة الموظف غير كافٍ';
+  }
+  if (message == 'Cannot transfer to the same employee') {
+    return 'لا يمكن التحويل لنفس الموظف';
+  }
+  if (message == 'Source employee not found') {
+    return 'الموظف المحوّل منه غير موجود';
+  }
+  if (message == 'Destination employee not found') {
+    return 'الموظف المحوّل إليه غير موجود';
+  }
   if (message.startsWith('Insufficient stock for')) {
     final type = message.replaceFirst('Insufficient stock for ', '').trim();
     return 'مخزون غير كافٍ لـ $type';

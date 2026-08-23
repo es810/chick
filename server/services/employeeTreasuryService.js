@@ -267,62 +267,49 @@ const transferEmployeeTreasury = async (
   { fromEmployeeId, toEmployeeId, amount, notes },
   user
 ) => {
-  if (fromEmployeeId === toEmployeeId) {
+  const fromId = String(fromEmployeeId);
+  const toId = String(toEmployeeId);
+  const transferAmount = Number(amount);
+
+  if (!Number.isFinite(transferAmount) || transferAmount <= 0) {
+    throw new ApiError(400, 'Amount must be greater than 0');
+  }
+  if (fromId === toId) {
     throw new ApiError(400, 'Cannot transfer to the same employee');
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const [fromEmployee, toEmployee] = await Promise.all([
+    User.findOne({ _id: fromId, role: 'employee', isActive: { $ne: false } }),
+    User.findOne({ _id: toId, role: 'employee', isActive: { $ne: false } }),
+  ]);
 
-  try {
-    const [fromEmployee, toEmployee] = await Promise.all([
-      User.findOne({ _id: fromEmployeeId, role: 'employee', isActive: { $ne: false } }).session(
-        session
-      ),
-      User.findOne({ _id: toEmployeeId, role: 'employee', isActive: { $ne: false } }).session(
-        session
-      ),
-    ]);
+  if (!fromEmployee) throw new ApiError(404, 'Source employee not found');
+  if (!toEmployee) throw new ApiError(404, 'Destination employee not found');
 
-    if (!fromEmployee) throw new ApiError(404, 'Source employee not found');
-    if (!toEmployee) throw new ApiError(404, 'Destination employee not found');
-
-    const balance = await getEmployeeTreasuryBalance(fromEmployeeId);
-    if (balance < amount) {
-      throw new ApiError(400, 'Insufficient employee treasury balance');
-    }
-
-    const [transfer] = await EmployeeTreasuryTransfer.create(
-      [
-        {
-          fromEmployeeId,
-          toEmployeeId,
-          amount,
-          notes: notes || '',
-          createdBy: user._id,
-        },
-      ],
-      { session }
-    );
-
-    await session.commitTransaction();
-
-    await logAction(user._id, user.name, 'EMPLOYEE_TREASURY_TRANSFER', fromEmployee.name, {
-      toEmployee: toEmployee.name,
-      amount,
-      notes: notes || '',
-    });
-
-    return EmployeeTreasuryTransfer.findById(transfer._id)
-      .populate('fromEmployeeId', 'name')
-      .populate('toEmployeeId', 'name')
-      .populate('createdBy', 'name');
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
+  const balance = await getEmployeeTreasuryBalance(fromId);
+  if (balance < transferAmount) {
+    throw new ApiError(400, 'Insufficient employee treasury balance');
   }
+
+  // Single insert — no Mongo transaction (avoids abort/conflict errors on Atlas).
+  const transfer = await EmployeeTreasuryTransfer.create({
+    fromEmployeeId: fromId,
+    toEmployeeId: toId,
+    amount: transferAmount,
+    notes: notes || '',
+    createdBy: user._id,
+  });
+
+  await logAction(user._id, user.name, 'EMPLOYEE_TREASURY_TRANSFER', fromEmployee.name, {
+    toEmployee: toEmployee.name,
+    amount: transferAmount,
+    notes: notes || '',
+  });
+
+  return EmployeeTreasuryTransfer.findById(transfer._id)
+    .populate('fromEmployeeId', 'name')
+    .populate('toEmployeeId', 'name')
+    .populate('createdBy', 'name');
 };
 
 module.exports = {
