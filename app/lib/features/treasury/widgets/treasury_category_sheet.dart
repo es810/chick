@@ -7,8 +7,10 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
+import '../../../core/utils/number_input_utils.dart';
 import '../../../models/treasury_entry_item.dart';
 import '../../../shared/widgets/collection_pdf_actions.dart';
+import '../../../shared/widgets/invoice_number_field.dart';
 import 'collection_invoice_form.dart';
 
 Future<void> showTreasuryCategorySheet({
@@ -226,8 +228,9 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
   Future<void> _showSimpleEntryDialog({TreasuryEntryItem? existing}) async {
     final l10n = context.l10n;
     final amountController = TextEditingController(
-      text: existing != null ? existing.amount.toStringAsFixed(2) : '',
+      text: existing != null ? formatInputNumber(existing.amount) : '',
     );
+    final discountController = TextEditingController();
     final descController = TextEditingController(text: existing?.description ?? '');
     String? selectedEmployeeId;
     String? selectedSupplierId;
@@ -237,83 +240,121 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(existing == null ? _addButtonLabel(l10n) : l10n.editEntry),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (widget.category.needsEmployee && existing == null) ...[
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedEmployeeId,
-                    decoration: InputDecoration(labelText: l10n.selectEmployee),
-                    items: _employees
-                        .map(
-                          (e) => DropdownMenuItem<String>(
-                            value: (e['_id'] ?? e['id']).toString(),
-                            child: Text(e['name'] as String? ?? ''),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setDialogState(() => selectedEmployeeId = v),
+        builder: (ctx, setDialogState) {
+          num? supplierBalance;
+          if (selectedSupplierId != null) {
+            for (final s in _suppliers) {
+              if ((s['_id'] ?? s['id']).toString() == selectedSupplierId) {
+                supplierBalance = s['balance'] as num?;
+                break;
+              }
+            }
+          }
+          return AlertDialog(
+            title: Text(existing == null ? _addButtonLabel(l10n) : l10n.editEntry),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.category.needsEmployee && existing == null) ...[
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedEmployeeId,
+                      decoration: InputDecoration(labelText: l10n.selectEmployee),
+                      items: _employees
+                          .map(
+                            (e) => DropdownMenuItem<String>(
+                              value: (e['_id'] ?? e['id']).toString(),
+                              child: Text(e['name'] as String? ?? ''),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setDialogState(() => selectedEmployeeId = v),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (needsSupplier) ...[
+                    Text(
+                      l10n.employeeDebtHint,
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedSupplierId,
+                      decoration: InputDecoration(labelText: l10n.selectSupplier),
+                      items: _suppliers
+                          .map(
+                            (s) => DropdownMenuItem<String>(
+                              value: (s['_id'] ?? s['id']).toString(),
+                              child: Text(
+                                '${s['name'] as String? ?? ''} — ${context.formatCurrency(((s['balance'] as num?) ?? 0).toDouble())}',
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setDialogState(() => selectedSupplierId = v),
+                    ),
+                    if (supplierBalance != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '${l10n.supplierDebt}: ${context.formatCurrency(supplierBalance.toDouble())}',
+                        style: Theme.of(ctx).textTheme.bodySmall,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                  ],
+                  InvoiceNumberField(
+                    controller: amountController,
+                    labelText: _amountLabel(l10n),
                   ),
+                  if (needsSupplier) ...[
+                    const SizedBox(height: 12),
+                    InvoiceNumberField(
+                      controller: discountController,
+                      labelText: l10n.amountDeducted,
+                      helperText: l10n.discountOptionalHint,
+                    ),
+                  ],
                   const SizedBox(height: 12),
-                ],
-                if (needsSupplier) ...[
-                  Text(
-                    l10n.employeeDebtHint,
-                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  TextField(
+                    controller: descController,
+                    decoration: InputDecoration(labelText: l10n.descriptionOptional),
                   ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedSupplierId,
-                    decoration: InputDecoration(labelText: l10n.selectSupplier),
-                    items: _suppliers
-                        .map(
-                          (s) => DropdownMenuItem<String>(
-                            value: (s['_id'] ?? s['id']).toString(),
-                            child: Text(s['name'] as String? ?? ''),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setDialogState(() => selectedSupplierId = v),
-                  ),
-                  const SizedBox(height: 12),
                 ],
-                TextField(
-                  controller: amountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: _amountLabel(l10n)),
-                  autofocus: true,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  decoration: InputDecoration(labelText: l10n.descriptionOptional),
-                ),
-              ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.save)),
-          ],
-        ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+              ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.save)),
+            ],
+          );
+        },
       ),
     );
 
     if (ok != true || !mounted) {
       amountController.dispose();
+      discountController.dispose();
       descController.dispose();
       return;
     }
 
-    final amount = double.tryParse(amountController.text.trim().replaceAll(',', ''));
+    final amount = parseInputNumber(amountController.text);
+    final amountDeducted = needsSupplier ? parseInputNumber(discountController.text) : 0.0;
     final description = descController.text.trim();
+    double? maxDebt;
+    if (needsSupplier && selectedSupplierId != null) {
+      for (final s in _suppliers) {
+        if ((s['_id'] ?? s['id']).toString() == selectedSupplierId) {
+          maxDebt = ((s['balance'] as num?) ?? 0).toDouble();
+          break;
+        }
+      }
+    }
     amountController.dispose();
+    discountController.dispose();
     descController.dispose();
 
-    if (amount == null || amount <= 0) {
+    if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.invalidAmount), backgroundColor: AppColors.error),
       );
@@ -334,6 +375,21 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
       return;
     }
 
+    if (needsSupplier) {
+      if (amountDeducted < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.invalidAmount), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+      if (maxDebt != null && amount + amountDeducted > maxDebt) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.paymentExceedsSupplierDebt), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+    }
+
     setState(() => _submitting = true);
     try {
       final repo = ref.read(treasuryRepositoryProvider);
@@ -344,6 +400,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
           description: description.isEmpty ? null : description,
           employeeId: selectedEmployeeId,
           supplierId: selectedSupplierId,
+          amountDeducted: amountDeducted,
         );
       } else {
         await repo.updateEntry(

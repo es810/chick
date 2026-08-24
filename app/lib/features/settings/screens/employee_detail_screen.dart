@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/number_input_utils.dart';
 import '../../../models/employee_ledger_model.dart';
 import '../../../models/supplier_model.dart';
+import '../../../shared/widgets/invoice_number_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
 class EmployeeDetailScreen extends ConsumerStatefulWidget {
@@ -55,9 +57,16 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
   Future<void> _showAddDialog({required bool isExpense}) async {
     final l10n = context.l10n;
     final amountController = TextEditingController();
+    final discountController = TextEditingController();
     final descController = TextEditingController();
     String? selectedSupplierId;
     List<SupplierModel> suppliers = [];
+
+    void disposeControllers() {
+      amountController.dispose();
+      discountController.dispose();
+      descController.dispose();
+    }
 
     if (!isExpense) {
       try {
@@ -68,15 +77,13 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
             SnackBar(content: Text('$e'), backgroundColor: AppColors.error),
           );
         }
-        amountController.dispose();
-        descController.dispose();
+        disposeControllers();
         return;
       }
     }
 
     if (!mounted) {
-      amountController.dispose();
-      descController.dispose();
+      disposeControllers();
       return;
     }
 
@@ -105,7 +112,9 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                         .map(
                           (s) => DropdownMenuItem(
                             value: s.id,
-                            child: Text(s.name),
+                            child: Text(
+                              '${s.name} — ${context.formatCurrency(s.balance)}',
+                            ),
                           ),
                         )
                         .toList(),
@@ -113,11 +122,18 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                TextField(
+                InvoiceNumberField(
                   controller: amountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: l10n.amount),
+                  labelText: l10n.amount,
                 ),
+                if (!isExpense) ...[
+                  const SizedBox(height: 12),
+                  InvoiceNumberField(
+                    controller: discountController,
+                    labelText: l10n.amountDeducted,
+                    helperText: l10n.discountOptionalHint,
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: descController,
@@ -147,17 +163,25 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
     );
 
     if (confirmed != true || !mounted) {
-      amountController.dispose();
-      descController.dispose();
+      disposeControllers();
       return;
     }
 
-    final amount = double.tryParse(amountController.text.trim().replaceAll(',', ''));
+    final amount = parseInputNumber(amountController.text);
+    final amountDeducted = isExpense ? 0.0 : parseInputNumber(discountController.text);
     final description = descController.text.trim();
-    amountController.dispose();
-    descController.dispose();
+    SupplierModel? supplierForDebt;
+    if (selectedSupplierId != null) {
+      for (final s in suppliers) {
+        if (s.id == selectedSupplierId) {
+          supplierForDebt = s;
+          break;
+        }
+      }
+    }
+    disposeControllers();
 
-    if (amount == null || amount <= 0 || description.isEmpty) {
+    if (amount <= 0 || description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.invalidAmount), backgroundColor: AppColors.error),
       );
@@ -171,12 +195,34 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
       return;
     }
 
+    if (!isExpense) {
+      if (amountDeducted < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.invalidAmount), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+      final maxDebt = supplierForDebt?.balance ?? 0;
+      if (amount + amountDeducted > maxDebt) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.paymentExceedsSupplierDebt), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+    }
+
     try {
       final repo = ref.read(employeeRepositoryProvider);
       if (isExpense) {
         await repo.addExpense(widget.employeeId, amount, description);
       } else {
-        await repo.addDebt(widget.employeeId, amount, description, selectedSupplierId!);
+        await repo.addDebt(
+          widget.employeeId,
+          amount,
+          description,
+          selectedSupplierId!,
+          amountDeducted: amountDeducted,
+        );
         ref.invalidate(supplierStatementProvider(selectedSupplierId!));
         ref.invalidate(suppliersProvider);
       }

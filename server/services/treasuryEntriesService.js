@@ -88,7 +88,15 @@ const deleteMovement = async (id) => {
   return movement;
 };
 
-const createLedgerEntry = async (type, employeeId, amount, description, user, supplierId = null) => {
+const createLedgerEntry = async (
+  type,
+  employeeId,
+  amount,
+  description,
+  user,
+  supplierId = null,
+  amountDeducted = 0
+) => {
   const ledgerType = type === 'loading' ? 'debt' : 'expense';
   const entry = await addLedgerEntry(
     employeeId,
@@ -96,7 +104,8 @@ const createLedgerEntry = async (type, employeeId, amount, description, user, su
     amount,
     description,
     user,
-    supplierId
+    supplierId,
+    amountDeducted
   );
   await entry.populate('employeeId', 'name');
   await entry.populate('createdBy', 'name');
@@ -143,16 +152,22 @@ const updateLedgerEntry = async (id, { amount, description }) => {
     await entry.save({ session });
 
     if (entry.type === 'debt' && entry.supplierId) {
+      const previousPayment = await SupplierPayment.findOne({
+        employeeLedgerId: entry._id,
+      }).session(session);
+      const previousDeducted = previousPayment?.amountDeducted || 0;
+
       await reverseSupplierPaymentFromLedger(session, entry._id);
       const supplier = await Supplier.findById(entry.supplierId).session(session);
       const employee = await User.findById(entry.employeeId).session(session);
       if (!supplier) throw new ApiError(404, 'Supplier not found');
-      if (entry.amount > (supplier.balance || 0)) {
-        throw new ApiError(400, 'Payment amount cannot exceed supplier debt');
+      if (entry.amount + previousDeducted > (supplier.balance || 0)) {
+        throw new ApiError(400, 'Payment and discount cannot exceed supplier debt');
       }
       await applySupplierPaymentFromLedger(session, {
         supplier,
         amount: entry.amount,
+        amountDeducted: previousDeducted,
         employee,
         ledgerEntryId: entry._id,
         description: entry.description,

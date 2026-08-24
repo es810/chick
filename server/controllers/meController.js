@@ -24,14 +24,15 @@ const addMyExpense = asyncHandler(async (req, res) => {
 });
 
 const addMyDebt = asyncHandler(async (req, res) => {
-  const { amount, description, supplierId } = req.body;
+  const { amount, description, supplierId, amountDeducted = 0 } = req.body;
   const entry = await addLedgerEntry(
     req.user._id,
     'debt',
     amount,
     description,
     req.user,
-    supplierId
+    supplierId,
+    amountDeducted
   );
   res.status(201).json({ success: true, data: entry });
 });

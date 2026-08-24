@@ -46,6 +46,13 @@ String _localizeServerMessage(String message, Object? errors) {
     if (detail != null) return detail;
     return 'بيانات غير مكتملة أو غير صحيحة';
   }
+  if (message == 'Payment and discount cannot exceed supplier debt' ||
+      message == 'Payment amount cannot exceed supplier debt') {
+    return 'المبلغ المدفوع والخصم لا يمكن أن يتجاوزا مديونية المورد';
+  }
+  if (message == 'Deducted amount cannot be negative') {
+    return 'مبلغ الخصم غير صالح';
+  }
   if (message == 'Insufficient employee treasury balance') {
     return 'رصيد خزنة الموظف غير كافٍ';
   }

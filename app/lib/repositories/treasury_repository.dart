@@ -123,6 +123,7 @@ class TreasuryRepository {
     String? description,
     String? employeeId,
     String? supplierId,
+    double amountDeducted = 0,
   }) async {
     final response = await _api.post(
       '${ApiConstants.treasury}/entries',
@@ -132,6 +133,7 @@ class TreasuryRepository {
         if (description != null) 'description': description,
         if (employeeId != null) 'employeeId': employeeId,
         if (supplierId != null) 'supplierId': supplierId,
+        if (category == TreasuryCategory.loading) 'amountDeducted': amountDeducted,
       },
     );
     final data = response.data as Map<String, dynamic>;

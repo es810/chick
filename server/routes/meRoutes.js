@@ -16,6 +16,7 @@ const ledgerValidation = [
 const debtValidation = [
   ...ledgerValidation,
   body('supplierId').isMongoId().withMessage('Supplier is required'),
+  body('amountDeducted').optional().isFloat({ min: 0 }),
 ];
 
 router.get('/ledger', getMyLedger);

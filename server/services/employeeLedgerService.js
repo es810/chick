@@ -41,19 +41,29 @@ const getEmployeeLedger = async (employeeId) => {
 
 /**
  * Apply employee goods-debt as a supplier payment (reduces supplier AP).
- * Treasury impact stays on the ledger debt row (التحميل); not double-withdrawn.
+ * Cash (`amount`) hits treasury via the ledger debt row; optional discount
+ * reduces AP only and does not leave the treasury.
  */
 const applySupplierPaymentFromLedger = async (session, {
   supplier,
   amount,
+  amountDeducted = 0,
   employee,
   ledgerEntryId,
   description,
   user,
   paymentDate = new Date(),
 }) => {
+  const deducted = Number(amountDeducted) || 0;
+  if (deducted < 0) {
+    throw new ApiError(400, 'Deducted amount cannot be negative');
+  }
+
   const balanceBefore = supplier.balance || 0;
-  const balanceAfter = Math.max(0, balanceBefore - amount);
+  if (amount + deducted > balanceBefore) {
+    throw new ApiError(400, 'Payment and discount cannot exceed supplier debt');
+  }
+  const balanceAfter = Math.max(0, balanceBefore - amount - deducted);
 
   supplier.balance = balanceAfter;
   await supplier.save({ session });
@@ -61,6 +71,7 @@ const applySupplierPaymentFromLedger = async (session, {
   const notes = [
     employee?.name ? `عن طريق ${employee.name}` : null,
     description || null,
+    deducted > 0 ? `خصم ${deducted}` : null,
   ]
     .filter(Boolean)
     .join(' — ');
@@ -71,6 +82,7 @@ const applySupplierPaymentFromLedger = async (session, {
         supplierId: supplier._id,
         paymentDate,
         amount,
+        amountDeducted: deducted,
         balanceBefore,
         balanceAfter,
         notes,
@@ -102,7 +114,20 @@ const reverseSupplierPaymentFromLedger = async (session, ledgerEntryId) => {
   return payment;
 };
 
-const addLedgerEntry = async (employeeId, type, amount, description, user, supplierId = null) => {
+const addLedgerEntry = async (
+  employeeId,
+  type,
+  amount,
+  description,
+  user,
+  supplierId = null,
+  amountDeducted = 0
+) => {
+  const deducted = Number(amountDeducted) || 0;
+  if (deducted < 0) {
+    throw new ApiError(400, 'Deducted amount cannot be negative');
+  }
+
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -115,8 +140,8 @@ const addLedgerEntry = async (employeeId, type, amount, description, user, suppl
       if (!supplierId) throw new ApiError(400, 'Supplier is required for goods debt');
       supplier = await Supplier.findById(supplierId).session(session);
       if (!supplier) throw new ApiError(404, 'Supplier not found');
-      if (amount > (supplier.balance || 0)) {
-        throw new ApiError(400, 'Payment amount cannot exceed supplier debt');
+      if (amount + deducted > (supplier.balance || 0)) {
+        throw new ApiError(400, 'Payment and discount cannot exceed supplier debt');
       }
     }
 
@@ -143,6 +168,7 @@ const addLedgerEntry = async (employeeId, type, amount, description, user, suppl
       await applySupplierPaymentFromLedger(session, {
         supplier,
         amount,
+        amountDeducted: deducted,
         employee,
         ledgerEntryId: entry._id,
         description,
@@ -155,6 +181,7 @@ const addLedgerEntry = async (employeeId, type, amount, description, user, suppl
     const action = type === 'expense' ? 'ADD_EMPLOYEE_EXPENSE' : 'ADD_EMPLOYEE_DEBT';
     await logAction(user._id, user.name, action, employee.name, {
       amount,
+      amountDeducted: deducted,
       description,
       supplierId: supplier?._id?.toString(),
       supplierName: supplier?.name,
@@ -164,7 +191,9 @@ const addLedgerEntry = async (employeeId, type, amount, description, user, suppl
       .populate('createdBy', 'name')
       .populate('supplierId', 'name');
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction().catch(() => {});
+    }
     throw error;
   } finally {
     session.endSession();

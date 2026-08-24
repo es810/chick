@@ -28,14 +28,16 @@ class EmployeeRepository {
     String employeeId,
     double amount,
     String description,
-    String supplierId,
-  ) async {
+    String supplierId, {
+    double amountDeducted = 0,
+  }) async {
     final response = await _api.post(
       '${ApiConstants.employees}/$employeeId/ledger/debt',
       data: {
         'amount': amount,
         'description': description,
         'supplierId': supplierId,
+        'amountDeducted': amountDeducted,
       },
     );
     final data = response.data as Map<String, dynamic>;
@@ -86,14 +88,16 @@ class EmployeeRepository {
   Future<EmployeeLedgerEntry> addMyDebt(
     double amount,
     String description,
-    String supplierId,
-  ) async {
+    String supplierId, {
+    double amountDeducted = 0,
+  }) async {
     final response = await _api.post(
       '${ApiConstants.myAccount}/ledger/debt',
       data: {
         'amount': amount,
         'description': description,
         'supplierId': supplierId,
+        'amountDeducted': amountDeducted,
       },
     );
     final data = response.data as Map<String, dynamic>;

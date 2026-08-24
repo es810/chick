@@ -85,7 +85,7 @@ const listTreasuryEntriesHandler = asyncHandler(async (req, res) => {
 });
 
 const createTreasuryEntryHandler = asyncHandler(async (req, res) => {
-  const { category, amount, description, employeeId, supplierId } = req.body;
+  const { category, amount, description, employeeId, supplierId, amountDeducted = 0 } = req.body;
   let entry;
 
   if (category === 'collection') {
@@ -105,7 +105,8 @@ const createTreasuryEntryHandler = asyncHandler(async (req, res) => {
       amount,
       description,
       req.user,
-      supplierId
+      supplierId,
+      amountDeducted
     );
   } else {
     return res.status(400).json({ success: false, message: 'Invalid category' });
