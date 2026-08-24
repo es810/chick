@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.11] — 2026-08-24
+
+### Treasury, invoices & lists
+- Optional supplier discount when paying via employee treasury (admin)
+- Stop auto-filling distribution price from stock loading price
+- Fix employee-to-employee treasury transfer save conflict
+- Faster admin dashboard (skip heavy damaged-stock reconcile on load)
+
 ## [1.8.10] — 2026-08-21
 
 ### Clients & suppliers
