@@ -157,7 +157,11 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                 ),
               )
               .toList(),
-          onChanged: (v) => setState(() => _chickenType = v),
+          onChanged: (v) => setState(() {
+            _chickenType = v;
+            // Sale price must never inherit stock/loading cost.
+            _priceController.clear();
+          }),
         ),
         if (selectedStock != null) ...[
           const SizedBox(height: 12),
@@ -194,6 +198,7 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         InvoiceNumberField(
           controller: _priceController,
           labelText: l10n.pricePerKg,
+          helperText: l10n.salePriceManualHint,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 20),

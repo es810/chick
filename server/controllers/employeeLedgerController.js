@@ -1,7 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const { getEmployeeLedger, addLedgerEntry } = require('../services/employeeLedgerService');
 const { listEmployeeAdvances, createSalaryAdvance } = require('../services/salaryAdvanceService');
-const { getEmployeeTreasurySummary } = require('../services/employeeTreasuryService');
+const { getEmployeeTreasurySummary, getEmployeeTreasuryStatement } = require('../services/employeeTreasuryService');
 
 const getLedger = asyncHandler(async (req, res) => {
   const [ledger, advanceData, treasury] = await Promise.all([
@@ -63,4 +63,9 @@ const addSalaryAdvance = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: advance });
 });
 
-module.exports = { getLedger, addExpense, addDebt, addSalaryAdvance };
+const getTreasuryStatement = asyncHandler(async (req, res) => {
+  const data = await getEmployeeTreasuryStatement(req.params.id);
+  res.json({ success: true, data });
+});
+
+module.exports = { getLedger, addExpense, addDebt, addSalaryAdvance, getTreasuryStatement };

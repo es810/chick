@@ -40,6 +40,10 @@ class InvoiceNumberField extends StatelessWidget {
       autofillHints: const [],
       enableSuggestions: false,
       autocorrect: false,
+      enableIMEPersonalizedLearning: false,
+      smartDashesType: SmartDashesType.disabled,
+      smartQuotesType: SmartQuotesType.disabled,
+      spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
       inputFormatters: [
         if (decimal)
           FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))

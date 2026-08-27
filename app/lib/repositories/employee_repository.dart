@@ -132,4 +132,12 @@ class EmployeeRepository {
     final data = response.data as Map<String, dynamic>;
     return AccountStatement.fromJson(data['data'] as Map<String, dynamic>);
   }
+
+  Future<AccountStatement> getTreasuryStatement(String employeeId) async {
+    final response = await _api.get(
+      '${ApiConstants.employees}/$employeeId/treasury/statement',
+    );
+    final data = response.data as Map<String, dynamic>;
+    return AccountStatement.fromJson(data['data'] as Map<String, dynamic>);
+  }
 }

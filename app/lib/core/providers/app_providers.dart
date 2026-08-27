@@ -106,6 +106,11 @@ final myTreasuryStatementProvider = FutureProvider((ref) async {
   return ref.watch(employeeRepositoryProvider).getMyTreasuryStatement();
 });
 
+final employeeTreasuryStatementProvider =
+    FutureProvider.family<AccountStatement, String>((ref, employeeId) async {
+  return ref.watch(employeeRepositoryProvider).getTreasuryStatement(employeeId);
+});
+
 final damagedStockProvider = FutureProvider((ref) async {
   ref.keepAlive();
   return ref.watch(damagedStockRepositoryProvider).list();

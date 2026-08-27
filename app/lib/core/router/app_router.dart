@@ -100,6 +100,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           employeeName: state.uri.queryParameters['name'] ?? '',
         ),
       ),
+      GoRoute(
+        path: '/admin/employees/:id/treasury-statement',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => EmployeeTreasuryStatementScreen(
+          employeeId: state.pathParameters['id']!,
+        ),
+      ),
 
       GoRoute(
         path: '/admin/collection-invoices',

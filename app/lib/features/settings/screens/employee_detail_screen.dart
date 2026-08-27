@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
@@ -417,6 +418,20 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                             ? AppColors.primaryGreen
                             : AppColors.error,
                         subtitle: l10n.employeeTreasuryFormula,
+                        onTap: () => context.push(
+                          '/admin/employees/${widget.employeeId}/treasury-statement',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push(
+                            '/admin/employees/${widget.employeeId}/treasury-statement',
+                          ),
+                          icon: const Icon(Icons.receipt_long_outlined),
+                          label: Text(l10n.viewAccountStatement),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -600,6 +615,7 @@ class _SummaryCard extends StatelessWidget {
     required this.icon,
     required this.color,
     this.subtitle,
+    this.onTap,
   });
 
   final String title;
@@ -607,34 +623,47 @@ class _SummaryCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String? subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(height: 8),
-            Text(title, style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 4),
-            Text(
-              context.formatCurrency(amount),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-            ),
-            if (subtitle != null && subtitle!.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                subtitle!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: color),
+                  if (onTap != null) ...[
+                    const Spacer(),
+                    Icon(Icons.chevron_left, color: Colors.grey.shade600),
+                  ],
+                ],
               ),
+              const SizedBox(height: 8),
+              Text(title, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 4),
+              Text(
+                context.formatCurrency(amount),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+              ),
+              if (subtitle != null && subtitle!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  subtitle!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

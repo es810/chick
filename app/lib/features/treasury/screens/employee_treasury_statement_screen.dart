@@ -10,12 +10,33 @@ import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
 class EmployeeTreasuryStatementScreen extends ConsumerWidget {
-  const EmployeeTreasuryStatementScreen({super.key});
+  const EmployeeTreasuryStatementScreen({super.key, this.employeeId});
+
+  /// When null, loads the signed-in employee's own statement (`/me`).
+  final String? employeeId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final statementAsync = ref.watch(myTreasuryStatementProvider);
+    final isSelf = employeeId == null || employeeId!.isEmpty;
+    final statementAsync = isSelf
+        ? ref.watch(myTreasuryStatementProvider)
+        : ref.watch(employeeTreasuryStatementProvider(employeeId!));
+
+    void retry() {
+      if (isSelf) {
+        ref.invalidate(myTreasuryStatementProvider);
+      } else {
+        ref.invalidate(employeeTreasuryStatementProvider(employeeId!));
+      }
+    }
+
+    Future<void> refresh() async {
+      retry();
+      if (isSelf) {
+        ref.invalidate(myTreasuryProvider);
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -25,13 +46,10 @@ class EmployeeTreasuryStatementScreen extends ConsumerWidget {
         loading: () => const LoadingShimmer(),
         error: (e, _) => ErrorStateWidget(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(myTreasuryStatementProvider),
+          onRetry: retry,
         ),
         data: (statement) => RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(myTreasuryStatementProvider);
-            ref.invalidate(myTreasuryProvider);
-          },
+          onRefresh: refresh,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
             children: [

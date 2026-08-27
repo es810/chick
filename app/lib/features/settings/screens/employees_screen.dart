@@ -61,6 +61,11 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
     );
   }
 
+  void _openTreasuryStatement(Map<String, dynamic> emp) {
+    final id = (emp['_id'] ?? emp['id']).toString();
+    context.push('/admin/employees/$id/treasury-statement');
+  }
+
   Future<void> _showEmployeeFormDialog({Map<String, dynamic>? employee}) async {
     final l10n = context.l10n;
     final isEdit = employee != null;
@@ -514,6 +519,8 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                   switch (action) {
                     case 'ledger':
                       _openLedger(emp);
+                    case 'statement':
+                      _openTreasuryStatement(emp);
                     case 'edit':
                       _showEmployeeFormDialog(employee: emp);
                     case 'delete':
@@ -526,6 +533,15 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                     child: ListTile(
                       leading: const Icon(Icons.account_balance_wallet_outlined),
                       title: Text(l10n.viewLedger),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'statement',
+                    child: ListTile(
+                      leading: const Icon(Icons.receipt_long_outlined),
+                      title: Text(l10n.accountStatement),
                       contentPadding: EdgeInsets.zero,
                       dense: true,
                     ),

@@ -371,6 +371,10 @@ class AppLocalizations {
   },
   'avgWeight': {'en': 'Avg Weight (kg)', 'ar': 'متوسط الوزن (كغ)'},
   'pricePerKg': {'en': 'Price/kg (EGP)', 'ar': 'السعر/كغ (ج.م)'},
+  'salePriceManualHint': {
+    'en': 'Enter sale price manually — not filled from loading cost',
+    'ar': 'أدخل سعر البيع يدويًا — لا يُملأ من سعر التحميل',
+  },
   'add': {'en': 'Add', 'ar': 'إضافة'},
   'cancel': {'en': 'Cancel', 'ar': 'إلغاء'},
   'save': {'en': 'Save', 'ar': 'حفظ'},
@@ -807,6 +811,7 @@ class AppLocalizations {
   String get netWeightFromGrossHint => _get('netWeightFromGrossHint');
   String get avgWeight => _get('avgWeight');
   String get pricePerKg => _get('pricePerKg');
+  String get salePriceManualHint => _get('salePriceManualHint');
   String get add => _get('add');
   String get cancel => _get('cancel');
   String get save => _get('save');

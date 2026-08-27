@@ -140,7 +140,10 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
                 ),
               )
               .toList(),
-          onChanged: (v) => setState(() => _chickenType = v),
+          onChanged: (v) => setState(() {
+                _chickenType = v;
+                // Keep existing invoice price; never fill from stock loading cost.
+              }),
         ),
         const SizedBox(height: 16),
         InvoiceNumberField(
@@ -170,6 +173,7 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
         InvoiceNumberField(
           controller: _priceController,
           labelText: l10n.pricePerKg,
+          helperText: l10n.salePriceManualHint,
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
