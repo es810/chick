@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.12] — 2026-08-27
+
+### Distribution invoices
+- Load all invoices (no longer capped at 20 so older ones stay visible)
+- Group list by date with clear day separators (Today / Yesterday / full date)
+
 ## [1.8.11] — 2026-08-24
 
 ### Treasury, invoices & lists
