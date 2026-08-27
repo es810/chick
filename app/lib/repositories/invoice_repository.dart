@@ -9,29 +9,44 @@ class InvoiceRepository {
   final ApiClient _api;
   final CacheService _cache;
 
+  /// Loads every invoice page so the list is not capped at 20.
   Future<({List<InvoiceModel> invoices, PaginationMeta? pagination})> getInvoices({
-    int page = 1,
     String? paymentStatus,
     String? search,
   }) async {
     try {
-      final response = await _api.get(
-        ApiConstants.invoices,
-        queryParameters: {
-          'page': page,
-          'limit': 20,
-          if (paymentStatus != null) 'paymentStatus': paymentStatus,
-          if (search != null) 'search': search,
-        },
+      const limit = 100;
+      var page = 1;
+      var totalPages = 1;
+      var total = 0;
+      final all = <InvoiceModel>[];
+
+      do {
+        final response = await _api.get(
+          ApiConstants.invoices,
+          queryParameters: {
+            'page': page,
+            'limit': limit,
+            if (paymentStatus != null) 'paymentStatus': paymentStatus,
+            if (search != null && search.isNotEmpty) 'search': search,
+          },
+        );
+        final data = response.data as Map<String, dynamic>;
+        final invoices = (data['data'] as List)
+            .map((e) => InvoiceModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+        all.addAll(invoices);
+
+        final pagination = data['pagination'] as Map<String, dynamic>?;
+        totalPages = (pagination?['pages'] as num?)?.toInt() ?? 1;
+        total = (pagination?['total'] as num?)?.toInt() ?? all.length;
+        page++;
+      } while (page <= totalPages);
+
+      return (
+        invoices: all,
+        pagination: PaginationMeta(total: total, page: 1, pages: 1),
       );
-      final data = response.data as Map<String, dynamic>;
-      final invoices = (data['data'] as List)
-          .map((e) => InvoiceModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      final pagination = data['pagination'] != null
-          ? PaginationMeta.fromJson(data['pagination'] as Map<String, dynamic>)
-          : null;
-      return (invoices: invoices, pagination: pagination);
     } catch (e) {
       if (!await _cache.isOnline) {
         final cached = _cache.getCached('invoices');
@@ -53,7 +68,7 @@ class InvoiceRepository {
   }
 
   Future<InvoiceModel> createInvoice(Map<String, dynamic> payload) async {
-  try {
+    try {
       final response = await _api.post(ApiConstants.invoices, data: payload);
       final data = response.data as Map<String, dynamic>;
       return InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);

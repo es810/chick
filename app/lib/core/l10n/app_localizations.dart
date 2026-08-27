@@ -192,6 +192,8 @@ class AppLocalizations {
   'partial': {'en': 'Partial', 'ar': 'جزئي'},
 
   'searchInvoices': {'en': 'Search invoices...', 'ar': 'بحث في الفواتير...'},
+  'today': {'en': 'Today', 'ar': 'اليوم'},
+  'yesterday': {'en': 'Yesterday', 'ar': 'أمس'},
   'status': {'en': 'Status', 'ar': 'الحالة'},
   'all': {'en': 'All', 'ar': 'الكل'},
   'noInvoicesFound': {'en': 'No invoices found', 'ar': 'لم يتم العثور على فواتير'},
@@ -700,6 +702,8 @@ class AppLocalizations {
   String get partial => _get('partial');
 
   String get searchInvoices => _get('searchInvoices');
+  String get today => _get('today');
+  String get yesterday => _get('yesterday');
   String get status => _get('status');
   String get all => _get('all');
   String get noInvoicesFound => _get('noInvoicesFound');

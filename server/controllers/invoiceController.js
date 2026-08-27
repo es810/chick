@@ -20,36 +20,32 @@ const getInvoices = asyncHandler(async (req, res) => {
 
   if (paymentStatus) query.paymentStatus = paymentStatus;
   if (clientId) query.clientId = clientId;
-
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-  let invoicesQuery = Invoice.find(query)
-    .populate('clientId', 'name phone address')
-    .populate('employeeId', 'name')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(parseInt(limit));
-
   if (search) {
-    invoicesQuery = Invoice.find({
-      ...query,
-      invoiceNumber: { $regex: search, $options: 'i' },
-    })
-      .populate('clientId', 'name phone')
+    query.invoiceNumber = { $regex: search, $options: 'i' };
+  }
+
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 20));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [invoices, total] = await Promise.all([
+    Invoice.find(query)
+      .populate('clientId', 'name phone address')
       .populate('employeeId', 'name')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
-  }
-
-  const [invoices, total] = await Promise.all([
-    invoicesQuery,
+      .limit(limitNum),
     Invoice.countDocuments(query),
   ]);
 
   res.json({
     success: true,
     data: invoices,
-    pagination: { total, page: parseInt(page), pages: Math.ceil(total / limit) },
+    pagination: {
+      total,
+      page: pageNum,
+      pages: Math.max(1, Math.ceil(total / limitNum)),
+    },
   });
 });
 
