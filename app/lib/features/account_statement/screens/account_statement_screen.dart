@@ -1,13 +1,16 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../core/utils/number_input_utils.dart';
+import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/account_statement_model.dart';
+import '../../../models/user_model.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/invoice_number_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -62,7 +65,11 @@ class AccountStatementScreen extends ConsumerWidget {
         ),
         data: (statement) => RefreshIndicator(
           onRefresh: () async => _invalidate(ref),
-          child: _StatementBody(statement: statement, kind: kind),
+          child: _StatementBody(
+            statement: statement,
+            kind: kind,
+            basePath: _basePath(ref),
+          ),
         ),
       ),
     );
@@ -74,6 +81,14 @@ class AccountStatementScreen extends ConsumerWidget {
     } else {
       ref.invalidate(supplierStatementProvider(entityId));
     }
+  }
+
+  String _basePath(WidgetRef ref) {
+    return switch (ref.watch(currentUserProvider)?.role) {
+      UserRole.employee => '/employee',
+      UserRole.client => '/client',
+      _ => '/admin',
+    };
   }
 
   Future<void> _showPayDebtDialog(
@@ -218,10 +233,15 @@ class AccountStatementScreen extends ConsumerWidget {
 }
 
 class _StatementBody extends StatelessWidget {
-  const _StatementBody({required this.statement, required this.kind});
+  const _StatementBody({
+    required this.statement,
+    required this.kind,
+    required this.basePath,
+  });
 
   final AccountStatement statement;
   final AccountStatementKind kind;
+  final String basePath;
 
   @override
   Widget build(BuildContext context) {
@@ -276,6 +296,21 @@ class _StatementBody extends StatelessWidget {
     );
   }
 
+  bool _isNavigable(AccountStatementEntry entry) {
+    if (kind != AccountStatementKind.client) return false;
+    if (entry.id.isEmpty || entry.id.endsWith('-prior-debt')) return false;
+    return entry.type == 'distribution' || entry.type == 'collection';
+  }
+
+  void _openEntry(BuildContext context, AccountStatementEntry entry) {
+    switch (entry.type) {
+      case 'distribution':
+        context.push('$basePath/invoices/${entry.id}');
+      case 'collection':
+        context.push('$basePath/collection-invoices/${entry.id}');
+    }
+  }
+
   List<Widget> _buildEntries(BuildContext context, List<AccountStatementEntry> entries) {
     final l10n = context.l10n;
     var running = 0.0;
@@ -284,33 +319,45 @@ class _StatementBody extends StatelessWidget {
       running += entry.debit - entry.credit;
       final balance = entry.balanceAfter ?? running;
       final isPayment = entry.type == 'payment';
+      final canOpen = _isNavigable(entry);
 
       return Card(
         margin: const EdgeInsets.only(bottom: 8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  if (isPayment)
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 8),
-                      child: Icon(Icons.payments, size: 18, color: Colors.green.shade700),
+        child: InkWell(
+          onTap: canOpen ? () => _openEntry(context, entry) : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    if (isPayment)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 8),
+                        child: Icon(Icons.payments, size: 18, color: Colors.green.shade700),
+                      ),
+                    Expanded(
+                      child: Text(
+                        entry.description,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
-                  Expanded(
-                    child: Text(
-                      entry.description,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    Text(
+                      DateFormat.yMMMd().format(entry.date),
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  ),
-                  Text(
-                    DateFormat.yMMMd().format(entry.date),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
+                    if (canOpen) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_left,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  ],
+                ),
               if (entry.subtitle.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(entry.subtitle, style: Theme.of(context).textTheme.bodySmall),
@@ -346,6 +393,7 @@ class _StatementBody extends StatelessWidget {
             ],
           ),
         ),
+      ),
       );
     }).toList();
   }
