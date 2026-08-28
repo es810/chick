@@ -15,6 +15,7 @@ class StockModel extends Equatable {
     this.lowStockThreshold = 50,
     this.pendingSurplusQuantity = 0,
     this.pendingSurplusNetWeight = 0,
+    this.createdAt,
     int? usableQuantity,
     double? usableNetWeight,
   })  : usableQuantity = usableQuantity ??
@@ -49,6 +50,8 @@ class StockModel extends Equatable {
 
   /// Book net weight minus open surplus kg.
   final double usableNetWeight;
+
+  final DateTime? createdAt;
 
   bool get isLowStock => usableQuantity <= lowStockThreshold;
 
@@ -85,6 +88,9 @@ class StockModel extends Equatable {
       pendingSurplusNetWeight: pendingKg,
       usableQuantity: usableQty,
       usableNetWeight: usableKg,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : null,
     );
   }
 

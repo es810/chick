@@ -17,7 +17,8 @@ const supplierStockSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-supplierStockSchema.index({ supplierId: 1, chickenType: 1 }, { unique: true });
+supplierStockSchema.index({ supplierId: 1, createdAt: -1 });
+supplierStockSchema.index({ supplierId: 1, chickenType: 1 });
 supplierStockSchema.virtual('isLowStock').get(function () {
   return this.quantity <= this.lowStockThreshold;
 });

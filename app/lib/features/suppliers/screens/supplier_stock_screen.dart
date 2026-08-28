@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
@@ -75,17 +76,35 @@ class SupplierStockScreen extends ConsumerWidget {
             );
           }
 
+          final rows = _buildRows(stock);
+
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(supplierStockProvider(supplierId)),
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-              itemCount: stock.length,
-              itemBuilder: (_, i) => _StockCard(
-                item: stock[i],
-                isAdmin: isAdmin,
-                onEdit: isAdmin ? () => _showEditStockDialog(context, ref, stock[i]) : null,
-                onDelete: isAdmin ? () => _confirmDelete(context, ref, stock[i]) : null,
-              ),
+              itemCount: rows.length,
+              itemBuilder: (_, i) {
+                final row = rows[i];
+                if (row.isHeader) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 8),
+                    child: Text(
+                      _dateHeaderLabel(context, row.day!),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryGreen,
+                          ),
+                    ),
+                  );
+                }
+                final item = row.item!;
+                return _StockCard(
+                  item: item,
+                  isAdmin: isAdmin,
+                  onEdit: isAdmin ? () => _showEditStockDialog(context, ref, item) : null,
+                  onDelete: isAdmin ? () => _confirmDelete(context, ref, item) : null,
+                );
+              },
             ),
           );
         },
@@ -299,6 +318,48 @@ class SupplierStockScreen extends ConsumerWidget {
       }
     }
   }
+
+  DateTime _dayKey(DateTime date) {
+    final local = date.toLocal();
+    return DateTime(local.year, local.month, local.day);
+  }
+
+  String _dateHeaderLabel(BuildContext context, DateTime day) {
+    final l10n = context.l10n;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    if (day == today) return l10n.today;
+    if (day == yesterday) return l10n.yesterday;
+    return DateFormat.yMMMMEEEEd(Localizations.localeOf(context).toString()).format(day);
+  }
+
+  List<_ListRow> _buildRows(List<StockModel> stock) {
+    final rows = <_ListRow>[];
+    DateTime? lastDay;
+    for (final item in stock) {
+      final created = item.createdAt?.toLocal() ?? DateTime.now();
+      final day = _dayKey(created);
+      if (lastDay == null || day != lastDay) {
+        rows.add(_ListRow.header(day));
+        lastDay = day;
+      }
+      rows.add(_ListRow.item(item));
+    }
+    return rows;
+  }
+}
+
+class _ListRow {
+  const _ListRow._({this.day, this.item});
+
+  _ListRow.header(DateTime day) : this._(day: day);
+  _ListRow.item(StockModel item) : this._(item: item);
+
+  final DateTime? day;
+  final StockModel? item;
+
+  bool get isHeader => day != null;
 }
 
 class _StockCard extends StatelessWidget {
@@ -325,6 +386,17 @@ class _StockCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (item.createdAt != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  DateFormat.yMMMd().add_jm().format(item.createdAt!.toLocal()),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.primaryGreen,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
             if (item.location.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),

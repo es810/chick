@@ -151,7 +151,7 @@ const getSupplierStatement = async (supplierId) => {
   const supplier = await Supplier.findById(supplierId);
   if (!supplier) throw new ApiError(404, 'Supplier not found');
 
-  const stockItems = await SupplierStock.find({ supplierId }).sort({ updatedAt: 1 });
+  const stockItems = await SupplierStock.find({ supplierId }).sort({ createdAt: 1 });
   const payments = await SupplierPayment.find({ supplierId })
     .populate('createdBy', 'name')
     .populate('employeeId', 'name')
@@ -164,7 +164,7 @@ const getSupplierStatement = async (supplierId) => {
     entries.push({
       id: item._id.toString(),
       type: 'purchase',
-      date: item.updatedAt,
+      date: item.createdAt,
       description: `بضاعة — ${item.chickenType}`,
       subtitle: item.location || '',
       debit: total,

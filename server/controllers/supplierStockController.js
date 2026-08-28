@@ -10,7 +10,7 @@ const {
 const getSupplierStock = asyncHandler(async (req, res) => {
   await ensureSupplier(req.params.supplierId);
   const stocks = await SupplierStock.find({ supplierId: req.params.supplierId }).sort({
-    chickenType: 1,
+    createdAt: -1,
   });
   res.json({ success: true, data: stocks });
 });
