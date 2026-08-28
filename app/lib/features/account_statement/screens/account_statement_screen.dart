@@ -363,25 +363,47 @@ class _StatementBody extends StatelessWidget {
                 Text(entry.subtitle, style: Theme.of(context).textTheme.bodySmall),
               ],
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _AmountChip(
-                      label: l10n.debit,
-                      amount: entry.debit,
-                      color: Colors.red.shade700,
+              if (entry.type == 'collection' &&
+                  (entry.amountPaid != null || entry.amountDeducted != null))
+                Row(
+                  children: [
+                    Expanded(
+                      child: _AmountChip(
+                        label: l10n.amountPaid,
+                        amount: entry.amountPaid ?? 0,
+                        color: Colors.green.shade700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _AmountChip(
-                      label: l10n.credit,
-                      amount: entry.credit,
-                      color: Colors.green.shade700,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _AmountChip(
+                        label: l10n.statementDiscount,
+                        amount: entry.amountDeducted ?? 0,
+                        color: Colors.orange.shade800,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: _AmountChip(
+                        label: l10n.debit,
+                        amount: entry.debit,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _AmountChip(
+                        label: l10n.credit,
+                        amount: entry.credit,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 8),
               Align(
                 alignment: AlignmentDirectional.centerEnd,

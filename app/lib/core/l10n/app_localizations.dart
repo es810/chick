@@ -422,6 +422,7 @@ class AppLocalizations {
   'debit': {'en': 'Debit', 'ar': 'مدين'},
   'credit': {'en': 'Credit', 'ar': 'دائن'},
   'statementBalanceAfter': {'en': 'Balance after', 'ar': 'الرصيد بعد'},
+  'statementDiscount': {'en': 'Discount', 'ar': 'خصم'},
   'noStatementEntries': {'en': 'No transactions yet', 'ar': 'لا توجد حركات بعد'},
   'paySupplierDebt': {'en': 'Pay debt', 'ar': 'دفع الدين'},
   'supplierPaymentRecorded': {'en': 'Supplier payment recorded', 'ar': 'تم تسجيل دفع الدين'},
@@ -848,6 +849,7 @@ class AppLocalizations {
   String get debit => _get('debit');
   String get credit => _get('credit');
   String get statementBalanceAfter => _get('statementBalanceAfter');
+  String get statementDiscount => _get('statementDiscount');
   String get noStatementEntries => _get('noStatementEntries');
   String get paySupplierDebt => _get('paySupplierDebt');
   String get supplierPaymentRecorded => _get('supplierPaymentRecorded');

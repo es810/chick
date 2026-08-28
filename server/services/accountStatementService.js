@@ -87,7 +87,8 @@ const getClientStatement = async (clientId) => {
   }
 
   for (const collection of collections) {
-    const credit = collection.amountPaid + collection.amountDeducted;
+    const amountPaid = collection.amountPaid || 0;
+    const amountDeducted = collection.amountDeducted || 0;
     entries.push({
       id: collection._id.toString(),
       type: 'collection',
@@ -95,7 +96,9 @@ const getClientStatement = async (clientId) => {
       description: 'فاتورة تحصيل',
       subtitle: collection.employeeId?.name ?? '',
       debit: 0,
-      credit,
+      credit: amountPaid + amountDeducted,
+      amountPaid,
+      amountDeducted,
       balanceAfter: collection.balanceAfter,
       reference: null,
     });

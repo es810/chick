@@ -32,6 +32,8 @@ class AccountStatementEntry {
     required this.credit,
     this.balanceAfter,
     this.reference,
+    this.amountPaid,
+    this.amountDeducted,
   });
 
   final String id;
@@ -43,6 +45,8 @@ class AccountStatementEntry {
   final double credit;
   final double? balanceAfter;
   final String? reference;
+  final double? amountPaid;
+  final double? amountDeducted;
 
   factory AccountStatementEntry.fromJson(Map<String, dynamic> json) {
     return AccountStatementEntry(
@@ -55,6 +59,8 @@ class AccountStatementEntry {
       credit: (json['credit'] as num?)?.toDouble() ?? 0,
       balanceAfter: (json['balanceAfter'] as num?)?.toDouble(),
       reference: json['reference']?.toString(),
+      amountPaid: (json['amountPaid'] as num?)?.toDouble(),
+      amountDeducted: (json['amountDeducted'] as num?)?.toDouble(),
     );
   }
 }
