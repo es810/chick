@@ -38,6 +38,26 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
   final _priceController = TextEditingController();
   bool _isSubmitting = false;
   bool _initialized = false;
+  Future<InvoiceModel>? _invoiceFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final amountListeners = Listenable.merge([
+      _countController,
+      _grossController,
+      _priceController,
+    ]);
+    amountListeners.addListener(_onAmountFieldsChanged);
+  }
+
+  void _onAmountFieldsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<InvoiceModel> _loadInvoiceFuture() {
+    return _invoiceFuture ??= ref.read(invoiceRepositoryProvider).getInvoice(widget.invoiceId);
+  }
 
   @override
   void dispose() {
@@ -76,7 +96,7 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.editInvoice)),
       body: FutureBuilder<InvoiceModel>(
-        future: ref.read(invoiceRepositoryProvider).getInvoice(widget.invoiceId),
+        future: _loadInvoiceFuture(),
         builder: (context, invoiceSnapshot) {
           if (invoiceSnapshot.connectionState == ConnectionState.waiting) {
             return const LoadingOverlay();
@@ -150,13 +170,11 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
           controller: _countController,
           labelText: l10n.itemCount,
           decimal: false,
-          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
         InvoiceNumberField(
           controller: _grossController,
           labelText: l10n.grossWeight,
-          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
         InputDecorator(
@@ -174,7 +192,6 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
           controller: _priceController,
           labelText: l10n.pricePerKg,
           helperText: l10n.salePriceManualHint,
-          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 16),
         TextFormField(

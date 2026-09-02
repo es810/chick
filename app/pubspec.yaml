@@ -1,7 +1,7 @@
 name: chicken_farm
 description: Chicken Farm Management System - Professional mobile app
 publish_to: 'none'
-version: 1.8.17+27
+version: 1.8.18+28
 
 environment:
   sdk: '>=3.2.0 <4.0.0'

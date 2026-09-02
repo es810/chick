@@ -22,6 +22,12 @@ class InvoiceDetailScreen extends ConsumerStatefulWidget {
 
 class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   bool _isDeleting = false;
+  Future<InvoiceModel>? _invoiceFuture;
+
+  Future<InvoiceModel> _loadInvoiceFuture() {
+    return _invoiceFuture ??=
+        ref.read(invoiceRepositoryProvider).getInvoice(widget.invoiceId);
+  }
 
   Future<void> _confirmDelete(InvoiceModel invoice) async {
     final l10n = context.l10n;
@@ -74,7 +80,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final canManage = widget.basePath.contains('admin') || widget.basePath.contains('employee');
-    final invoiceFuture = ref.watch(invoiceRepositoryProvider).getInvoice(widget.invoiceId);
+    final invoiceFuture = _loadInvoiceFuture();
 
     return Scaffold(
       appBar: AppBar(

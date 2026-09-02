@@ -351,28 +351,31 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
         ),
         const SizedBox(height: 12),
         InvoiceNumberField(
-          key: const ValueKey('collection_amount_paid'),
           controller: _amountPaidController,
           labelText: l10n.amountPaid,
-          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
         InvoiceNumberField(
-          key: const ValueKey('collection_amount_discount'),
           controller: _amountDeductedController,
           labelText: l10n.amountDeducted,
           helperText: l10n.discountOptionalHint,
-          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
-        InputDecorator(
-          decoration: InputDecoration(labelText: l10n.balanceAfterPayment),
-          child: Text(
-            formatInputNumber(_balanceAfter),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryGreen,
-                ),
+        ListenableBuilder(
+          listenable: Listenable.merge([
+            _amountPaidController,
+            _amountDeductedController,
+            _balanceBeforeController,
+          ]),
+          builder: (context, _) => InputDecorator(
+            decoration: InputDecoration(labelText: l10n.balanceAfterPayment),
+            child: Text(
+              formatInputNumber(_balanceAfter),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryGreen,
+                  ),
+            ),
           ),
         ),
       ],
