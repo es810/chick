@@ -407,127 +407,143 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
               ? Center(child: Text(_error!))
               : RefreshIndicator(
                   onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      _SummaryCard(
-                        title: l10n.employeeTreasuryBalance,
-                        amount: _ledger!.treasuryBalance,
-                        icon: Icons.account_balance_wallet,
-                        color: _ledger!.treasuryBalance >= 0
-                            ? AppColors.primaryGreen
-                            : AppColors.error,
-                        subtitle: l10n.employeeTreasuryFormula,
-                        onTap: () => context.push(
-                          '/admin/employees/${widget.employeeId}/treasury-statement',
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            _SummaryCard(
+                              title: l10n.employeeTreasuryBalance,
+                              amount: _ledger!.treasuryBalance,
+                              icon: Icons.account_balance_wallet,
+                              color: _ledger!.treasuryBalance >= 0
+                                  ? AppColors.primaryGreen
+                                  : AppColors.error,
+                              subtitle: l10n.employeeTreasuryFormula,
+                              onTap: () => context.push(
+                                '/admin/employees/${widget.employeeId}/treasury-statement',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => context.push(
+                                  '/admin/employees/${widget.employeeId}/treasury-statement',
+                                ),
+                                icon: const Icon(Icons.receipt_long_outlined),
+                                label: Text(l10n.viewAccountStatement),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _SummaryCard(
+                                    title: l10n.expenses,
+                                    amount: _ledger!.totalExpenses,
+                                    icon: Icons.local_gas_station,
+                                    color: AppColors.warning,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _SummaryCard(
+                                    title: l10n.employeeDebt,
+                                    amount: _ledger!.totalDebt,
+                                    icon: Icons.inventory_2,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _SummaryCard(
+                                    title: l10n.salaryAdvance,
+                                    amount: _ledger!.totalAdvances,
+                                    icon: Icons.payments_outlined,
+                                    color: AppColors.primaryGreen,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _SummaryCard(
+                                    title: l10n.employeeSalary,
+                                    amount: _ledger!.employeeSalary,
+                                    icon: Icons.account_balance_wallet_outlined,
+                                    color: AppColors.darkGreen,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _showAddAdvanceDialog,
+                                icon: const Icon(Icons.payments_outlined),
+                                label: Text(l10n.addSalaryAdvance),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              l10n.salaryAdvanceHint,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(l10n.salaryAdvance, style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 8),
+                            ..._buildAdvanceEntries(_ledger!.advances, l10n),
+                            const SizedBox(height: 24),
+                            Text(l10n.expenses, style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 8),
+                          ]),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => context.push(
-                            '/admin/employees/${widget.employeeId}/treasury-statement',
-                          ),
-                          icon: const Icon(Icons.receipt_long_outlined),
-                          label: Text(l10n.viewAccountStatement),
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _EmployeeActionButtonsHeader(
+                          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                          onAddExpense: () => _showAddDialog(isExpense: true),
+                          onAddDebt: () => _showAddDialog(isExpense: false),
+                          addExpenseLabel: l10n.addExpense,
+                          addDebtLabel: l10n.addDebt,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _SummaryCard(
-                              title: l10n.expenses,
-                              amount: _ledger!.totalExpenses,
-                              icon: Icons.local_gas_station,
-                              color: AppColors.warning,
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate(
+                            _buildEntries(
+                              _ledger!.entries.where((e) => e.isExpense).toList(),
+                              l10n,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _SummaryCard(
-                              title: l10n.employeeDebt,
-                              amount: _ledger!.totalDebt,
-                              icon: Icons.inventory_2,
-                              color: AppColors.error,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _SummaryCard(
-                              title: l10n.salaryAdvance,
-                              amount: _ledger!.totalAdvances,
-                              icon: Icons.payments_outlined,
-                              color: AppColors.primaryGreen,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _SummaryCard(
-                              title: l10n.employeeSalary,
-                              amount: _ledger!.employeeSalary,
-                              icon: Icons.account_balance_wallet_outlined,
-                              color: AppColors.darkGreen,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _showAddAdvanceDialog,
-                          icon: const Icon(Icons.payments_outlined),
-                          label: Text(l10n.addSalaryAdvance),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.salaryAdvanceHint,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(l10n.salaryAdvance, style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      ..._buildAdvanceEntries(_ledger!.advances, l10n),
-                      const SizedBox(height: 24),
-                      Text(l10n.expenses, style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      ..._buildEntries(_ledger!.entries.where((e) => e.isExpense).toList(), l10n),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _showAddDialog(isExpense: true),
-                              icon: const Icon(Icons.add),
-                              label: Text(l10n.addExpense),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            Text(l10n.employeeDebt, style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 4),
+                            Text(
+                              l10n.employeeDebtHint,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _showAddDialog(isExpense: false),
-                              icon: const Icon(Icons.add),
-                              label: Text(l10n.addDebt),
+                            const SizedBox(height: 8),
+                            ..._buildEntries(
+                              _ledger!.entries.where((e) => e.isDebt).toList(),
+                              l10n,
                             ),
-                          ),
-                        ],
+                          ]),
+                        ),
                       ),
-                      const SizedBox(height: 20),
-                      Text(l10n.employeeDebt, style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.employeeDebtHint,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-                      ..._buildEntries(_ledger!.entries.where((e) => e.isDebt).toList(), l10n),
                     ],
                   ),
                 ),
@@ -605,6 +621,65 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
         ),
       );
     }).toList();
+  }
+}
+
+class _EmployeeActionButtonsHeader extends SliverPersistentHeaderDelegate {
+  const _EmployeeActionButtonsHeader({
+    required this.backgroundColor,
+    required this.onAddExpense,
+    required this.onAddDebt,
+    required this.addExpenseLabel,
+    required this.addDebtLabel,
+  });
+
+  final Color backgroundColor;
+  final VoidCallback onAddExpense;
+  final VoidCallback onAddDebt;
+  final String addExpenseLabel;
+  final String addDebtLabel;
+
+  @override
+  double get minExtent => 64;
+
+  @override
+  double get maxExtent => 64;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      color: backgroundColor,
+      elevation: overlapsContent ? 2 : 0,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onAddExpense,
+                icon: const Icon(Icons.add),
+                label: Text(addExpenseLabel),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: onAddDebt,
+                icon: const Icon(Icons.add),
+                label: Text(addDebtLabel),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _EmployeeActionButtonsHeader oldDelegate) {
+    return oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.addExpenseLabel != addExpenseLabel ||
+        oldDelegate.addDebtLabel != addDebtLabel;
   }
 }
 
