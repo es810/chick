@@ -4,6 +4,7 @@ const Supplier = require('../models/Supplier');
 const EmployeeLedger = require('../models/EmployeeLedger');
 const SupplierPayment = require('../models/SupplierPayment');
 const { getTreasurySummary } = require('./treasuryService');
+const { getEmployeeTreasuryBalance } = require('./employeeTreasuryService');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 
@@ -142,6 +143,11 @@ const addLedgerEntry = async (
       if (!supplier) throw new ApiError(404, 'Supplier not found');
       if (amount + deducted > (supplier.balance || 0)) {
         throw new ApiError(400, 'Payment and discount cannot exceed supplier debt');
+      }
+
+      const employeeBalance = await getEmployeeTreasuryBalance(employeeId);
+      if (employeeBalance < amount) {
+        throw new ApiError(400, 'Insufficient employee treasury balance');
       }
     }
 

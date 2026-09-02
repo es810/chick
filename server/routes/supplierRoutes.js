@@ -29,6 +29,7 @@ router.post(
     body('paymentDate').isISO8601(),
     body('amount').isFloat({ min: 0.01 }),
     body('amountDeducted').optional().isFloat({ min: 0 }),
+    body('employeeId').optional().isMongoId(),
     body('notes').optional().trim(),
   ],
   validate,

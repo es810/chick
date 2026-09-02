@@ -1,12 +1,17 @@
 const Supplier = require('../models/Supplier');
 const SupplierPayment = require('../models/SupplierPayment');
 const ApiError = require('../utils/apiError');
-const { logAction } = require('./auditService');
-const { deductFromMainTreasury } = require('./treasuryService');
+const { addLedgerEntry } = require('./employeeLedgerService');
 
+/**
+ * Supplier payments always flow through the paying employee's treasury
+ * (employee ledger debt), which also reduces the main treasury via loading.
+ */
 const createSupplierPayment = async (supplierId, data, user) => {
   const { paymentDate, amount, notes = '' } = data;
   const amountDeducted = Number(data.amountDeducted) || 0;
+  const employeeId =
+    user.role === 'employee' ? user._id.toString() : data.employeeId?.toString();
 
   if (!amount || amount <= 0) {
     throw new ApiError(400, 'Payment amount must be greater than zero');
@@ -14,41 +19,39 @@ const createSupplierPayment = async (supplierId, data, user) => {
   if (amountDeducted < 0) {
     throw new ApiError(400, 'Deducted amount cannot be negative');
   }
+  if (!employeeId) {
+    throw new ApiError(400, 'Employee is required for supplier payment');
+  }
 
   const supplier = await Supplier.findById(supplierId);
   if (!supplier) throw new ApiError(404, 'Supplier not found');
 
-  const balanceBefore = supplier.balance;
-  if (amount + amountDeducted > balanceBefore) {
+  if (amount + amountDeducted > (supplier.balance || 0)) {
     throw new ApiError(400, 'Payment and discount cannot exceed supplier debt');
   }
 
-  const balanceAfter = Math.max(0, balanceBefore - amount - amountDeducted);
+  const description = notes.trim() || `دفع مورد — ${supplier.name}`;
 
-  const movement = await deductFromMainTreasury(amount, user, {
-    reason: `دفع مورد — ${supplier.name}`,
-    supplierId: supplier._id.toString(),
-  });
-
-  const payment = await SupplierPayment.create({
+  const entry = await addLedgerEntry(
+    employeeId,
+    'debt',
+    amount,
+    description,
+    user,
     supplierId,
-    paymentDate: new Date(paymentDate),
-    amount,
-    amountDeducted,
-    balanceBefore,
-    balanceAfter,
-    notes,
-    treasuryMovementId: movement._id,
-    createdBy: user._id,
-  });
+    amountDeducted
+  );
 
-  supplier.balance = balanceAfter;
-  await supplier.save();
+  const payment = await SupplierPayment.findOne({ employeeLedgerId: entry._id });
+  if (!payment) throw new ApiError(500, 'Supplier payment not recorded');
 
-  await logAction(user._id, user.name, 'SUPPLIER_PAYMENT', supplier.name, {
-    amount,
-    amountDeducted,
-  });
+  if (paymentDate) {
+    const paidAt = new Date(paymentDate);
+    if (!Number.isNaN(paidAt.getTime())) {
+      payment.paymentDate = paidAt;
+      await payment.save();
+    }
+  }
 
   return payment;
 };

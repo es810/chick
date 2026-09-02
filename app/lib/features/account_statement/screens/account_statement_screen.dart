@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../core/utils/number_input_utils.dart';
 import '../../../features/auth/providers/auth_provider.dart';
@@ -97,12 +98,25 @@ class AccountStatementScreen extends ConsumerWidget {
     AccountStatement statement,
   ) async {
     final l10n = context.l10n;
+    final isAdmin = ref.read(currentUserProvider)?.role == UserRole.admin;
     final amountController = TextEditingController();
     final discountController = TextEditingController();
     final notesController = TextEditingController();
     var paymentDate = DateTime.now();
     final formKey = GlobalKey<FormState>();
     final maxDebt = statement.entity.balance;
+    String? selectedEmployeeId;
+    var employees = <Map<String, dynamic>>[];
+
+    if (isAdmin) {
+      try {
+        employees = await ref.read(collectionRepositoryProvider).listEmployees();
+      } catch (_) {
+        employees = [];
+      }
+    }
+
+    if (!context.mounted) return;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -120,7 +134,32 @@ class AccountStatementScreen extends ConsumerWidget {
                     '${l10n.supplierDebt}: ${context.formatCurrency(maxDebt)}',
                     style: Theme.of(ctx).textTheme.bodyMedium,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.paySupplierViaEmployeeHint,
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                  if (isAdmin) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedEmployeeId,
+                      decoration: InputDecoration(labelText: l10n.selectEmployee),
+                      items: employees
+                          .map(
+                            (e) => DropdownMenuItem<String>(
+                              value: (e['_id'] ?? e['id']).toString(),
+                              child: Text(e['name'] as String? ?? ''),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) => setState(() => selectedEmployeeId = value),
+                      validator: (value) =>
+                          value == null || value.isEmpty ? l10n.selectEmployee : null,
+                    ),
+                  ],
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(l10n.paymentDate),
@@ -211,6 +250,7 @@ class AccountStatementScreen extends ConsumerWidget {
             amount: amount,
             amountDeducted: amountDeducted,
             notes: notesController.text.trim(),
+            employeeId: selectedEmployeeId,
           );
       ref.invalidate(supplierStatementProvider(entityId));
       ref.invalidate(suppliersProvider);
@@ -223,9 +263,12 @@ class AccountStatementScreen extends ConsumerWidget {
       }
     } on DioException catch (e) {
       if (!context.mounted) return;
-      final message = e.response?.data is Map &&
-              (e.response!.data as Map)['message'] == 'Insufficient main treasury balance'
-          ? l10n.insufficientTreasury
+      final message = e.response?.data is Map
+          ? switch ((e.response!.data as Map)['message']) {
+              'Insufficient main treasury balance' => l10n.insufficientTreasury,
+              'Insufficient employee treasury balance' => l10n.insufficientEmployeeTreasury,
+              _ => apiErrorMessage(e),
+            }
           : apiErrorMessage(e);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }

@@ -81,6 +81,7 @@ class SupplierRepository {
     required double amount,
     double amountDeducted = 0,
     String notes = '',
+    String? employeeId,
   }) async {
     await _api.post(
       '${ApiConstants.suppliers}/$supplierId/payments',
@@ -89,6 +90,7 @@ class SupplierRepository {
         'amount': amount,
         'amountDeducted': amountDeducted,
         if (notes.isNotEmpty) 'notes': notes,
+        if (employeeId != null && employeeId.isNotEmpty) 'employeeId': employeeId,
       },
     );
   }

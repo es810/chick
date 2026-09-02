@@ -437,6 +437,10 @@ class AppLocalizations {
   'statementDiscount': {'en': 'Discount', 'ar': 'خصم'},
   'noStatementEntries': {'en': 'No transactions yet', 'ar': 'لا توجد حركات بعد'},
   'paySupplierDebt': {'en': 'Pay debt', 'ar': 'دفع الدين'},
+  'paySupplierViaEmployeeHint': {
+    'en': 'Deducted from the paying employee treasury and main treasury.',
+    'ar': 'يُخصم من خزنة الموظف الدافع ثم من الخزنة الرئيسية',
+  },
   'supplierPaymentRecorded': {'en': 'Supplier payment recorded', 'ar': 'تم تسجيل دفع الدين'},
   'paymentAmount': {'en': 'Payment amount', 'ar': 'مبلغ الدفع'},
   'paymentDate': {'en': 'Payment date', 'ar': 'تاريخ الدفع'},
@@ -867,6 +871,7 @@ class AppLocalizations {
   String get statementDiscount => _get('statementDiscount');
   String get noStatementEntries => _get('noStatementEntries');
   String get paySupplierDebt => _get('paySupplierDebt');
+  String get paySupplierViaEmployeeHint => _get('paySupplierViaEmployeeHint');
   String get supplierPaymentRecorded => _get('supplierPaymentRecorded');
   String get paymentAmount => _get('paymentAmount');
   String get paymentDate => _get('paymentDate');
