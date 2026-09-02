@@ -216,7 +216,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => InvoiceDetailScreen(invoiceId: state.pathParameters['id']!, basePath: '/admin'),
           ),
           GoRoute(path: '/admin/stock', builder: (_, __) => const StockScreen()),
-          GoRoute(path: '/admin/clients', builder: (_, __) => const ClientsScreen()),
+          GoRoute(path: '/admin/clients', builder: (_, __) => const ClientsScreen(basePath: '/admin')),
           GoRoute(path: '/admin/suppliers', builder: (_, __) => const SuppliersScreen(basePath: '/admin')),
           GoRoute(path: '/admin/reports', builder: (_, __) => const ReportsScreen()),
           GoRoute(path: '/admin/employees', builder: (_, __) => const EmployeesScreen()),
@@ -230,6 +230,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const EmployeeTreasuryStatementScreen(),
       ),
 
+      GoRoute(
+        path: '/employee/clients/:id/statement',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => AccountStatementScreen(
+          entityId: state.pathParameters['id']!,
+          entityName: state.uri.queryParameters['name'] ?? '',
+          kind: AccountStatementKind.client,
+        ),
+      ),
+
       ShellRoute(
         navigatorKey: employeeShellNavigatorKey,
         builder: (context, state, child) => AppShell(
@@ -238,6 +248,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             (icon: Icons.dashboard, path: '/employee/dashboard'),
             (icon: Icons.receipt_long, path: '/employee/invoices'),
             (icon: Icons.payments, path: '/employee/collection-invoices'),
+            (icon: Icons.people, path: '/employee/clients'),
             (icon: Icons.local_shipping, path: '/employee/suppliers'),
             (icon: Icons.settings, path: '/employee/settings'),
           ],
@@ -276,6 +287,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/employee/suppliers',
             builder: (_, __) => const SuppliersScreen(basePath: '/employee'),
+          ),
+          GoRoute(
+            path: '/employee/clients',
+            builder: (_, __) => const ClientsScreen(basePath: '/employee'),
           ),
           GoRoute(path: '/employee/settings', builder: (_, __) => const SettingsScreen()),
         ],

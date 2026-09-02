@@ -48,6 +48,10 @@ class AppLocalizations {
     'en': 'Clients are the recipients of distribution.',
     'ar': 'العميل هو الذي يتم التوزيع له',
   },
+  'clientsEmployeeRoleHint': {
+    'en': 'View client accounts and statements — editing is admin only.',
+    'ar': 'عرض حسابات العملاء وكشوف الحساب — التعديل للإدارة فقط',
+  },
   'suppliers': {'en': 'Suppliers', 'ar': 'الموردين'},
   'suppliersRoleHint': {
     'en': 'Suppliers are where we receive goods from. Received goods sync to distribution stock.',
@@ -192,6 +196,14 @@ class AppLocalizations {
   'partial': {'en': 'Partial', 'ar': 'جزئي'},
 
   'searchInvoices': {'en': 'Search invoices...', 'ar': 'بحث في الفواتير...'},
+  'searchCollectionInvoices': {
+    'en': 'Search collections...',
+    'ar': 'بحث في التحصيل...',
+  },
+  'noCollectionInvoicesMatch': {
+    'en': 'No matching collections',
+    'ar': 'لا توجد فواتير تحصيل مطابقة',
+  },
   'today': {'en': 'Today', 'ar': 'اليوم'},
   'yesterday': {'en': 'Yesterday', 'ar': 'أمس'},
   'status': {'en': 'Status', 'ar': 'الحالة'},
@@ -607,6 +619,7 @@ class AppLocalizations {
   String get stock => _get('stock');
   String get clients => _get('clients');
   String get clientsRoleHint => _get('clientsRoleHint');
+  String get clientsEmployeeRoleHint => _get('clientsEmployeeRoleHint');
   String get suppliers => _get('suppliers');
   String get suppliersRoleHint => _get('suppliersRoleHint');
   String get settings => _get('settings');
@@ -707,6 +720,8 @@ class AppLocalizations {
   String get partial => _get('partial');
 
   String get searchInvoices => _get('searchInvoices');
+  String get searchCollectionInvoices => _get('searchCollectionInvoices');
+  String get noCollectionInvoicesMatch => _get('noCollectionInvoicesMatch');
   String get today => _get('today');
   String get yesterday => _get('yesterday');
   String get status => _get('status');

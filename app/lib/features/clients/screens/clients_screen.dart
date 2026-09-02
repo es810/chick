@@ -14,7 +14,9 @@ import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/role_hint_banner.dart';
 
 class ClientsScreen extends ConsumerStatefulWidget {
-  const ClientsScreen({super.key});
+  const ClientsScreen({super.key, this.basePath = '/admin'});
+
+  final String basePath;
 
   @override
   ConsumerState<ClientsScreen> createState() => _ClientsScreenState();
@@ -69,7 +71,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
   void _openClientStatement(ClientModel client) {
     context.push(
-      '/admin/clients/${client.id}/statement?name=${Uri.encodeComponent(client.name)}',
+      '${widget.basePath}/clients/${client.id}/statement?name=${Uri.encodeComponent(client.name)}',
     );
   }
 
@@ -288,7 +290,9 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
       ),
       body: Column(
         children: [
-          RoleHintBanner(text: l10n.clientsRoleHint),
+          RoleHintBanner(
+            text: isAdmin ? l10n.clientsRoleHint : l10n.clientsEmployeeRoleHint,
+          ),
           _searchBar(l10n),
           Expanded(
             child: clientsAsync.when(
