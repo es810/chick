@@ -25,8 +25,13 @@ const toEntry = (doc) => ({
   createdAt: doc.createdAt,
 });
 
-const listCollectionInvoices = async () => {
-  const invoices = await CollectionInvoice.find()
+const listCollectionInvoices = async (filters = {}) => {
+  const query = {};
+  if (filters.employeeId) {
+    query.employeeId = filters.employeeId;
+  }
+
+  const invoices = await CollectionInvoice.find(query)
     .populate('clientId', 'name phone')
     .populate('employeeId', 'name')
     .sort({ collectionDate: -1, createdAt: -1 })
@@ -35,11 +40,20 @@ const listCollectionInvoices = async () => {
   return invoices.map(toEntry);
 };
 
-const getCollectionInvoice = async (id) => {
+const assertCanAccessCollection = (invoice, user) => {
+  if (!user || user.role === 'admin') return;
+  const ownerId = invoice.employeeId?._id?.toString() ?? invoice.employeeId?.toString();
+  if (ownerId !== user._id.toString()) {
+    throw new ApiError(403, 'Not authorized to access this collection invoice');
+  }
+};
+
+const getCollectionInvoice = async (id, user) => {
   const invoice = await CollectionInvoice.findById(id)
     .populate('clientId', 'name phone')
     .populate('employeeId', 'name');
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
+  assertCanAccessCollection(invoice, user);
   return toEntry(invoice);
 };
 
@@ -59,11 +73,14 @@ const validateAmounts = ({ amountPaid, amountDeducted, balanceBefore }) => {
 const createCollectionInvoice = async (data, user) => {
   const {
     clientId,
-    employeeId,
     collectionDate,
     amountPaid,
     amountDeducted,
   } = data;
+
+  // Employees can only create collections under their own account.
+  const employeeId =
+    user.role === 'employee' ? user._id.toString() : data.employeeId;
 
   const client = await Client.findById(clientId);
   if (!client) throw new ApiError(404, 'Client not found');
@@ -113,6 +130,7 @@ const createCollectionInvoice = async (data, user) => {
 const updateCollectionInvoice = async (id, data, user) => {
   const invoice = await CollectionInvoice.findById(id);
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
+  assertCanAccessCollection(invoice, user);
 
   const oldClient = await Client.findById(invoice.clientId);
   if (oldClient) {
@@ -122,11 +140,14 @@ const updateCollectionInvoice = async (id, data, user) => {
 
   const {
     clientId,
-    employeeId,
     collectionDate,
     amountPaid,
     amountDeducted,
   } = data;
+
+  // Employees cannot reassign a collection to another employee.
+  const employeeId =
+    user.role === 'employee' ? user._id.toString() : data.employeeId;
 
   const client = await Client.findById(clientId);
   if (!client) throw new ApiError(404, 'Client not found');
@@ -173,6 +194,7 @@ const updateCollectionInvoice = async (id, data, user) => {
 const deleteCollectionInvoice = async (id, user) => {
   const invoice = await CollectionInvoice.findById(id);
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
+  assertCanAccessCollection(invoice, user);
 
   const client = await Client.findById(invoice.clientId);
   if (client) {

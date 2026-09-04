@@ -60,6 +60,14 @@ const getInvoice = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Not authorized to view this invoice');
   }
 
+  if (
+    req.user.role === 'employee' &&
+    invoice.employeeId?._id?.toString() !== req.user._id.toString() &&
+    invoice.employeeId?.toString() !== req.user._id.toString()
+  ) {
+    throw new ApiError(403, 'Not authorized to view this invoice');
+  }
+
   res.json({ success: true, data: invoice });
 });
 

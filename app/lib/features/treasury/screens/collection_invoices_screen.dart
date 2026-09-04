@@ -7,7 +7,9 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
+import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/treasury_entry_item.dart';
+import '../../../models/user_model.dart';
 import '../../../shared/widgets/collection_pdf_actions.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -197,6 +199,11 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final user = ref.watch(currentUserProvider);
+    final isAdmin = user?.role == UserRole.admin;
+
+    bool canManage(TreasuryEntryItem entry) =>
+        isAdmin || (user?.role == UserRole.employee && entry.employeeId == user?.id);
 
     return Scaffold(
       appBar: AppBar(
@@ -326,17 +333,19 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
                                                   value: 'share',
                                                   child: Text(l10n.shareInvoice),
                                                 ),
-                                                PopupMenuItem(
-                                                  value: 'edit',
-                                                  child: Text(l10n.editEntry),
-                                                ),
-                                                PopupMenuItem(
-                                                  value: 'delete',
-                                                  child: Text(
-                                                    l10n.delete,
-                                                    style: const TextStyle(color: AppColors.error),
+                                                if (canManage(entry)) ...[
+                                                  PopupMenuItem(
+                                                    value: 'edit',
+                                                    child: Text(l10n.editEntry),
                                                   ),
-                                                ),
+                                                  PopupMenuItem(
+                                                    value: 'delete',
+                                                    child: Text(
+                                                      l10n.delete,
+                                                      style: const TextStyle(color: AppColors.error),
+                                                    ),
+                                                  ),
+                                                ],
                                               ],
                                             ),
                                           ],

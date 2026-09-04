@@ -10,12 +10,16 @@ const { listEmployeesForPicker } = require('../services/treasuryEntriesService')
 const { getTreasurySummary } = require('../services/treasuryService');
 
 const listCollectionInvoicesHandler = asyncHandler(async (req, res) => {
-  const data = await listCollectionInvoices();
+  const filters = {};
+  if (req.user.role === 'employee') {
+    filters.employeeId = req.user._id;
+  }
+  const data = await listCollectionInvoices(filters);
   res.json({ success: true, data });
 });
 
 const getCollectionInvoiceHandler = asyncHandler(async (req, res) => {
-  const data = await getCollectionInvoice(req.params.id);
+  const data = await getCollectionInvoice(req.params.id, req.user);
   res.json({ success: true, data });
 });
 

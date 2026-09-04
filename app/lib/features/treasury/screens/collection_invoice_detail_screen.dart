@@ -7,7 +7,9 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
+import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/treasury_entry_item.dart';
+import '../../../models/user_model.dart';
 import '../../../shared/widgets/collection_pdf_actions.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -135,12 +137,17 @@ class _CollectionInvoiceDetailScreenState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final entry = _entry;
+    final user = ref.watch(currentUserProvider);
+    final canManage = entry != null &&
+        !_busy &&
+        (user?.role == UserRole.admin ||
+            (user?.role == UserRole.employee && entry.employeeId == user?.id));
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.collectionInvoice),
         actions: [
-          if (entry != null && !_busy) ...[
+          if (canManage) ...[
             IconButton(
               icon: const Icon(Icons.delete_outline),
               tooltip: l10n.delete,
@@ -220,26 +227,28 @@ class _CollectionInvoiceDetailScreenState
                           entry: entry,
                           clientPhone: entry.clientPhone,
                         ),
-                        const SizedBox(height: 16),
-                        OutlinedButton.icon(
-                          onPressed: _busy ? null : _edit,
-                          icon: const Icon(Icons.edit_outlined),
-                          label: Text(l10n.editEntry),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                        if (canManage) ...[
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: _busy ? null : _edit,
+                            icon: const Icon(Icons.edit_outlined),
+                            label: Text(l10n.editEntry),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: _busy ? null : _confirmDelete,
-                          icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                          label: Text(l10n.delete),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.error,
-                            side: const BorderSide(color: AppColors.error),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: _busy ? null : _confirmDelete,
+                            icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                            label: Text(l10n.delete),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                              side: const BorderSide(color: AppColors.error),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
     );
