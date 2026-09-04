@@ -15,7 +15,11 @@ const errorHandler = (err, req, res, next) => {
   if (err.code === 11000) {
     statusCode = 400;
     const field = Object.keys(err.keyPattern || {})[0];
-    message = `${field} already exists`;
+    if (field === 'employeeLedgerId') {
+      message = 'تعارض أثناء تسجيل دفع المورد. حدّث كشف الحساب وحاول مرة أخرى.';
+    } else {
+      message = `${field} already exists`;
+    }
   }
 
   if (err.name === 'CastError') {

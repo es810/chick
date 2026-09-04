@@ -20,12 +20,10 @@ const supplierPaymentSchema = new mongoose.Schema(
     employeeLedgerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'EmployeeLedger',
-      default: null,
     },
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      default: null,
     },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
@@ -33,6 +31,12 @@ const supplierPaymentSchema = new mongoose.Schema(
 );
 
 supplierPaymentSchema.index({ supplierId: 1, paymentDate: -1 });
-supplierPaymentSchema.index({ employeeLedgerId: 1 }, { unique: true, sparse: true });
-
+// Only enforce uniqueness when a real ledger link exists (ignore missing/null).
+supplierPaymentSchema.index(
+  { employeeLedgerId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { employeeLedgerId: { $exists: true, $type: 'objectId' } },
+  }
+);
 module.exports = mongoose.model('SupplierPayment', supplierPaymentSchema);

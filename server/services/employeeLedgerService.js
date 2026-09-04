@@ -77,25 +77,42 @@ const applySupplierPaymentFromLedger = async (session, {
     .filter(Boolean)
     .join(' — ');
 
-  const [payment] = await SupplierPayment.create(
-    [
-      {
-        supplierId: supplier._id,
-        paymentDate,
-        amount,
-        amountDeducted: deducted,
-        balanceBefore,
-        balanceAfter,
-        notes,
-        employeeLedgerId: ledgerEntryId,
-        employeeId: employee?._id ?? null,
-        createdBy: user._id,
-      },
-    ],
-    { session }
+  // Idempotent: a concurrent statement sync may have already linked this ledger row.
+  const existingPayment = await SupplierPayment.findOne({ employeeLedgerId: ledgerEntryId }).session(
+    session
   );
+  if (existingPayment) {
+    return existingPayment;
+  }
 
-  return payment;
+  try {
+    const [payment] = await SupplierPayment.create(
+      [
+        {
+          supplierId: supplier._id,
+          paymentDate,
+          amount,
+          amountDeducted: deducted,
+          balanceBefore,
+          balanceAfter,
+          notes,
+          employeeLedgerId: ledgerEntryId,
+          employeeId: employee?._id ?? undefined,
+          createdBy: user._id,
+        },
+      ],
+      { session }
+    );
+    return payment;
+  } catch (error) {
+    if (error?.code === 11000) {
+      const again = await SupplierPayment.findOne({ employeeLedgerId: ledgerEntryId }).session(
+        session
+      );
+      if (again) return again;
+    }
+    throw error;
+  }
 };
 
 const reverseSupplierPaymentFromLedger = async (session, ledgerEntryId) => {

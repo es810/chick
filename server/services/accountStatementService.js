@@ -42,19 +42,27 @@ const syncPaymentsFromEmployeeLedger = async (supplierId) => {
       .filter(Boolean)
       .join(' — ');
 
-    await SupplierPayment.create({
-      supplierId,
-      paymentDate: debt.createdAt || new Date(),
-      amount: debt.amount,
-      balanceBefore,
-      balanceAfter,
-      notes,
-      employeeLedgerId: debt._id,
-      employeeId: debt.employeeId?._id ?? debt.employeeId ?? null,
-      createdBy: debt.createdBy,
-    });
-  }
-};
+    try {
+      await SupplierPayment.create({
+        supplierId,
+        paymentDate: debt.createdAt || new Date(),
+        amount: debt.amount,
+        balanceBefore,
+        balanceAfter,
+        notes,
+        employeeLedgerId: debt._id,
+        employeeId: debt.employeeId?._id ?? debt.employeeId ?? undefined,
+        createdBy: debt.createdBy,
+      });
+    } catch (error) {
+      // Concurrent pay/sync may create the same link; roll balance back and continue.
+      if (error?.code === 11000) {
+        supplier.balance = balanceBefore;
+        await supplier.save();
+        continue;
+      }
+      throw error;
+    }
 
 const getClientStatement = async (clientId) => {
   const client = await Client.findById(clientId);

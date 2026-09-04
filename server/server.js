@@ -7,6 +7,7 @@ const logger = require('./utils/logger');
 const { bootstrapInitialAdmin, ensureAdminFromEnv } = require('./utils/bootstrapAdmin');
 const { resetDatabase } = require('./utils/resetDatabase');
 const { migrateSupplierStockIndexes } = require('./utils/migrateSupplierStockIndexes');
+const { migrateSupplierPaymentIndexes } = require('./utils/migrateSupplierPaymentIndexes');
 
 const MAX_DB_ATTEMPTS = nodeEnv === 'production' ? 12 : 6;
 const DB_RETRY_MS = 5000;
@@ -33,6 +34,7 @@ async function startMongoWithRetry() {
     try {
       await connectDB();
       await migrateSupplierStockIndexes();
+      await migrateSupplierPaymentIndexes();
       await bootstrapIfEmpty();
       return true;
     } catch (error) {
@@ -57,6 +59,7 @@ function scheduleMongoReconnect() {
     try {
       await connectDB();
       await migrateSupplierStockIndexes();
+      await migrateSupplierPaymentIndexes();
       await bootstrapIfEmpty();
       logger.info('MongoDB reconnected');
       clearInterval(timer);
