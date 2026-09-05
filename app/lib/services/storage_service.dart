@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,16 +12,43 @@ class StorageService {
   final SharedPreferences _prefs;
   final FlutterSecureStorage _secure;
 
-  Future<void> saveToken(String token) => _secure.write(key: AppConstants.tokenKey, value: token);
-  Future<String?> getToken() => _secure.read(key: AppConstants.tokenKey);
-  Future<void> clearToken() => _secure.delete(key: AppConstants.tokenKey);
+  static const _secureTimeout = Duration(seconds: 4);
+
+  Future<void> saveToken(String token) async {
+    try {
+      await _secure.write(key: AppConstants.tokenKey, value: token).timeout(_secureTimeout);
+    } catch (e) {
+      debugPrint('saveToken failed: $e');
+    }
+  }
+
+  Future<String?> getToken() async {
+    try {
+      return await _secure.read(key: AppConstants.tokenKey).timeout(_secureTimeout);
+    } catch (e) {
+      debugPrint('getToken failed: $e');
+      return null;
+    }
+  }
+
+  Future<void> clearToken() async {
+    try {
+      await _secure.delete(key: AppConstants.tokenKey).timeout(_secureTimeout);
+    } catch (e) {
+      debugPrint('clearToken failed: $e');
+    }
+  }
 
   Future<void> saveUser(UserModel user) =>
       _prefs.setString(AppConstants.userKey, jsonEncode(user.toJson()));
   UserModel? getUser() {
     final data = _prefs.getString(AppConstants.userKey);
     if (data == null) return null;
-    return UserModel.fromJson(jsonDecode(data) as Map<String, dynamic>);
+    try {
+      return UserModel.fromJson(jsonDecode(data) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
   }
   Future<void> clearUser() => _prefs.remove(AppConstants.userKey);
 

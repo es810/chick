@@ -1,14 +1,42 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
+import '../providers/auth_provider.dart';
 
-class SplashScreen extends ConsumerWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  Timer? _failsafe;
+
+  @override
+  void initState() {
+    super.initState();
+    // Hard failsafe: never stay on splash longer than 8 seconds.
+    _failsafe = Timer(const Duration(seconds: 8), () {
+      final auth = ref.read(authProvider);
+      if (auth.isLoading) {
+        ref.read(authProvider.notifier).forceFinishLoading();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _failsafe?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
 
     return Scaffold(

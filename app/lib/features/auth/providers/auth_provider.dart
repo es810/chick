@@ -35,31 +35,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final Ref _ref;
 
   Future<void> _init() async {
-    final cached = _repo.getCachedUser();
-    final hasToken = await _repo.hasToken();
-    if (cached != null && hasToken) {
-      state = AuthState(user: cached, isLoading: false);
-      await _refreshUserInBackground();
-      if (state.isAuthenticated) return;
-    }
-
-    state = state.copyWith(isLoading: true);
     try {
-      final user = await _repo.getCurrentUser();
-      if (user != null) {
-        state = AuthState(user: user, isLoading: false);
+      final cached = _repo.getCachedUser();
+      final hasToken = await _repo.hasToken().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => false,
+      );
+
+      if (cached != null && hasToken) {
+        // Leave splash immediately with cached session; refresh in background.
+        state = AuthState(user: cached, isLoading: false);
+        // ignore: unawaited_futures
+        _refreshUserInBackground();
         return;
       }
+
+      if (hasToken) {
+        state = state.copyWith(isLoading: true);
+        try {
+          final user = await _repo.getCurrentUser().timeout(const Duration(seconds: 15));
+          if (user != null) {
+            state = AuthState(user: user, isLoading: false);
+            return;
+          }
+        } catch (_) {
+          // fall through to login
+        }
+      }
+
+      if (kDebugMode) {
+        final ok = await _debugAutoLogin();
+        if (ok) return;
+      }
+
+      state = const AuthState(isLoading: false);
     } catch (_) {
-      // fall through to debug auto-login
+      // Never leave the user stuck on splash.
+      state = const AuthState(isLoading: false);
     }
-
-    if (kDebugMode) {
-      final ok = await _debugAutoLogin();
-      if (ok) return;
-    }
-
-    state = const AuthState(isLoading: false);
   }
 
   /// Debug-only: sign in as admin so testers skip the login screen after DB resets.
@@ -117,6 +130,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> refreshUser() async {
     final user = await _repo.getCurrentUser();
     state = AuthState(user: user, isLoading: false);
+  }
+
+  /// Escape hatch when splash/init hangs (secure storage or network).
+  void forceFinishLoading() {
+    if (!state.isLoading) return;
+    final cached = _repo.getCachedUser();
+    state = AuthState(user: cached, isLoading: false);
   }
 
   Future<void> logoutLocal() async {

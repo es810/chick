@@ -25,7 +25,12 @@ void main() async {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         storageServiceProvider.overrideWithValue(
-          StorageService(prefs, const FlutterSecureStorage()),
+          StorageService(
+            prefs,
+            const FlutterSecureStorage(
+              aOptions: AndroidOptions(encryptedSharedPreferences: true),
+            ),
+          ),
         ),
       ],
       child: const ChickenFarmApp(),
