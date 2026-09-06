@@ -95,7 +95,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
             IconButton(
               icon: const Icon(Icons.add),
               tooltip: context.l10n.distributionReceipt,
-              onPressed: () => context.go('${widget.basePath}/invoices/create'),
+              onPressed: () => context.push('${widget.basePath}/invoices/create'),
             ),
         ],
       ),
@@ -159,7 +159,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
                           onTap: () =>
-                              context.go('${widget.basePath}/invoices/${invoice.id}'),
+                              context.push('${widget.basePath}/invoices/${invoice.id}'),
                           leading: CircleAvatar(
                             backgroundColor:
                                 AppColors.primaryGreen.withValues(alpha: 0.15),

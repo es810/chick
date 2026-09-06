@@ -163,7 +163,7 @@ class EmployeeDashboardScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           FloatingActionButton.extended(
             heroTag: 'distribution',
-            onPressed: () => context.go('/employee/invoices/create'),
+            onPressed: () => context.push('/employee/invoices/create'),
             icon: const Icon(Icons.add),
             label: Text(l10n.distributionReceipt),
           ),
@@ -222,7 +222,7 @@ class EmployeeDashboardScreen extends ConsumerWidget {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
-                        onTap: () => context.go('/employee/invoices/${invoice.id}'),
+                        onTap: () => context.push('/employee/invoices/${invoice.id}'),
                         leading: CircleAvatar(
                           backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.15),
                           child: const Icon(Icons.receipt, color: AppColors.primaryGreen),

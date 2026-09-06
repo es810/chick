@@ -68,7 +68,7 @@ class ClientDashboardScreen extends ConsumerWidget {
                       ...invoices.map((invoice) => Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
-                              onTap: () => context.go('/client/invoices/${invoice.id}'),
+                              onTap: () => context.push('/client/invoices/${invoice.id}'),
                               title: Text(invoice.invoiceNumber),
                               subtitle: Text(
                                 invoice.createdAt != null

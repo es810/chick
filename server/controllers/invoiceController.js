@@ -56,16 +56,20 @@ const getInvoice = asyncHandler(async (req, res) => {
 
   if (!invoice) throw new ApiError(404, 'Invoice not found');
 
-  if (req.user.role === 'client' && req.user.clientProfile?.toString() !== invoice.clientId._id.toString()) {
-    throw new ApiError(403, 'Not authorized to view this invoice');
+  const clientId = invoice.clientId?._id?.toString() || invoice.clientId?.toString();
+  const employeeId = invoice.employeeId?._id?.toString() || invoice.employeeId?.toString();
+
+  if (req.user.role === 'client') {
+    const profileId = req.user.clientProfile?.toString();
+    if (!profileId || profileId !== clientId) {
+      throw new ApiError(403, 'Not authorized to view this invoice');
+    }
   }
 
-  if (
-    req.user.role === 'employee' &&
-    invoice.employeeId?._id?.toString() !== req.user._id.toString() &&
-    invoice.employeeId?.toString() !== req.user._id.toString()
-  ) {
-    throw new ApiError(403, 'Not authorized to view this invoice');
+  if (req.user.role === 'employee') {
+    if (!employeeId || employeeId !== req.user._id.toString()) {
+      throw new ApiError(403, 'Not authorized to view this invoice');
+    }
   }
 
   res.json({ success: true, data: invoice });

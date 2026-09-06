@@ -17,11 +17,11 @@ class InvoiceItemModel extends Equatable {
 
   factory InvoiceItemModel.fromJson(Map<String, dynamic> json) {
     return InvoiceItemModel(
-      chickenType: json['chickenType'] as String,
-      quantity: (json['quantity'] as num).toInt(),
-      weight: (json['weight'] as num).toDouble(),
-      unitPrice: (json['unitPrice'] as num).toDouble(),
-      total: (json['total'] as num).toDouble(),
+      chickenType: json['chickenType']?.toString() ?? '',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+      weight: (json['weight'] as num?)?.toDouble() ?? 0,
+      unitPrice: (json['unitPrice'] as num?)?.toDouble() ?? 0,
+      total: (json['total'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -81,27 +81,44 @@ class InvoiceModel extends Equatable {
     final client = json['clientId'];
     final employee = json['employeeId'];
 
+    String refId(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      if (value is Map) {
+        return value['_id']?.toString() ?? value['id']?.toString() ?? '';
+      }
+      return value.toString();
+    }
+
+    final itemsRaw = json['items'];
+    final items = itemsRaw is List
+        ? itemsRaw
+            .whereType<Map>()
+            .map((e) => InvoiceItemModel.fromJson(Map<String, dynamic>.from(e)))
+            .toList()
+        : <InvoiceItemModel>[];
+
     return InvoiceModel(
-      id: json['_id'] as String? ?? json['id'] as String,
-      invoiceNumber: json['invoiceNumber'] as String,
-      clientId: client is Map ? client['_id'] as String : client as String,
-      employeeId: employee is Map ? employee['_id'] as String : employee as String,
-      items: (json['items'] as List)
-          .map((e) => InvoiceItemModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      id: refId(json['_id']).isNotEmpty ? refId(json['_id']) : refId(json['id']),
+      invoiceNumber: json['invoiceNumber']?.toString() ?? '',
+      clientId: refId(client),
+      employeeId: refId(employee),
+      items: items,
       itemCount: (json['itemCount'] as num?)?.toInt() ?? 1,
       grossWeight: (json['grossWeight'] as num?)?.toDouble(),
       tareWeight: (json['tareWeight'] as num?)?.toDouble(),
-      totalWeight: (json['totalWeight'] as num).toDouble(),
-      totalPrice: (json['totalPrice'] as num).toDouble(),
+      totalWeight: (json['totalWeight'] as num?)?.toDouble() ?? 0,
+      totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0,
       balanceBefore: (json['balanceBefore'] as num?)?.toDouble(),
       balanceAfter: (json['balanceAfter'] as num?)?.toDouble(),
-      paymentStatus: json['paymentStatus'] as String,
+      paymentStatus: json['paymentStatus']?.toString() ?? 'pending',
       notes: json['notes'] as String? ?? '',
-      clientName: client is Map ? client['name'] as String? : null,
-      clientPhone: client is Map ? client['phone'] as String? : null,
-      employeeName: employee is Map ? employee['name'] as String? : null,
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+      clientName: client is Map ? client['name']?.toString() : null,
+      clientPhone: client is Map ? client['phone']?.toString() : null,
+      employeeName: employee is Map ? employee['name']?.toString() : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
     );
   }
 
