@@ -356,11 +356,9 @@ class _StatementBody extends StatelessWidget {
 
   List<Widget> _buildEntries(BuildContext context, List<AccountStatementEntry> entries) {
     final l10n = context.l10n;
-    var running = 0.0;
 
     return entries.map((entry) {
-      running += entry.debit - entry.credit;
-      final balance = entry.balanceAfter ?? running;
+      final balance = entry.balanceAfter ?? 0;
       final isPayment = entry.type == 'payment';
       final canOpen = _isNavigable(entry);
 

@@ -63,6 +63,8 @@ const syncPaymentsFromEmployeeLedger = async (supplierId) => {
       }
       throw error;
     }
+  }
+};
 
 const getClientStatement = async (clientId) => {
   const client = await Client.findById(clientId);
@@ -112,6 +114,7 @@ const getClientStatement = async (clientId) => {
     });
   }
 
+  // Compute running balance oldest → newest, then show newest first.
   entries.sort((a, b) => new Date(a.date) - new Date(b.date));
 
   const movementNet = entries.reduce(
@@ -144,6 +147,8 @@ const getClientStatement = async (clientId) => {
     running += (entry.debit || 0) - (entry.credit || 0);
     entry.balanceAfter = Math.max(0, running);
   }
+
+  entries.reverse();
 
   return {
     entity: {
@@ -248,10 +253,10 @@ const getSupplierStatement = async (supplierId) => {
   let running = 0;
   for (const entry of entries) {
     running += entry.debit - entry.credit;
-    if (entry.balanceAfter == null) {
-      entry.balanceAfter = running;
-    }
+    entry.balanceAfter = running;
   }
+
+  entries.reverse();
 
   return {
     entity: {

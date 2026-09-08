@@ -244,6 +244,8 @@ const getEmployeeTreasuryStatement = async (employeeId) => {
     entry.balanceAfter = running;
   }
 
+  entries.reverse();
+
   return {
     entity: {
       id: summary.employee.id,

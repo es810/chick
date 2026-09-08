@@ -116,11 +116,9 @@ class EmployeeTreasuryStatementScreen extends ConsumerWidget {
 
   List<Widget> _buildEntries(BuildContext context, List<AccountStatementEntry> entries) {
     final l10n = context.l10n;
-    var running = 0.0;
 
     return entries.map((entry) {
-      running += entry.credit - entry.debit;
-      final balance = entry.balanceAfter ?? running;
+      final balance = entry.balanceAfter ?? 0;
 
       return Card(
         margin: const EdgeInsets.only(bottom: 8),
