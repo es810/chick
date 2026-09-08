@@ -54,6 +54,30 @@ class AuthRepository {
     }
   }
 
+  Future<UserModel> updateProfile({
+    String? name,
+    String? phone,
+    String? currentPassword,
+    String? newPassword,
+  }) async {
+    final response = await _api.patch(
+      ApiConstants.me,
+      data: {
+        if (name != null) 'name': name,
+        if (phone != null) 'phone': phone,
+        if (currentPassword != null) 'currentPassword': currentPassword,
+        if (newPassword != null) 'newPassword': newPassword,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    if (data['success'] != true) {
+      throw Exception(data['message'] ?? 'Update failed');
+    }
+    final user = UserModel.fromJson(data['data'] as Map<String, dynamic>);
+    await _storage.saveUser(user);
+    return user;
+  }
+
   Future<void> clearSession() async {
     await _storage.clearAll();
   }

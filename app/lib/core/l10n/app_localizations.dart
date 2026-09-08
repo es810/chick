@@ -58,6 +58,26 @@ class AppLocalizations {
     'ar': 'المورد هو من نأخذ منه البضاعة — تُضاف تلقائياً لمخزون التوزيع',
   },
   'settings': {'en': 'Settings', 'ar': 'الإعدادات'},
+  'editName': {'en': 'Edit name', 'ar': 'تغيير الاسم'},
+  'changePassword': {'en': 'Change password', 'ar': 'تغيير كلمة المرور'},
+  'changePasswordSubtitle': {
+    'en': 'Update your account password',
+    'ar': 'تحديث كلمة مرور الحساب',
+  },
+  'currentPassword': {'en': 'Current password', 'ar': 'كلمة المرور الحالية'},
+  'newPassword': {'en': 'New password', 'ar': 'كلمة المرور الجديدة'},
+  'confirmPassword': {'en': 'Confirm password', 'ar': 'تأكيد كلمة المرور'},
+  'currentPasswordRequired': {
+    'en': 'Enter current password',
+    'ar': 'أدخل كلمة المرور الحالية',
+  },
+  'nameRequired': {'en': 'Name is required', 'ar': 'الاسم مطلوب'},
+  'passwordsDoNotMatch': {
+    'en': 'Passwords do not match',
+    'ar': 'كلمتا المرور غير متطابقتين',
+  },
+  'profileUpdated': {'en': 'Profile updated', 'ar': 'تم تحديث الحساب'},
+  'passwordUpdated': {'en': 'Password updated', 'ar': 'تم تحديث كلمة المرور'},
   'appVersion': {'en': 'App version', 'ar': 'إصدار التطبيق'},
   'reports': {'en': 'Reports', 'ar': 'التقارير'},
   'employees': {'en': 'Employees', 'ar': 'الموظفون'},
@@ -627,6 +647,17 @@ class AppLocalizations {
   String get suppliers => _get('suppliers');
   String get suppliersRoleHint => _get('suppliersRoleHint');
   String get settings => _get('settings');
+  String get editName => _get('editName');
+  String get changePassword => _get('changePassword');
+  String get changePasswordSubtitle => _get('changePasswordSubtitle');
+  String get currentPassword => _get('currentPassword');
+  String get newPassword => _get('newPassword');
+  String get confirmPassword => _get('confirmPassword');
+  String get currentPasswordRequired => _get('currentPasswordRequired');
+  String get nameRequired => _get('nameRequired');
+  String get passwordsDoNotMatch => _get('passwordsDoNotMatch');
+  String get profileUpdated => _get('profileUpdated');
+  String get passwordUpdated => _get('passwordUpdated');
   String get appVersion => _get('appVersion');
   String get reports => _get('reports');
   String get employees => _get('employees');
