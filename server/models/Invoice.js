@@ -31,6 +31,7 @@ const invoiceSchema = new mongoose.Schema(
       default: 'pending',
     },
     notes: { type: String, default: '' },
+    clientMutationId: { type: String, default: null, sparse: true },
   },
   { timestamps: true }
 );
@@ -38,5 +39,9 @@ const invoiceSchema = new mongoose.Schema(
 invoiceSchema.index({ createdAt: -1 });
 invoiceSchema.index({ clientId: 1 });
 invoiceSchema.index({ employeeId: 1 });
+invoiceSchema.index(
+  { clientMutationId: 1 },
+  { unique: true, partialFilterExpression: { clientMutationId: { $type: 'string' } } }
+);
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

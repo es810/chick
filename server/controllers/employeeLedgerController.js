@@ -34,8 +34,17 @@ const getLedger = asyncHandler(async (req, res) => {
 });
 
 const addExpense = asyncHandler(async (req, res) => {
-  const { amount, description } = req.body;
-  const entry = await addLedgerEntry(req.params.id, 'expense', amount, description, req.user);
+  const { amount, description, clientMutationId } = req.body;
+  const entry = await addLedgerEntry(
+    req.params.id,
+    'expense',
+    amount,
+    description,
+    req.user,
+    null,
+    0,
+    clientMutationId
+  );
   res.status(201).json({ success: true, data: entry });
 });
 

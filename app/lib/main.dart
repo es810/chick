@@ -12,6 +12,7 @@ import 'features/auth/providers/auth_provider.dart';
 import 'services/api_client.dart';
 import 'services/cache_service.dart';
 import 'services/storage_service.dart';
+import 'services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,13 +46,30 @@ class ChickenFarmApp extends ConsumerStatefulWidget {
   ConsumerState<ChickenFarmApp> createState() => _ChickenFarmAppState();
 }
 
-class _ChickenFarmAppState extends ConsumerState<ChickenFarmApp> {
+class _ChickenFarmAppState extends ConsumerState<ChickenFarmApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     ApiClient.onSessionExpired = () async {
       await ref.read(authProvider.notifier).logoutLocal();
     };
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(syncServiceProvider).startAutoSync();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(syncServiceProvider).syncPending();
+    }
   }
 
   @override

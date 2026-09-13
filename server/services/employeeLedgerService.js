@@ -139,11 +139,19 @@ const addLedgerEntry = async (
   description,
   user,
   supplierId = null,
-  amountDeducted = 0
+  amountDeducted = 0,
+  clientMutationId = null
 ) => {
   const deducted = Number(amountDeducted) || 0;
   if (deducted < 0) {
     throw new ApiError(400, 'Deducted amount cannot be negative');
+  }
+
+  if (clientMutationId) {
+    const existing = await EmployeeLedger.findOne({ clientMutationId })
+      .populate('createdBy', 'name')
+      .populate('supplierId', 'name');
+    if (existing) return existing;
   }
 
   const session = await mongoose.startSession();
@@ -182,6 +190,7 @@ const addLedgerEntry = async (
           description,
           supplierId: supplier?._id ?? null,
           createdBy: user._id,
+          ...(clientMutationId ? { clientMutationId } : {}),
         },
       ],
       { session }

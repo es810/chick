@@ -45,11 +45,11 @@ final treasuryRepositoryProvider = Provider<TreasuryRepository>((ref) {
 });
 
 final collectionRepositoryProvider = Provider<CollectionRepository>((ref) {
-  return CollectionRepository(ref.watch(apiClientProvider));
+  return CollectionRepository(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider));
 });
 
 final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
-  return EmployeeRepository(ref.watch(apiClientProvider));
+  return EmployeeRepository(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider));
 });
 
 final damagedStockRepositoryProvider = Provider<DamagedStockRepository>((ref) {

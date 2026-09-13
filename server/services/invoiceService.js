@@ -52,7 +52,18 @@ const createInvoice = async (data, employee) => {
       grossWeight: inputGross,
       tareWeight: inputTare = 0,
       itemCount: inputItemCount,
+      clientMutationId,
     } = data;
+
+    if (clientMutationId) {
+      const existing = await Invoice.findOne({ clientMutationId }).session(session);
+      if (existing) {
+        await session.commitTransaction();
+        return Invoice.findById(existing._id)
+          .populate('clientId', 'name phone address')
+          .populate('employeeId', 'name email');
+      }
+    }
 
     const client = await Client.findById(clientId).session(session);
     if (!client) throw new ApiError(404, 'Client not found');
@@ -109,6 +120,7 @@ const createInvoice = async (data, employee) => {
           balanceAfter: balanceBefore,
           paymentStatus,
           notes,
+          ...(clientMutationId ? { clientMutationId } : {}),
         },
       ],
       { session }

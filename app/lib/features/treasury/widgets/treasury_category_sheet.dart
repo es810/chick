@@ -128,7 +128,7 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
             backgroundColor: AppColors.success,
           ),
         );
-        if (existing == null) {
+        if (existing == null && !saved.id.startsWith('pending')) {
           await showCollectionShareDialog(context: context, entry: saved);
         }
       }

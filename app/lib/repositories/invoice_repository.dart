@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../core/constants/api_constants.dart';
 import '../models/invoice_model.dart';
 import '../services/api_client.dart';
@@ -43,6 +44,11 @@ class InvoiceRepository {
         page++;
       } while (page <= totalPages);
 
+      await _cache.cacheData('invoices', {
+        'items': all.map((e) => e.toJson()).toList(),
+        'total': total,
+      });
+
       return (
         invoices: all,
         pagination: PaginationMeta(total: total, page: 1, pages: 1),
@@ -67,17 +73,44 @@ class InvoiceRepository {
     return InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
-  Future<InvoiceModel> createInvoice(Map<String, dynamic> payload) async {
+  /// Creates an invoice. When offline (and [allowQueue] is true), queues locally
+  /// and throws [OfflineQueuedException] so the UI can show a pending success.
+  Future<InvoiceModel> createInvoice(
+    Map<String, dynamic> payload, {
+    bool allowQueue = true,
+  }) async {
+    final body = Map<String, dynamic>.from(payload);
+    body['clientMutationId'] ??= _cache.newMutationId();
+
     try {
-      final response = await _api.post(ApiConstants.invoices, data: payload);
+      final response = await _api.post(ApiConstants.invoices, data: body);
       final data = response.data as Map<String, dynamic>;
       return InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
     } catch (e) {
-      if (!await _cache.isOnline) {
-        await _cache.addPendingSync('create_invoice', payload);
+      if (allowQueue && await _shouldQueue(e)) {
+        await _cache.addPendingSync(
+          'create_invoice',
+          body,
+          clientMutationId: body['clientMutationId'] as String?,
+        );
+        throw OfflineQueuedException(
+          'create_invoice',
+          clientMutationId: body['clientMutationId'] as String?,
+        );
       }
       rethrow;
     }
+  }
+
+  Future<bool> _shouldQueue(Object e) async {
+    if (!await _cache.isOnline) return true;
+    if (e is DioException) {
+      return e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError;
+    }
+    return false;
   }
 
   Future<InvoiceModel> updateInvoice(String id, Map<String, dynamic> updates) async {

@@ -146,7 +146,9 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
           backgroundColor: AppColors.success,
         ),
       );
-      await showCollectionShareDialog(context: context, entry: saved);
+      if (!saved.id.startsWith('pending')) {
+        await showCollectionShareDialog(context: context, entry: saved);
+      }
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../services/cache_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../widgets/employee_ledger_section.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
@@ -87,6 +88,16 @@ class EmployeeDashboardScreen extends ConsumerWidget {
                             .read(employeeRepositoryProvider)
                             .addMyExpense(amount, description);
                         if (ctx.mounted) Navigator.pop(ctx, true);
+                      } on OfflineQueuedException {
+                        if (ctx.mounted) Navigator.pop(ctx, true);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.savedOfflineWillSync),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                        }
                       } catch (e) {
                         setDialogState(() => submitting = false);
                         if (context.mounted) {

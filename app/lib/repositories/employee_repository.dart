@@ -1,13 +1,16 @@
+import 'package:dio/dio.dart';
 import '../core/constants/api_constants.dart';
 import '../models/employee_ledger_model.dart';
 import '../models/employee_treasury_model.dart';
 import '../models/account_statement_model.dart';
 import '../services/api_client.dart';
+import '../services/cache_service.dart';
 
 class EmployeeRepository {
-  EmployeeRepository(this._api);
+  EmployeeRepository(this._api, this._cache);
 
   final ApiClient _api;
+  final CacheService _cache;
 
   Future<EmployeeLedgerSummary> getLedger(String employeeId) async {
     final response = await _api.get('${ApiConstants.employees}/$employeeId/ledger');
@@ -15,13 +18,37 @@ class EmployeeRepository {
     return EmployeeLedgerSummary.fromJson(data['data'] as Map<String, dynamic>);
   }
 
-  Future<EmployeeLedgerEntry> addExpense(String employeeId, double amount, String description) async {
-    final response = await _api.post(
-      '${ApiConstants.employees}/$employeeId/ledger/expense',
-      data: {'amount': amount, 'description': description},
-    );
-    final data = response.data as Map<String, dynamic>;
-    return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
+  Future<EmployeeLedgerEntry> addExpense(
+    String employeeId,
+    double amount,
+    String description, {
+    String? clientMutationId,
+    bool allowQueue = true,
+  }) async {
+    final mutationId = clientMutationId ?? _cache.newMutationId();
+    final body = {
+      'amount': amount,
+      'description': description,
+      'clientMutationId': mutationId,
+    };
+    try {
+      final response = await _api.post(
+        '${ApiConstants.employees}/$employeeId/ledger/expense',
+        data: body,
+      );
+      final data = response.data as Map<String, dynamic>;
+      return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
+    } catch (e) {
+      if (allowQueue && await _shouldQueue(e)) {
+        await _cache.addPendingSync(
+          'add_expense',
+          {...body, 'employeeId': employeeId},
+          clientMutationId: mutationId,
+        );
+        throw OfflineQueuedException('add_expense', clientMutationId: mutationId);
+      }
+      rethrow;
+    }
   }
 
   Future<EmployeeLedgerEntry> addDebt(
@@ -76,13 +103,47 @@ class EmployeeRepository {
     );
   }
 
-  Future<EmployeeLedgerEntry> addMyExpense(double amount, String description) async {
-    final response = await _api.post(
-      '${ApiConstants.myAccount}/ledger/expense',
-      data: {'amount': amount, 'description': description},
-    );
-    final data = response.data as Map<String, dynamic>;
-    return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
+  Future<EmployeeLedgerEntry> addMyExpense(
+    double amount,
+    String description, {
+    String? clientMutationId,
+    bool allowQueue = true,
+  }) async {
+    final mutationId = clientMutationId ?? _cache.newMutationId();
+    final body = {
+      'amount': amount,
+      'description': description,
+      'clientMutationId': mutationId,
+    };
+    try {
+      final response = await _api.post(
+        '${ApiConstants.myAccount}/ledger/expense',
+        data: body,
+      );
+      final data = response.data as Map<String, dynamic>;
+      return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
+    } catch (e) {
+      if (allowQueue && await _shouldQueue(e)) {
+        await _cache.addPendingSync(
+          'add_expense',
+          body,
+          clientMutationId: mutationId,
+        );
+        throw OfflineQueuedException('add_expense', clientMutationId: mutationId);
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> _shouldQueue(Object e) async {
+    if (!await _cache.isOnline) return true;
+    if (e is DioException) {
+      return e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError;
+    }
+    return false;
   }
 
   Future<EmployeeLedgerEntry> addMyDebt(

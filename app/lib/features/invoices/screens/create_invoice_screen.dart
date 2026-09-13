@@ -11,6 +11,7 @@ import '../../../models/client_model.dart';
 import '../../../models/stock_model.dart';
 import '../../../shared/widgets/client_picker_field.dart';
 import '../../../shared/widgets/invoice_number_field.dart';
+import '../../../services/cache_service.dart';
 
 class CreateInvoiceScreen extends ConsumerStatefulWidget {
   const CreateInvoiceScreen({super.key, this.basePath = '/employee'});
@@ -296,6 +297,16 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.invoiceCreated(invoice.invoiceNumber))),
+        );
+        context.go('${widget.basePath}/invoices');
+      }
+    } on OfflineQueuedException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.savedOfflineWillSync),
+            backgroundColor: AppColors.success,
+          ),
         );
         context.go('${widget.basePath}/invoices');
       }

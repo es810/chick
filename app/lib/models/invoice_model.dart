@@ -122,6 +122,24 @@ class InvoiceModel extends Equatable {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        '_id': id,
+        'invoiceNumber': invoiceNumber,
+        'clientId': {'id': clientId, 'name': clientName, 'phone': clientPhone},
+        'employeeId': {'id': employeeId, 'name': employeeName},
+        'items': items.map((e) => e.toJson()..['total'] = e.total).toList(),
+        'itemCount': itemCount,
+        'grossWeight': grossWeight,
+        'tareWeight': tareWeight,
+        'totalWeight': totalWeight,
+        'totalPrice': totalPrice,
+        'balanceBefore': balanceBefore,
+        'balanceAfter': balanceAfter,
+        'paymentStatus': paymentStatus,
+        'notes': notes,
+        'createdAt': createdAt?.toIso8601String(),
+      };
+
   double get netWeight {
     if (grossWeight != null && tareWeight != null) {
       return grossWeight! - tareWeight!;

@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import '../core/constants/api_constants.dart';
 import '../models/treasury_entry_item.dart';
 import '../models/treasury_summary_model.dart';
 import '../services/api_client.dart';
+import '../services/cache_service.dart';
 
 class CollectionCreateResult {
   const CollectionCreateResult({required this.entry, this.summary});
@@ -11,9 +13,10 @@ class CollectionCreateResult {
 }
 
 class CollectionRepository {
-  CollectionRepository(this._api);
+  CollectionRepository(this._api, this._cache);
 
   final ApiClient _api;
+  final CacheService _cache;
 
   Future<List<TreasuryEntryItem>> listInvoices() async {
     final response = await _api.get(ApiConstants.collections);
@@ -42,26 +45,52 @@ class CollectionRepository {
     required double amountDeducted,
     required double balanceBefore,
     required double balanceAfter,
+    String? clientMutationId,
+    bool allowQueue = true,
   }) async {
-    final response = await _api.post(
-      ApiConstants.collections,
-      data: {
-        'clientId': clientId,
-        'employeeId': employeeId,
-        'collectionDate': collectionDate.toIso8601String(),
-        'amountPaid': amountPaid,
-        'amountDeducted': amountDeducted,
-        'balanceBefore': balanceBefore,
-        'balanceAfter': balanceAfter,
-      },
-    );
-    final data = response.data as Map<String, dynamic>;
-    final payload = data['data'] as Map<String, dynamic>;
-    final entry = TreasuryEntryItem.fromJson(payload['entry'] as Map<String, dynamic>);
-    final summary = payload['summary'] != null
-        ? TreasurySummaryModel.fromJson(payload['summary'] as Map<String, dynamic>)
-        : null;
-    return CollectionCreateResult(entry: entry, summary: summary);
+    final mutationId = clientMutationId ?? _cache.newMutationId();
+    final body = {
+      'clientId': clientId,
+      'employeeId': employeeId,
+      'collectionDate': collectionDate.toIso8601String(),
+      'amountPaid': amountPaid,
+      'amountDeducted': amountDeducted,
+      'balanceBefore': balanceBefore,
+      'balanceAfter': balanceAfter,
+      'clientMutationId': mutationId,
+    };
+
+    try {
+      final response = await _api.post(ApiConstants.collections, data: body);
+      final data = response.data as Map<String, dynamic>;
+      final payload = data['data'] as Map<String, dynamic>;
+      final entry = TreasuryEntryItem.fromJson(payload['entry'] as Map<String, dynamic>);
+      final summary = payload['summary'] != null
+          ? TreasurySummaryModel.fromJson(payload['summary'] as Map<String, dynamic>)
+          : null;
+      return CollectionCreateResult(entry: entry, summary: summary);
+    } catch (e) {
+      if (allowQueue && await _shouldQueue(e)) {
+        await _cache.addPendingSync(
+          'create_collection',
+          body,
+          clientMutationId: mutationId,
+        );
+        throw OfflineQueuedException('create_collection', clientMutationId: mutationId);
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> _shouldQueue(Object e) async {
+    if (!await _cache.isOnline) return true;
+    if (e is DioException) {
+      return e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError;
+    }
+    return false;
   }
 
   Future<TreasuryEntryItem> updateInvoice({

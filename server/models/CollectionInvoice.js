@@ -15,11 +15,16 @@ const collectionInvoiceSchema = new mongoose.Schema(
       required: true,
     },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    clientMutationId: { type: String, default: null, sparse: true },
   },
   { timestamps: true }
 );
 
 collectionInvoiceSchema.index({ collectionDate: -1 });
 collectionInvoiceSchema.index({ clientId: 1, collectionDate: -1 });
+collectionInvoiceSchema.index(
+  { clientMutationId: 1 },
+  { unique: true, partialFilterExpression: { clientMutationId: { $type: 'string' } } }
+);
 
 module.exports = mongoose.model('CollectionInvoice', collectionInvoiceSchema);

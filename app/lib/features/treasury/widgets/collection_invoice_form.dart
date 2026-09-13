@@ -13,6 +13,7 @@ import '../../../models/treasury_entry_item.dart';
 import '../../../models/user_model.dart';
 import '../../../shared/widgets/client_picker_field.dart';
 import '../../../shared/widgets/invoice_number_field.dart';
+import '../../../services/cache_service.dart';
 
 Future<TreasuryEntryItem?> showCollectionInvoiceDialog({
   required BuildContext context,
@@ -273,6 +274,32 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       }
 
       if (mounted) Navigator.pop(context, saved);
+    } on OfflineQueuedException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.savedOfflineWillSync),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      Navigator.pop(
+        context,
+        TreasuryEntryItem(
+          id: 'pending-local',
+          category: 'collection',
+          amount: amountPaid,
+          description: _selectedClient?.name ?? '',
+          clientId: _selectedClient?.id,
+          clientName: _selectedClient?.name,
+          clientPhone: _selectedClient?.phone,
+          employeeId: _selectedEmployeeId,
+          collectionDate: _collectionDate,
+          amountPaid: amountPaid,
+          amountDeducted: _amountDeducted,
+          balanceBefore: _balanceBefore,
+          balanceAfter: _balanceAfter,
+        ),
+      );
     } catch (e) {
       if (mounted) _showError(apiErrorMessage(e));
     } finally {

@@ -498,6 +498,10 @@ class AppLocalizations {
   'arabic': {'en': 'العربية', 'ar': 'العربية'},
   'syncPending': {'en': 'Sync Pending Data', 'ar': 'مزامنة البيانات المعلّقة'},
   'syncSubtitle': {'en': 'Sync offline changes when online', 'ar': 'مزامنة التغييرات دون اتصال عند الاتصال'},
+  'savedOfflineWillSync': {
+    'en': 'Saved offline — will sync when internet is back',
+    'ar': 'تم الحفظ بدون نت — هيتزامن لما الشبكة ترجع',
+  },
   'syncedItems': {'en': 'Synced {count} items', 'ar': 'تمت مزامنة {count} عناصر'},
   'nothingToSync': {'en': 'Nothing to sync', 'ar': 'لا يوجد ما يُزامَن'},
   'pushNotifications': {'en': 'Push Notifications', 'ar': 'إشعارات الدفع'},
@@ -931,6 +935,7 @@ class AppLocalizations {
   String get arabic => _get('arabic');
   String get syncPending => _get('syncPending');
   String get syncSubtitle => _get('syncSubtitle');
+  String get savedOfflineWillSync => _get('savedOfflineWillSync');
   String syncedItems(int count) => _get('syncedItems').replaceAll('{count}', '$count');
   String get nothingToSync => _get('nothingToSync');
   String get pushNotifications => _get('pushNotifications');

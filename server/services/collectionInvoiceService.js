@@ -83,7 +83,17 @@ const createCollectionInvoice = async (data, user) => {
     collectionDate,
     amountPaid,
     amountDeducted,
+    clientMutationId,
   } = data;
+
+  if (clientMutationId) {
+    const existing = await CollectionInvoice.findOne({ clientMutationId })
+      .populate('clientId', 'name phone')
+      .populate('employeeId', 'name');
+    if (existing) {
+      return toEntry(existing);
+    }
+  }
 
   // Employees can only create collections under their own account.
   const employeeId =
@@ -119,6 +129,7 @@ const createCollectionInvoice = async (data, user) => {
     balanceAfter,
     treasuryMovementId: movement._id,
     createdBy: user._id,
+    ...(clientMutationId ? { clientMutationId } : {}),
   });
 
   client.balance = balanceAfter;
