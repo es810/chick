@@ -349,8 +349,10 @@ class _StatementBody extends StatelessWidget {
     switch (entry.type) {
       case 'distribution':
         context.push('$basePath/invoices/${entry.id}');
+        break;
       case 'collection':
         context.push('$basePath/collection-invoices/${entry.id}');
+        break;
     }
   }
 

@@ -5,6 +5,7 @@ const CollectionInvoice = require('../models/CollectionInvoice');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 const { normalizeToCairoDayStart } = require('../utils/businessCalendar');
+const { isSameId } = require('../utils/refId');
 
 const toEntry = (doc) => ({
   id: doc._id,
@@ -40,10 +41,13 @@ const listCollectionInvoices = async (filters = {}) => {
   return invoices.map(toEntry);
 };
 
-const assertCanAccessCollection = (invoice, user) => {
+/** View is open to employees; mutate only own invoices. */
+const assertCanMutateCollection = (invoice, user) => {
   if (!user || user.role === 'admin') return;
-  const ownerId = invoice.employeeId?._id?.toString() ?? invoice.employeeId?.toString();
-  if (ownerId !== user._id.toString()) {
+  if (user.role !== 'employee') {
+    throw new ApiError(403, 'Not authorized to access this collection invoice');
+  }
+  if (!isSameId(invoice.employeeId, user._id)) {
     throw new ApiError(403, 'Not authorized to access this collection invoice');
   }
 };
@@ -53,7 +57,10 @@ const getCollectionInvoice = async (id, user) => {
     .populate('clientId', 'name phone')
     .populate('employeeId', 'name');
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
-  assertCanAccessCollection(invoice, user);
+  // Employees may view any collection invoice; edit/delete stay owner-only.
+  if (user && user.role !== 'admin' && user.role !== 'employee') {
+    throw new ApiError(403, 'Not authorized to access this collection invoice');
+  }
   return toEntry(invoice);
 };
 
@@ -130,7 +137,7 @@ const createCollectionInvoice = async (data, user) => {
 const updateCollectionInvoice = async (id, data, user) => {
   const invoice = await CollectionInvoice.findById(id);
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
-  assertCanAccessCollection(invoice, user);
+  assertCanMutateCollection(invoice, user);
 
   const oldClient = await Client.findById(invoice.clientId);
   if (oldClient) {
@@ -194,7 +201,7 @@ const updateCollectionInvoice = async (id, data, user) => {
 const deleteCollectionInvoice = async (id, user) => {
   const invoice = await CollectionInvoice.findById(id);
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
-  assertCanAccessCollection(invoice, user);
+  assertCanMutateCollection(invoice, user);
 
   const client = await Client.findById(invoice.clientId);
   if (client) {
