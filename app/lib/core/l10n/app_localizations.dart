@@ -447,6 +447,10 @@ class AppLocalizations {
   },
   'name': {'en': 'Name', 'ar': 'الاسم'},
   'phone': {'en': 'Phone', 'ar': 'رقم الهاتف'},
+  'whatsappGroupLink': {
+    'en': 'WhatsApp group link',
+    'ar': 'لينك جروب واتساب',
+  },
   'address': {'en': 'Address', 'ar': 'العنوان'},
   'clientDebt': {'en': 'Debt (EGP)', 'ar': 'المديونية (ج.م)'},
   'supplierDebt': {'en': 'Supplier debt (EGP)', 'ar': 'مديونية المورد (ج.م)'},
@@ -895,6 +899,7 @@ class AppLocalizations {
   String get supplierStockSynced => _get('supplierStockSynced');
   String get name => _get('name');
   String get phone => _get('phone');
+  String get whatsappGroupLink => _get('whatsappGroupLink');
   String get address => _get('address');
   String get clientDebt => _get('clientDebt');
   String get supplierDebt => _get('supplierDebt');

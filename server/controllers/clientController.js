@@ -59,7 +59,15 @@ const getClientAccountStatement = asyncHandler(async (req, res) => {
 });
 
 const createClient = asyncHandler(async (req, res) => {
-  const { name, phone, address = '', balance = 0, email, password } = req.body;
+  const {
+    name,
+    phone,
+    address = '',
+    whatsappGroupLink = '',
+    balance = 0,
+    email,
+    password,
+  } = req.body;
 
   const exists = await User.findOne({ email });
   if (exists) throw new ApiError(400, 'Email already registered');
@@ -76,6 +84,7 @@ const createClient = asyncHandler(async (req, res) => {
     name,
     phone,
     address,
+    whatsappGroupLink: String(whatsappGroupLink || '').trim(),
     balance,
     userId: user._id,
   });
@@ -89,7 +98,8 @@ const createClient = asyncHandler(async (req, res) => {
 });
 
 const updateClient = asyncHandler(async (req, res) => {
-  const { name, phone, address, balance, email, password } = req.body;
+  const { name, phone, address, whatsappGroupLink, balance, email, password } =
+    req.body;
 
   const client = await Client.findById(req.params.id);
   if (!client) throw new ApiError(404, 'Client not found');
@@ -97,6 +107,9 @@ const updateClient = asyncHandler(async (req, res) => {
   if (name !== undefined) client.name = name;
   if (phone !== undefined) client.phone = phone;
   if (address !== undefined) client.address = address;
+  if (whatsappGroupLink !== undefined) {
+    client.whatsappGroupLink = String(whatsappGroupLink || '').trim();
+  }
   if (balance !== undefined) client.balance = balance;
 
   if (client.userId) {

@@ -9,6 +9,7 @@ class TreasuryEntryItem {
     this.clientId,
     this.clientName,
     this.clientPhone,
+    this.clientWhatsappGroupLink,
     this.employeeId,
     this.employeeName,
     this.collectionDate,
@@ -28,6 +29,7 @@ class TreasuryEntryItem {
   final String? clientId;
   final String? clientName;
   final String? clientPhone;
+  final String? clientWhatsappGroupLink;
   final String? employeeId;
   final String? employeeName;
   final DateTime? collectionDate;
@@ -43,18 +45,21 @@ class TreasuryEntryItem {
     final rawId = json['id'] ?? json['_id'];
     return TreasuryEntryItem(
       id: rawId?.toString() ?? '',
-      category: json['category'] as String,
-      amount: (json['amount'] as num).toDouble(),
+      category: json['category']?.toString() ?? 'collection',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
       description: json['description'] as String? ?? '',
       subtitle: json['subtitle'] as String? ?? '',
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
       clientId: json['clientId']?.toString(),
-      clientName: json['clientName'] as String?,
-      clientPhone: json['clientPhone'] as String?,
+      clientName: json['clientName']?.toString(),
+      clientPhone: json['clientPhone']?.toString(),
+      clientWhatsappGroupLink: json['clientWhatsappGroupLink']?.toString(),
       employeeId: json['employeeId']?.toString(),
-      employeeName: json['employeeName'] as String?,
+      employeeName: json['employeeName']?.toString(),
       collectionDate: json['collectionDate'] != null
-          ? DateTime.parse(json['collectionDate'] as String)
+          ? DateTime.tryParse(json['collectionDate'].toString())
           : null,
       amountPaid: (json['amountPaid'] as num?)?.toDouble(),
       amountDeducted: (json['amountDeducted'] as num?)?.toDouble(),

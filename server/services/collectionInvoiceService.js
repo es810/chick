@@ -16,6 +16,7 @@ const toEntry = (doc) => ({
   clientId: doc.clientId?._id?.toString() ?? doc.clientId?.toString(),
   clientName: doc.clientId?.name ?? '',
   clientPhone: doc.clientId?.phone ?? '',
+  clientWhatsappGroupLink: doc.clientId?.whatsappGroupLink ?? '',
   employeeId: doc.employeeId?._id?.toString() ?? doc.employeeId?.toString(),
   employeeName: doc.employeeId?.name ?? '',
   collectionDate: doc.collectionDate,
@@ -33,7 +34,7 @@ const listCollectionInvoices = async (filters = {}) => {
   }
 
   const invoices = await CollectionInvoice.find(query)
-    .populate('clientId', 'name phone')
+    .populate('clientId', 'name phone whatsappGroupLink')
     .populate('employeeId', 'name')
     .sort({ collectionDate: -1, createdAt: -1 })
     .limit(500);
@@ -54,7 +55,7 @@ const assertCanMutateCollection = (invoice, user) => {
 
 const getCollectionInvoice = async (id, user) => {
   const invoice = await CollectionInvoice.findById(id)
-    .populate('clientId', 'name phone')
+    .populate('clientId', 'name phone whatsappGroupLink')
     .populate('employeeId', 'name');
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
   // Employees may view any collection invoice; edit/delete stay owner-only.
@@ -88,7 +89,7 @@ const createCollectionInvoice = async (data, user) => {
 
   if (clientMutationId) {
     const existing = await CollectionInvoice.findOne({ clientMutationId })
-      .populate('clientId', 'name phone')
+      .populate('clientId', 'name phone whatsappGroupLink')
       .populate('employeeId', 'name');
     if (existing) {
       return toEntry(existing);
@@ -140,7 +141,7 @@ const createCollectionInvoice = async (data, user) => {
     amountDeducted,
   });
 
-  await invoice.populate('clientId', 'name phone');
+  await invoice.populate('clientId', 'name phone whatsappGroupLink');
   await invoice.populate('employeeId', 'name');
   return toEntry(invoice);
 };
@@ -204,7 +205,7 @@ const updateCollectionInvoice = async (id, data, user) => {
     amountDeducted,
   });
 
-  await invoice.populate('clientId', 'name phone');
+  await invoice.populate('clientId', 'name phone whatsappGroupLink');
   await invoice.populate('employeeId', 'name');
   return toEntry(invoice);
 };

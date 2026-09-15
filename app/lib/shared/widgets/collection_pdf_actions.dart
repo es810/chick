@@ -9,11 +9,13 @@ class CollectionPdfActions extends StatefulWidget {
     super.key,
     required this.entry,
     this.clientPhone,
+    this.whatsappGroupLink,
     this.compact = false,
   });
 
   final TreasuryEntryItem entry;
   final String? clientPhone;
+  final String? whatsappGroupLink;
   final bool compact;
 
   @override
@@ -66,6 +68,8 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
       () => pdfService.shareCollectionViaWhatsApp(
         widget.entry,
         clientPhone: widget.clientPhone ?? widget.entry.clientPhone,
+        whatsappGroupLink: widget.whatsappGroupLink ??
+            widget.entry.clientWhatsappGroupLink,
       ),
       successMessage: context.l10n.pdfShared,
     );
@@ -151,6 +155,7 @@ Future<void> showCollectionShareDialog({
   required BuildContext context,
   required TreasuryEntryItem entry,
   String? clientPhone,
+  String? whatsappGroupLink,
 }) {
   return showDialog<void>(
     context: context,
@@ -160,6 +165,7 @@ Future<void> showCollectionShareDialog({
         child: CollectionPdfActions(
           entry: entry,
           clientPhone: clientPhone,
+          whatsappGroupLink: whatsappGroupLink,
         ),
       ),
       actions: [

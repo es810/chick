@@ -121,7 +121,11 @@ class _CollectionInvoiceDetailScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.entryDeleted), backgroundColor: AppColors.success),
       );
-      context.go('${widget.basePath}/collection-invoices');
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('${widget.basePath}/collection-invoices');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

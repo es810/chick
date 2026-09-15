@@ -60,7 +60,7 @@ const createInvoice = async (data, employee) => {
       if (existing) {
         await session.commitTransaction();
         return Invoice.findById(existing._id)
-          .populate('clientId', 'name phone address')
+          .populate('clientId', 'name phone address whatsappGroupLink')
           .populate('employeeId', 'name email');
       }
     }
@@ -157,7 +157,7 @@ const createInvoice = async (data, employee) => {
     });
 
     return await Invoice.findById(invoice._id)
-      .populate('clientId', 'name phone address')
+      .populate('clientId', 'name phone address whatsappGroupLink')
       .populate('employeeId', 'name email');
   } catch (error) {
     await safeAbort(session);
@@ -284,7 +284,7 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     });
 
     return await Invoice.findById(invoice._id)
-      .populate('clientId', 'name phone address')
+      .populate('clientId', 'name phone address whatsappGroupLink')
       .populate('employeeId', 'name email');
   } catch (error) {
     await safeAbort(session);

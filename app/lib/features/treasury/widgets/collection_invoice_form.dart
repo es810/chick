@@ -240,28 +240,37 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
         );
       }
 
-      // Prefer phone from picker when API omits it.
-      if ((saved.clientPhone == null || saved.clientPhone!.isEmpty) &&
-          _selectedClient != null &&
-          _selectedClient!.phone.isNotEmpty) {
-        saved = TreasuryEntryItem(
-          id: saved.id,
-          category: saved.category,
-          amount: saved.amount,
-          description: saved.description,
-          subtitle: saved.subtitle,
-          createdAt: saved.createdAt,
-          clientId: saved.clientId,
-          clientName: saved.clientName,
-          clientPhone: _selectedClient!.phone,
-          employeeId: saved.employeeId,
-          employeeName: saved.employeeName,
-          collectionDate: saved.collectionDate,
-          amountPaid: saved.amountPaid,
-          amountDeducted: saved.amountDeducted,
-          balanceBefore: saved.balanceBefore,
-          balanceAfter: saved.balanceAfter,
-        );
+      // Prefer phone / WhatsApp group from picker when API omits them.
+      if (_selectedClient != null) {
+        final needPhone = (saved.clientPhone == null || saved.clientPhone!.isEmpty) &&
+            _selectedClient!.phone.isNotEmpty;
+        final needGroup =
+            (saved.clientWhatsappGroupLink == null ||
+                saved.clientWhatsappGroupLink!.isEmpty) &&
+            _selectedClient!.whatsappGroupLink.isNotEmpty;
+        if (needPhone || needGroup) {
+          saved = TreasuryEntryItem(
+            id: saved.id,
+            category: saved.category,
+            amount: saved.amount,
+            description: saved.description,
+            subtitle: saved.subtitle,
+            createdAt: saved.createdAt,
+            clientId: saved.clientId,
+            clientName: saved.clientName,
+            clientPhone: needPhone ? _selectedClient!.phone : saved.clientPhone,
+            clientWhatsappGroupLink: needGroup
+                ? _selectedClient!.whatsappGroupLink
+                : saved.clientWhatsappGroupLink,
+            employeeId: saved.employeeId,
+            employeeName: saved.employeeName,
+            collectionDate: saved.collectionDate,
+            amountPaid: saved.amountPaid,
+            amountDeducted: saved.amountDeducted,
+            balanceBefore: saved.balanceBefore,
+            balanceAfter: saved.balanceAfter,
+          );
+        }
       }
 
       ref.invalidate(clientsProvider);
@@ -292,6 +301,7 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
           clientId: _selectedClient?.id,
           clientName: _selectedClient?.name,
           clientPhone: _selectedClient?.phone,
+          clientWhatsappGroupLink: _selectedClient?.whatsappGroupLink,
           employeeId: _selectedEmployeeId,
           collectionDate: _collectionDate,
           amountPaid: amountPaid,

@@ -9,11 +9,13 @@ class InvoicePdfActions extends StatefulWidget {
     super.key,
     required this.invoice,
     this.clientPhone,
+    this.whatsappGroupLink,
     this.compact = false,
   });
 
   final InvoiceModel invoice;
   final String? clientPhone;
+  final String? whatsappGroupLink;
   final bool compact;
 
   @override
@@ -66,6 +68,8 @@ class _InvoicePdfActionsState extends State<InvoicePdfActions> {
       () => pdfService.shareViaWhatsApp(
         widget.invoice,
         clientPhone: widget.clientPhone,
+        whatsappGroupLink:
+            widget.whatsappGroupLink ?? widget.invoice.clientWhatsappGroupLink,
       ),
       successMessage: context.l10n.pdfShared,
     );

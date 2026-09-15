@@ -108,70 +108,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      // Admin collection list + detail (full-screen on root — no blank screen)
       GoRoute(
         path: '/admin/collection-invoices',
         parentNavigatorKey: rootNavigatorKey,
         builder: (_, __) => const CollectionInvoicesScreen(basePath: '/admin'),
-      ),
-      GoRoute(
-        path: '/admin/collection-invoices/:id',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, state) => CollectionInvoiceDetailScreen(
-          invoiceId: state.pathParameters['id']!,
-          basePath: '/admin',
-        ),
-      ),
-
-      // Distribution invoices (outside ShellRoute — avoids blank detail screen)
-      GoRoute(
-        path: '/admin/invoices/create',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const CreateInvoiceScreen(basePath: '/admin'),
-      ),
-      GoRoute(
-        path: '/admin/invoices/:id/edit',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, state) => EditInvoiceScreen(
-          invoiceId: state.pathParameters['id']!,
-          basePath: '/admin',
-        ),
-      ),
-      GoRoute(
-        path: '/admin/invoices/:id',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, state) => InvoiceDetailScreen(
-          invoiceId: state.pathParameters['id']!,
-          basePath: '/admin',
-        ),
-      ),
-      GoRoute(
-        path: '/employee/invoices/create',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const CreateInvoiceScreen(basePath: '/employee'),
-      ),
-      GoRoute(
-        path: '/employee/invoices/:id/edit',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, state) => EditInvoiceScreen(
-          invoiceId: state.pathParameters['id']!,
-          basePath: '/employee',
-        ),
-      ),
-      GoRoute(
-        path: '/employee/invoices/:id',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, state) => InvoiceDetailScreen(
-          invoiceId: state.pathParameters['id']!,
-          basePath: '/employee',
-        ),
-      ),
-      GoRoute(
-        path: '/client/invoices/:id',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, state) => InvoiceDetailScreen(
-          invoiceId: state.pathParameters['id']!,
-          basePath: '/client',
-        ),
+        routes: [
+          GoRoute(
+            path: ':id',
+            parentNavigatorKey: rootNavigatorKey,
+            builder: (_, state) => CollectionInvoiceDetailScreen(
+              invoiceId: state.pathParameters['id']!,
+              basePath: '/admin',
+            ),
+          ),
+        ],
       ),
 
       GoRoute(
@@ -234,6 +185,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      GoRoute(
+        path: '/employee/treasury/statement',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, __) => const EmployeeTreasuryStatementScreen(),
+      ),
+
+      GoRoute(
+        path: '/employee/clients/:id/statement',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => AccountStatementScreen(
+          entityId: state.pathParameters['id']!,
+          entityName: state.uri.queryParameters['name'] ?? '',
+          kind: AccountStatementKind.client,
+        ),
+      ),
+
       ShellRoute(
         navigatorKey: adminShellNavigatorKey,
         builder: (context, state, child) => AppShell(
@@ -251,7 +218,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: '/admin/dashboard', builder: (_, __) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/treasury', builder: (_, __) => const AdminTreasuryScreen()),
-          GoRoute(path: '/admin/invoices', builder: (_, __) => const InvoicesListScreen(basePath: '/admin')),
+          GoRoute(
+            path: '/admin/invoices',
+            builder: (_, __) => const InvoicesListScreen(basePath: '/admin'),
+            routes: [
+              GoRoute(
+                path: 'create',
+                parentNavigatorKey: rootNavigatorKey,
+                builder: (_, __) => const CreateInvoiceScreen(basePath: '/admin'),
+              ),
+              GoRoute(
+                path: ':id',
+                parentNavigatorKey: rootNavigatorKey,
+                builder: (_, state) => InvoiceDetailScreen(
+                  invoiceId: state.pathParameters['id']!,
+                  basePath: '/admin',
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (_, state) => EditInvoiceScreen(
+                      invoiceId: state.pathParameters['id']!,
+                      basePath: '/admin',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
           GoRoute(path: '/admin/stock', builder: (_, __) => const StockScreen()),
           GoRoute(path: '/admin/clients', builder: (_, __) => const ClientsScreen(basePath: '/admin')),
           GoRoute(path: '/admin/suppliers', builder: (_, __) => const SuppliersScreen(basePath: '/admin')),
@@ -259,22 +254,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/admin/employees', builder: (_, __) => const EmployeesScreen()),
           GoRoute(path: '/admin/settings', builder: (_, __) => const SettingsScreen()),
         ],
-      ),
-
-      GoRoute(
-        path: '/employee/treasury/statement',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, __) => const EmployeeTreasuryStatementScreen(),
-      ),
-
-      GoRoute(
-        path: '/employee/clients/:id/statement',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (_, state) => AccountStatementScreen(
-          entityId: state.pathParameters['id']!,
-          entityName: state.uri.queryParameters['name'] ?? '',
-          kind: AccountStatementKind.client,
-        ),
       ),
 
       ShellRoute(
@@ -295,17 +274,47 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/employee/dashboard', builder: (_, __) => const EmployeeDashboardScreen()),
           GoRoute(
             path: '/employee/collection-invoices',
-            builder: (_, __) =>
-                const CollectionInvoicesScreen(basePath: '/employee'),
+            builder: (_, __) => const CollectionInvoicesScreen(basePath: '/employee'),
+            routes: [
+              GoRoute(
+                path: ':id',
+                parentNavigatorKey: rootNavigatorKey,
+                builder: (_, state) => CollectionInvoiceDetailScreen(
+                  invoiceId: state.pathParameters['id']!,
+                  basePath: '/employee',
+                ),
+              ),
+            ],
           ),
           GoRoute(
-            path: '/employee/collection-invoices/:id',
-            builder: (_, state) => CollectionInvoiceDetailScreen(
-              invoiceId: state.pathParameters['id']!,
-              basePath: '/employee',
-            ),
+            path: '/employee/invoices',
+            builder: (_, __) => const InvoicesListScreen(basePath: '/employee'),
+            routes: [
+              GoRoute(
+                path: 'create',
+                parentNavigatorKey: rootNavigatorKey,
+                builder: (_, __) => const CreateInvoiceScreen(basePath: '/employee'),
+              ),
+              GoRoute(
+                path: ':id',
+                parentNavigatorKey: rootNavigatorKey,
+                builder: (_, state) => InvoiceDetailScreen(
+                  invoiceId: state.pathParameters['id']!,
+                  basePath: '/employee',
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (_, state) => EditInvoiceScreen(
+                      invoiceId: state.pathParameters['id']!,
+                      basePath: '/employee',
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          GoRoute(path: '/employee/invoices', builder: (_, __) => const InvoicesListScreen(basePath: '/employee')),
           GoRoute(
             path: '/employee/suppliers',
             builder: (_, __) => const SuppliersScreen(basePath: '/employee'),
@@ -331,7 +340,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
         routes: [
           GoRoute(path: '/client/dashboard', builder: (_, __) => const ClientDashboardScreen()),
-          GoRoute(path: '/client/invoices', builder: (_, __) => const InvoicesListScreen(basePath: '/client')),
+          GoRoute(
+            path: '/client/invoices',
+            builder: (_, __) => const InvoicesListScreen(basePath: '/client'),
+            routes: [
+              GoRoute(
+                path: ':id',
+                parentNavigatorKey: rootNavigatorKey,
+                builder: (_, state) => InvoiceDetailScreen(
+                  invoiceId: state.pathParameters['id']!,
+                  basePath: '/client',
+                ),
+              ),
+            ],
+          ),
           GoRoute(path: '/client/settings', builder: (_, __) => const SettingsScreen()),
         ],
       ),

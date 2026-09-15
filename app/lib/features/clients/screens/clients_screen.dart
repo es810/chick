@@ -81,6 +81,9 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final nameController = TextEditingController(text: client?.name ?? '');
     final phoneController = TextEditingController(text: client?.phone ?? '');
     final addressController = TextEditingController(text: client?.address ?? '');
+    final whatsappGroupController = TextEditingController(
+      text: client?.whatsappGroupLink ?? '',
+    );
     final balanceController = TextEditingController(
       text: client != null ? client.balance.toStringAsFixed(0) : '',
     );
@@ -127,6 +130,17 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                   ),
                   validator: (v) =>
                       v == null || v.trim().isEmpty ? l10n.fieldRequired : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: whatsappGroupController,
+                  keyboardType: TextInputType.url,
+                  textDirection: TextDirection.ltr,
+                  decoration: InputDecoration(
+                    labelText: l10n.whatsappGroupLink,
+                    hintText: 'https://chat.whatsapp.com/...',
+                    prefixIcon: const Icon(Icons.groups_outlined),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -203,6 +217,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
           'name': nameController.text.trim(),
           'phone': phoneController.text.trim(),
           'address': addressController.text.trim(),
+          'whatsappGroupLink': whatsappGroupController.text.trim(),
           'balance': balance,
           'email': emailController.text.trim(),
         };
@@ -218,6 +233,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
             name: nameController.text.trim(),
             phone: phoneController.text.trim(),
             address: addressController.text.trim(),
+            whatsappGroupLink: whatsappGroupController.text.trim(),
             balance: balance,
             email: emailController.text.trim(),
           ),

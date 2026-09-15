@@ -54,6 +54,7 @@ class InvoiceModel extends Equatable {
     this.notes = '',
     this.clientName,
     this.clientPhone,
+    this.clientWhatsappGroupLink,
     this.employeeName,
     this.createdAt,
   });
@@ -74,6 +75,7 @@ class InvoiceModel extends Equatable {
   final String notes;
   final String? clientName;
   final String? clientPhone;
+  final String? clientWhatsappGroupLink;
   final String? employeeName;
   final DateTime? createdAt;
 
@@ -115,6 +117,9 @@ class InvoiceModel extends Equatable {
       notes: json['notes'] as String? ?? '',
       clientName: client is Map ? client['name']?.toString() : null,
       clientPhone: client is Map ? client['phone']?.toString() : null,
+      clientWhatsappGroupLink: client is Map
+          ? client['whatsappGroupLink']?.toString()
+          : null,
       employeeName: employee is Map ? employee['name']?.toString() : null,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())

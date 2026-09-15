@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/utils/currency_formatter.dart';
 import '../models/invoice_model.dart';
@@ -314,6 +315,25 @@ class PdfService {
     );
   }
 
+  /// Opens the client's WhatsApp group invite/open link if present.
+  Future<void> openWhatsAppGroupLink(String? link) async {
+    final raw = (link ?? '').trim();
+    if (raw.isEmpty) return;
+
+    var normalized = raw;
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      normalized = 'https://$normalized';
+    }
+
+    final uri = Uri.tryParse(normalized);
+    if (uri == null) return;
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    }
+  }
+
   /// Opens system share / save dialog (works on mobile & desktop).
   Future<void> downloadPdf(InvoiceModel invoice) async {
     final result = await buildInvoicePdf(invoice);
@@ -333,9 +353,15 @@ class PdfService {
     await _sharePdfFile(result, message: _shareMessage(invoice));
   }
 
-  Future<void> shareViaWhatsApp(InvoiceModel invoice, {String? clientPhone}) async {
+  Future<void> shareViaWhatsApp(
+    InvoiceModel invoice, {
+    String? clientPhone,
+    String? whatsappGroupLink,
+  }) async {
     final result = await buildInvoicePdf(invoice);
     final message = _shareMessage(invoice);
+    final groupLink = whatsappGroupLink ?? invoice.clientWhatsappGroupLink;
+    await openWhatsAppGroupLink(groupLink);
     await _sharePdfFile(result, message: message);
   }
 
@@ -347,8 +373,11 @@ class PdfService {
   Future<void> shareCollectionViaWhatsApp(
     TreasuryEntryItem entry, {
     String? clientPhone,
+    String? whatsappGroupLink,
   }) async {
     final result = await buildCollectionPdf(entry);
+    final groupLink = whatsappGroupLink ?? entry.clientWhatsappGroupLink;
+    await openWhatsAppGroupLink(groupLink);
     await _sharePdfFile(result, message: _collectionShareMessage(entry));
   }
 

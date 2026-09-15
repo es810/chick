@@ -6,6 +6,7 @@ class ClientModel extends Equatable {
     required this.name,
     required this.phone,
     this.address = '',
+    this.whatsappGroupLink = '',
     this.balance = 0,
     this.email = '',
   });
@@ -14,6 +15,8 @@ class ClientModel extends Equatable {
   final String name;
   final String phone;
   final String address;
+  /// WhatsApp group invite/open URL (e.g. https://chat.whatsapp.com/...).
+  final String whatsappGroupLink;
   final double balance;
   final String email;
 
@@ -27,6 +30,7 @@ class ClientModel extends Equatable {
       name: json['name'] as String,
       phone: json['phone'] as String,
       address: json['address'] as String? ?? '',
+      whatsappGroupLink: json['whatsappGroupLink'] as String? ?? '',
       balance: (json['balance'] as num?)?.toDouble() ?? 0,
       email: email ?? '',
     );
@@ -36,6 +40,7 @@ class ClientModel extends Equatable {
         'name': name,
         'phone': phone,
         'address': address,
+        'whatsappGroupLink': whatsappGroupLink,
         'balance': balance,
         if (email.isNotEmpty) 'email': email,
         if (password != null && password.isNotEmpty) 'password': password,
