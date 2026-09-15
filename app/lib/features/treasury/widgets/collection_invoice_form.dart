@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +16,7 @@ import '../../../models/user_model.dart';
 import '../../../shared/widgets/client_picker_field.dart';
 import '../../../shared/widgets/invoice_number_field.dart';
 import '../../../services/cache_service.dart';
+import '../../../services/sync_service.dart';
 
 Future<TreasuryEntryItem?> showCollectionInvoiceDialog({
   required BuildContext context,
@@ -291,6 +294,7 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
           backgroundColor: AppColors.success,
         ),
       );
+      unawaited(ref.read(syncServiceProvider).syncPending());
       Navigator.pop(
         context,
         TreasuryEntryItem(

@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../core/constants/api_constants.dart';
 import '../models/employee_ledger_model.dart';
 import '../models/employee_treasury_model.dart';
@@ -39,7 +38,7 @@ class EmployeeRepository {
       final data = response.data as Map<String, dynamic>;
       return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
     } catch (e) {
-      if (allowQueue && await _shouldQueue(e)) {
+      if (allowQueue && await _cache.shouldQueueError(e)) {
         await _cache.addPendingSync(
           'add_expense',
           {...body, 'employeeId': employeeId},
@@ -123,7 +122,7 @@ class EmployeeRepository {
       final data = response.data as Map<String, dynamic>;
       return EmployeeLedgerEntry.fromJson(data['data'] as Map<String, dynamic>);
     } catch (e) {
-      if (allowQueue && await _shouldQueue(e)) {
+      if (allowQueue && await _cache.shouldQueueError(e)) {
         await _cache.addPendingSync(
           'add_expense',
           body,
@@ -133,17 +132,6 @@ class EmployeeRepository {
       }
       rethrow;
     }
-  }
-
-  Future<bool> _shouldQueue(Object e) async {
-    if (!await _cache.isOnline) return true;
-    if (e is DioException) {
-      return e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.sendTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.connectionError;
-    }
-    return false;
   }
 
   Future<EmployeeLedgerEntry> addMyDebt(

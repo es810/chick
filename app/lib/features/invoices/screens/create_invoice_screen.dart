@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,7 @@ import '../../../models/stock_model.dart';
 import '../../../shared/widgets/client_picker_field.dart';
 import '../../../shared/widgets/invoice_number_field.dart';
 import '../../../services/cache_service.dart';
+import '../../../services/sync_service.dart';
 
 class CreateInvoiceScreen extends ConsumerStatefulWidget {
   const CreateInvoiceScreen({super.key, this.basePath = '/employee'});
@@ -301,6 +304,8 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         context.go('${widget.basePath}/invoices');
       }
     } on OfflineQueuedException {
+      ref.invalidate(invoicesProvider);
+      ref.invalidate(dashboardProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -310,6 +315,8 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         );
         context.go('${widget.basePath}/invoices');
       }
+      // If the radio comes back quickly, push the queue without waiting for resume.
+      unawaited(ref.read(syncServiceProvider).syncPending());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

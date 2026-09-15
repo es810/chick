@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/number_input_utils.dart';
 import '../../../models/employee_ledger_model.dart';
 import '../../../models/supplier_model.dart';
+import '../../../services/cache_service.dart';
 import '../../../shared/widgets/invoice_number_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
@@ -234,6 +235,15 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isExpense ? l10n.deductedFromMainTreasury : l10n.supplierPaymentRecorded),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } on OfflineQueuedException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.savedOfflineWillSync),
             backgroundColor: AppColors.success,
           ),
         );

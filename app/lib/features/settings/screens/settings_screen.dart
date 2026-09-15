@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/user_model.dart';
+import '../../../services/cache_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/storage_service.dart';
 
@@ -22,6 +23,7 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
     final isAdmin = user?.role == UserRole.admin;
+    final pendingCount = ref.watch(cacheServiceProvider).pendingCount;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settings)),
@@ -104,16 +106,24 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.sync),
             title: Text(l10n.syncPending),
-            subtitle: Text(l10n.syncSubtitle),
+            subtitle: Text(
+              pendingCount > 0
+                  ? l10n.pendingSyncCount(pendingCount)
+                  : l10n.syncSubtitle,
+            ),
             onTap: () async {
+              final pendingBefore = ref.read(cacheServiceProvider).pendingCount;
               final count = await ref.read(syncServiceProvider).syncPending();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(count > 0 ? l10n.syncedItems(count) : l10n.nothingToSync),
-                  ),
-                );
-              }
+              if (!context.mounted) return;
+              final remaining = ref.read(cacheServiceProvider).pendingCount;
+              final message = count > 0
+                  ? l10n.syncedItems(count)
+                  : (pendingBefore > 0 && remaining > 0)
+                      ? l10n.syncStillPending
+                      : l10n.nothingToSync;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(message)),
+              );
             },
           ),
           ListTile(

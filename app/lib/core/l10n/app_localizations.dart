@@ -508,6 +508,14 @@ class AppLocalizations {
   },
   'syncedItems': {'en': 'Synced {count} items', 'ar': 'تمت مزامنة {count} عناصر'},
   'nothingToSync': {'en': 'Nothing to sync', 'ar': 'لا يوجد ما يُزامَن'},
+  'pendingSyncCount': {
+    'en': '{count} items waiting to sync',
+    'ar': '{count} عناصر بانتظار المزامنة',
+  },
+  'syncStillPending': {
+    'en': 'Could not sync yet — will retry when connection is stable',
+    'ar': 'لسه المزامنة متعملتش — هتتحاوله لما الشبكة تثبت',
+  },
   'pushNotifications': {'en': 'Push Notifications', 'ar': 'إشعارات الدفع'},
   'lowStockAlertsEnabled': {'en': 'Low stock alerts enabled', 'ar': 'تنبيهات نقص المخزون مفعّلة'},
   'logout': {'en': 'Logout', 'ar': 'تسجيل الخروج'},
@@ -943,6 +951,9 @@ class AppLocalizations {
   String get savedOfflineWillSync => _get('savedOfflineWillSync');
   String syncedItems(int count) => _get('syncedItems').replaceAll('{count}', '$count');
   String get nothingToSync => _get('nothingToSync');
+  String pendingSyncCount(int count) =>
+      _get('pendingSyncCount').replaceAll('{count}', '$count');
+  String get syncStillPending => _get('syncStillPending');
   String get pushNotifications => _get('pushNotifications');
   String get lowStockAlertsEnabled => _get('lowStockAlertsEnabled');
   String get logout => _get('logout');

@@ -37,6 +37,7 @@ class ClientModel extends Equatable {
   }
 
   Map<String, dynamic> toJson({String? password}) => {
+        if (id.isNotEmpty) '_id': id,
         'name': name,
         'phone': phone,
         'address': address,

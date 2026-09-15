@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import '../../../models/user_model.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../services/api_client.dart';
 import '../../../services/storage_service.dart';
+import '../../../services/sync_service.dart';
 
 class AuthState {
   const AuthState({this.user, this.isLoading = false, this.error});
@@ -47,6 +50,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         state = AuthState(user: cached, isLoading: false);
         // ignore: unawaited_futures
         _refreshUserInBackground();
+        unawaited(_ref.read(syncServiceProvider).syncPending());
         return;
       }
 
@@ -56,6 +60,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           final user = await _repo.getCurrentUser().timeout(const Duration(seconds: 15));
           if (user != null) {
             state = AuthState(user: user, isLoading: false);
+            unawaited(_ref.read(syncServiceProvider).syncPending());
             return;
           }
         } catch (_) {
@@ -90,6 +95,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final auth = await _repo.login(email, password, remember: true);
       invalidateAllAppData(_ref);
       state = AuthState(user: auth.user, isLoading: false);
+      unawaited(_ref.read(syncServiceProvider).syncPending());
       return true;
     } catch (_) {
       return false;
@@ -115,6 +121,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final auth = await _repo.login(email, password, remember: remember);
       invalidateAllAppData(_ref);
       state = AuthState(user: auth.user, isLoading: false);
+      // Flush any offline invoice/collection/expense queue now that we have a session.
+      unawaited(_ref.read(syncServiceProvider).syncPending());
       return true;
     } on DioException catch (e) {
       final message = _repo.parseError(e) ?? apiErrorMessage(e);

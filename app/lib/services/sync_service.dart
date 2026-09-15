@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/providers/app_providers.dart';
+import '../features/auth/providers/auth_provider.dart';
 import '../services/cache_service.dart';
 
 class SyncService {
@@ -14,22 +15,25 @@ class SyncService {
 
   bool _syncing = false;
   StreamSubscription? _connectivitySub;
+  String? lastError;
 
   /// Start listening for network restore and sync automatically.
   void startAutoSync() {
     _connectivitySub?.cancel();
     _connectivitySub = _cache.onConnectivityChanged.listen((results) async {
-      final online = !results.contains(ConnectivityResult.none);
-      if (online) {
-        try {
-          await syncPending();
-        } catch (e) {
-          debugPrint('Auto sync failed: $e');
-        }
+      final online =
+          results.isNotEmpty && !results.contains(ConnectivityResult.none);
+      if (!online) return;
+      // Brief delay so the radio/DNS is ready after reconnect.
+      await Future<void>.delayed(const Duration(seconds: 1));
+      try {
+        await syncPending();
+      } catch (e) {
+        debugPrint('Auto sync failed: $e');
       }
     });
-    // Kick once at startup in case there are leftovers.
-    Future<void>.delayed(const Duration(seconds: 2), () async {
+    // Kick once at startup in case there are leftovers (after auth restores).
+    Future<void>.delayed(const Duration(seconds: 3), () async {
       try {
         await syncPending();
       } catch (_) {}
@@ -43,10 +47,15 @@ class SyncService {
 
   Future<int> syncPending() async {
     if (_syncing) return 0;
+    if (_cache.pendingCount == 0) return 0;
     if (!await _cache.isOnline) return 0;
+
+    // Need a session before POSTing queued mutations.
+    if (_ref.read(authProvider).user == null) return 0;
 
     _syncing = true;
     var synced = 0;
+    lastError = null;
 
     try {
       final pending = _cache.getPendingSyncs();
@@ -69,9 +78,11 @@ class SyncService {
               await _ref.read(collectionRepositoryProvider).createInvoice(
                     clientId: payload['clientId'] as String,
                     employeeId: payload['employeeId'] as String,
-                    collectionDate: DateTime.parse(payload['collectionDate'] as String),
+                    collectionDate:
+                        DateTime.parse(payload['collectionDate'] as String),
                     amountPaid: (payload['amountPaid'] as num).toDouble(),
-                    amountDeducted: (payload['amountDeducted'] as num).toDouble(),
+                    amountDeducted:
+                        (payload['amountDeducted'] as num).toDouble(),
                     balanceBefore: (payload['balanceBefore'] as num).toDouble(),
                     balanceAfter: (payload['balanceAfter'] as num).toDouble(),
                     clientMutationId: payload['clientMutationId'] as String?,
@@ -107,8 +118,13 @@ class SyncService {
           await _cache.removePendingSync(id);
           synced++;
         } catch (e) {
+          lastError = e.toString();
           debugPrint('Sync item $id failed: $e');
-          // Stop on first failure to preserve order for money-related ops.
+          // Network blip: leave item queued and stop; will retry on resume.
+          if (await _cache.shouldQueueError(e)) {
+            break;
+          }
+          // Permanent/business error: stop to preserve money order.
           break;
         }
       }

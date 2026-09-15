@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../core/constants/api_constants.dart';
 import '../models/invoice_model.dart';
 import '../services/api_client.dart';
@@ -49,22 +48,86 @@ class InvoiceRepository {
         'total': total,
       });
 
+      final merged = _mergePendingInvoices(all);
       return (
-        invoices: all,
-        pagination: PaginationMeta(total: total, page: 1, pages: 1),
+        invoices: merged,
+        pagination: PaginationMeta(total: merged.length, page: 1, pages: 1),
       );
     } catch (e) {
-      if (!await _cache.isOnline) {
+      if (await _cache.shouldQueueError(e) || !await _cache.isOnline) {
         final cached = _cache.getCached('invoices');
         if (cached != null) {
           final invoices = (cached['items'] as List)
               .map((e) => InvoiceModel.fromJson(Map<String, dynamic>.from(e as Map)))
               .toList();
-          return (invoices: invoices, pagination: null);
+          return (invoices: _mergePendingInvoices(invoices), pagination: null);
+        }
+        final pendingOnly = _mergePendingInvoices(const []);
+        if (pendingOnly.isNotEmpty) {
+          return (invoices: pendingOnly, pagination: null);
         }
       }
       rethrow;
     }
+  }
+
+  List<InvoiceModel> _mergePendingInvoices(List<InvoiceModel> remote) {
+    final pending = _cache.getPendingSyncs(action: 'create_invoice');
+    if (pending.isEmpty) return remote;
+
+    final clientNames = <String, String>{};
+    final cachedClients = _cache.getCached('clients');
+    final clientItems = cachedClients?['items'];
+    if (clientItems is List) {
+      for (final raw in clientItems) {
+        if (raw is! Map) continue;
+        final id = raw['_id']?.toString() ?? raw['id']?.toString() ?? '';
+        final name = raw['name']?.toString() ?? '';
+        if (id.isNotEmpty) clientNames[id] = name;
+      }
+    }
+
+    final pendingModels = <InvoiceModel>[];
+    for (final item in pending.reversed) {
+      final id = item['id']?.toString() ?? '';
+      final payload = Map<String, dynamic>.from(item['payload'] as Map? ?? {});
+      final clientId = payload['clientId']?.toString() ?? '';
+      final itemsRaw = payload['items'];
+      final items = itemsRaw is List
+          ? itemsRaw
+              .whereType<Map>()
+              .map((e) => InvoiceItemModel.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+          : <InvoiceItemModel>[];
+
+      var totalWeight = 0.0;
+      var totalPrice = 0.0;
+      for (final line in items) {
+        totalWeight += line.weight;
+        totalPrice += line.weight * line.unitPrice;
+      }
+
+      pendingModels.add(
+        InvoiceModel(
+          id: 'pending-$id',
+          invoiceNumber: 'معلّق — مزامنة',
+          clientId: clientId,
+          employeeId: '',
+          items: items,
+          itemCount: (payload['itemCount'] as num?)?.toInt() ?? items.length,
+          grossWeight: (payload['grossWeight'] as num?)?.toDouble(),
+          tareWeight: (payload['tareWeight'] as num?)?.toDouble(),
+          totalWeight: totalWeight,
+          totalPrice: totalPrice,
+          paymentStatus: 'pending',
+          clientName: clientNames[clientId] ?? 'عميل',
+          createdAt: DateTime.tryParse(item['timestamp']?.toString() ?? '') ??
+              DateTime.now(),
+        ),
+      );
+    }
+
+    return [...pendingModels, ...remote];
   }
 
   Future<InvoiceModel> getInvoice(String id) async {
@@ -87,7 +150,7 @@ class InvoiceRepository {
       final data = response.data as Map<String, dynamic>;
       return InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
     } catch (e) {
-      if (allowQueue && await _shouldQueue(e)) {
+      if (allowQueue && await _cache.shouldQueueError(e)) {
         await _cache.addPendingSync(
           'create_invoice',
           body,
@@ -100,17 +163,6 @@ class InvoiceRepository {
       }
       rethrow;
     }
-  }
-
-  Future<bool> _shouldQueue(Object e) async {
-    if (!await _cache.isOnline) return true;
-    if (e is DioException) {
-      return e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.sendTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.connectionError;
-    }
-    return false;
   }
 
   Future<InvoiceModel> updateInvoice(String id, Map<String, dynamic> updates) async {

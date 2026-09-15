@@ -158,12 +158,27 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
-                          onTap: () =>
-                              context.push('${widget.basePath}/invoices/${invoice.id}'),
+                          onTap: () {
+                            if (invoice.id.startsWith('pending-')) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(l10n.savedOfflineWillSync)),
+                              );
+                              return;
+                            }
+                            context.push('${widget.basePath}/invoices/${invoice.id}');
+                          },
                           leading: CircleAvatar(
-                            backgroundColor:
-                                AppColors.primaryGreen.withValues(alpha: 0.15),
-                            child: const Icon(Icons.receipt, color: AppColors.primaryGreen),
+                            backgroundColor: invoice.id.startsWith('pending-')
+                                ? Colors.orange.withValues(alpha: 0.15)
+                                : AppColors.primaryGreen.withValues(alpha: 0.15),
+                            child: Icon(
+                              invoice.id.startsWith('pending-')
+                                  ? Icons.cloud_upload_outlined
+                                  : Icons.receipt,
+                              color: invoice.id.startsWith('pending-')
+                                  ? Colors.orange
+                                  : AppColors.primaryGreen,
+                            ),
                           ),
                           title: Text(invoice.invoiceNumber),
                           subtitle: Text(

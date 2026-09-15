@@ -153,6 +153,12 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
   }
 
   void _openDetail(TreasuryEntryItem entry) {
+    if (entry.id.startsWith('pending')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.savedOfflineWillSync)),
+      );
+      return;
+    }
     context.push('$_basePath/collection-invoices/${entry.id}');
   }
 
