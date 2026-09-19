@@ -448,8 +448,12 @@ class AppLocalizations {
   'name': {'en': 'Name', 'ar': 'الاسم'},
   'phone': {'en': 'Phone', 'ar': 'رقم الهاتف'},
   'whatsappGroupLink': {
-    'en': 'WhatsApp group link',
-    'ar': 'لينك جروب واتساب',
+    'en': 'WhatsApp group (for invoice share)',
+    'ar': 'جروب واتساب (لإرسال الفاتورة)',
+  },
+  'whatsappGroupLinkHint': {
+    'en': 'Optional — share opens WhatsApp with the PDF attached',
+    'ar': 'اختياري — المشاركة تفتح واتساب والفاتورة PDF مرفقة',
   },
   'address': {'en': 'Address', 'ar': 'العنوان'},
   'clientDebt': {'en': 'Debt (EGP)', 'ar': 'المديونية (ج.م)'},
@@ -912,6 +916,7 @@ class AppLocalizations {
   String get name => _get('name');
   String get phone => _get('phone');
   String get whatsappGroupLink => _get('whatsappGroupLink');
+  String get whatsappGroupLinkHint => _get('whatsappGroupLinkHint');
   String get address => _get('address');
   String get clientDebt => _get('clientDebt');
   String get supplierDebt => _get('supplierDebt');

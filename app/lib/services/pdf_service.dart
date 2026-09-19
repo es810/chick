@@ -6,7 +6,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/utils/currency_formatter.dart';
 import '../models/invoice_model.dart';
@@ -315,23 +314,50 @@ class PdfService {
     );
   }
 
-  /// Opens the client's WhatsApp group invite/open link if present.
-  Future<void> openWhatsAppGroupLink(String? link) async {
-    final raw = (link ?? '').trim();
-    if (raw.isEmpty) return;
+  static const _whatsAppChannel =
+      MethodChannel('com.chickenfarm.chicken_farm/whatsapp');
 
-    var normalized = raw;
-    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-      normalized = 'https://$normalized';
+  /// Shares the PDF into WhatsApp with the file attached.
+  Future<void> _sharePdfToWhatsApp(
+    PdfInvoiceResult result, {
+    required String message,
+    String? whatsappGroupLink,
+  }) async {
+    final file = await _pdfAsXFile(result);
+    final jid = _whatsAppJidFromStoredLink(whatsappGroupLink);
+
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        await _whatsAppChannel.invokeMethod<bool>('shareFile', {
+          'path': file.path,
+          'text': message,
+          'mime': 'application/pdf',
+          if (jid != null) 'jid': jid,
+        });
+        return;
+      } catch (_) {
+        // Fall through to system share sheet.
+      }
     }
 
-    final uri = Uri.tryParse(normalized);
-    if (uri == null) return;
+    await Share.shareXFiles(
+      [file],
+      text: message,
+      subject: result.filename,
+    );
+  }
 
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched) {
-      await launchUrl(uri, mode: LaunchMode.platformDefault);
+  /// Invite links cannot target SEND; only a real chat JID can.
+  String? _whatsAppJidFromStoredLink(String? raw) {
+    final value = (raw ?? '').trim();
+    if (value.isEmpty) return null;
+    if (value.contains('@g.us') || value.contains('@s.whatsapp.net')) {
+      return value;
     }
+    if (RegExp(r'^\d+(-\d+)?$').hasMatch(value)) {
+      return '$value@g.us';
+    }
+    return null;
   }
 
   /// Opens system share / save dialog (works on mobile & desktop).
@@ -359,10 +385,12 @@ class PdfService {
     String? whatsappGroupLink,
   }) async {
     final result = await buildInvoicePdf(invoice);
-    final message = _shareMessage(invoice);
     final groupLink = whatsappGroupLink ?? invoice.clientWhatsappGroupLink;
-    await openWhatsAppGroupLink(groupLink);
-    await _sharePdfFile(result, message: message);
+    await _sharePdfToWhatsApp(
+      result,
+      message: _shareMessage(invoice, groupHint: groupLink),
+      whatsappGroupLink: groupLink,
+    );
   }
 
   Future<void> downloadCollectionPdf(TreasuryEntryItem entry) async {
@@ -377,8 +405,11 @@ class PdfService {
   }) async {
     final result = await buildCollectionPdf(entry);
     final groupLink = whatsappGroupLink ?? entry.clientWhatsappGroupLink;
-    await openWhatsAppGroupLink(groupLink);
-    await _sharePdfFile(result, message: _collectionShareMessage(entry));
+    await _sharePdfToWhatsApp(
+      result,
+      message: _collectionShareMessage(entry, groupHint: groupLink),
+      whatsappGroupLink: groupLink,
+    );
   }
 
   Future<Directory> _pdfDirectory() async {
@@ -400,25 +431,33 @@ class PdfService {
     return invoicesDir;
   }
 
-  String _shareMessage(InvoiceModel invoice) {
+  String _shareMessage(InvoiceModel invoice, {String? groupHint}) {
     final total = CurrencyFormatter.format(invoice.totalPrice, languageCode: 'ar');
     final typeLine = invoice.chickenTypesLabel.isNotEmpty
         ? 'نوع الصنف: ${invoice.chickenTypesLabel}\n'
         : '';
+    final client = invoice.clientName ?? '';
+    final hint = (groupHint ?? '').trim().isNotEmpty
+        ? '\n(ابعت لجروب العميل: $client)'
+        : '';
     return 'إيصال توزيع ${invoice.invoiceNumber}\n'
-        'العميل: ${invoice.clientName ?? ''}\n'
+        'العميل: $client\n'
         '$typeLine'
-        'حساب الوجبة: $total';
+        'حساب الوجبة: $total$hint';
   }
 
-  String _collectionShareMessage(TreasuryEntryItem entry) {
+  String _collectionShareMessage(TreasuryEntryItem entry, {String? groupHint}) {
     final paid = CurrencyFormatter.format(
       entry.amountPaid ?? entry.amount,
       languageCode: 'ar',
     );
+    final client = entry.clientName ?? entry.description;
+    final hint = (groupHint ?? '').trim().isNotEmpty
+        ? '\n(ابعت لجروب العميل: $client)'
+        : '';
     return 'إيصال تحصيل\n'
-        'العميل: ${entry.clientName ?? entry.description}\n'
-        'المبلغ المحصل: $paid';
+        'العميل: $client\n'
+        'المبلغ المحصل: $paid$hint';
   }
 
   String _formatDate(DateTime date) =>

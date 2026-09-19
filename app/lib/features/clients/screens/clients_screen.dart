@@ -138,7 +138,7 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                   textDirection: TextDirection.ltr,
                   decoration: InputDecoration(
                     labelText: l10n.whatsappGroupLink,
-                    hintText: 'https://chat.whatsapp.com/...',
+                    hintText: l10n.whatsappGroupLinkHint,
                     prefixIcon: const Icon(Icons.groups_outlined),
                   ),
                 ),
