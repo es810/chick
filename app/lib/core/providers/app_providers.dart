@@ -159,9 +159,9 @@ final themeModeProvider = StateProvider<String>((ref) {
   return ref.watch(storageServiceProvider).getThemeMode();
 });
 
-/// Clears offline cache and refreshes all server-backed providers (e.g. after login or wipe).
+/// Refreshes server-backed providers without wiping Hive read cache.
+/// Keeps clients/stock available for employee offline invoice create.
 void invalidateAllAppData(Ref ref) {
-  ref.read(cacheServiceProvider).clearCache();
   ref.invalidate(clientsProvider);
   ref.invalidate(suppliersProvider);
   ref.invalidate(stockProvider);
@@ -175,4 +175,10 @@ void invalidateAllAppData(Ref ref) {
   ref.invalidate(salesReportProvider);
   ref.invalidate(revenueProvider);
   ref.invalidate(auditLogsProvider);
+}
+
+/// Clears local read cache and refreshes providers (logout / full wipe).
+void wipeLocalAppData(Ref ref) {
+  ref.read(cacheServiceProvider).clearCache();
+  invalidateAllAppData(ref);
 }

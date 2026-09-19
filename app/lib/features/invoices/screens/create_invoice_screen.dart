@@ -123,16 +123,58 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
       appBar: AppBar(title: Text(l10n.distributionReceipt)),
       body: clientsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (clients) => stockAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
-          data: (stock) {
-            if (stock.isEmpty) {
-              return Center(child: Text(l10n.noStockAddFirst));
-            }
-            return _buildForm(l10n, clients, stock);
-          },
+        error: (e, _) => _offlineDataError(l10n, e),
+        data: (clients) {
+          if (clients.isEmpty) {
+            return _offlineDataError(l10n, null);
+          }
+          return stockAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => _offlineDataError(l10n, e),
+            data: (stock) {
+              if (stock.isEmpty) {
+                return Center(child: Text(l10n.noStockAddFirst));
+              }
+              return _buildForm(l10n, clients, stock);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _offlineDataError(AppLocalizations l10n, Object? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off, size: 48, color: Colors.orange),
+            const SizedBox(height: 16),
+            Text(
+              l10n.offlineNeedCachedData,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                apiErrorMessage(error, fallback: l10n.serverError),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () {
+                ref.invalidate(clientsProvider);
+                ref.invalidate(stockProvider);
+              },
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.retry),
+            ),
+          ],
         ),
       ),
     );

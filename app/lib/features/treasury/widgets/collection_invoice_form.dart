@@ -86,15 +86,42 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
 
   Future<void> _loadFormData() async {
     try {
-      ref.invalidate(clientsProvider);
-      final results = await Future.wait([
-        ref.read(clientsProvider.future),
-        ref.read(collectionRepositoryProvider).listEmployees(),
-      ]);
+      final cache = ref.read(cacheServiceProvider);
+      final online = await cache.isOnline;
+      if (online) {
+        ref.invalidate(clientsProvider);
+      }
+
+      final user = ref.read(currentUserProvider);
+      final isEmployee = user?.role == UserRole.employee;
+
+      final clients = await ref.read(clientsProvider.future);
+
+      List<Map<String, dynamic>> employees;
+      if (isEmployee && widget.existing == null && user != null) {
+        // Employee create: no need for the full employees API offline.
+        employees = [
+          {'id': user.id, '_id': user.id, 'name': user.name},
+        ];
+        _selectedEmployeeId ??= user.id;
+      } else {
+        try {
+          employees =
+              await ref.read(collectionRepositoryProvider).listEmployees();
+        } catch (_) {
+          if (isEmployee && user != null) {
+            employees = [
+              {'id': user.id, '_id': user.id, 'name': user.name},
+            ];
+            _selectedEmployeeId ??= user.id;
+          } else {
+            rethrow;
+          }
+        }
+      }
+
       if (!mounted) return;
 
-      final clients = results[0] as List<ClientModel>;
-      final employees = results[1] as List<Map<String, dynamic>>;
       ClientModel? selectedClient;
       if (widget.existing?.clientId != null) {
         selectedClient =
@@ -192,19 +219,27 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
 
     setState(() => _submitting = true);
     try {
-      final clients = await ref.read(clientRepositoryProvider).getClients();
-      final freshClient = clients.firstWhere((c) => c.id == _selectedClient!.id);
-      _selectedClient = freshClient;
+      final cache = ref.read(cacheServiceProvider);
+      // Refresh live balance only when online; offline uses the form values.
+      if (await cache.isOnline) {
+        try {
+          final clients = await ref.read(clientRepositoryProvider).getClients();
+          final freshClient =
+              clients.firstWhere((c) => c.id == _selectedClient!.id);
+          _selectedClient = freshClient;
 
-      // Create: use live client debt.
-      // Edit: restore debt as it was before this collection (live + old paid/discount).
-      if (widget.existing == null) {
-        _balanceBeforeController.text = formatInputNumber(freshClient.balance);
-      } else {
-        final restored = freshClient.balance +
-            (widget.existing!.amountPaid ?? 0) +
-            (widget.existing!.amountDeducted ?? 0);
-        _balanceBeforeController.text = formatInputNumber(restored);
+          if (widget.existing == null) {
+            _balanceBeforeController.text =
+                formatInputNumber(freshClient.balance);
+          } else {
+            final restored = freshClient.balance +
+                (widget.existing!.amountPaid ?? 0) +
+                (widget.existing!.amountDeducted ?? 0);
+            _balanceBeforeController.text = formatInputNumber(restored);
+          }
+        } catch (_) {
+          // Keep the balance already shown in the form.
+        }
       }
 
       final repo = ref.read(collectionRepositoryProvider);

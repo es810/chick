@@ -506,6 +506,10 @@ class AppLocalizations {
     'en': 'Saved offline — will sync when internet is back',
     'ar': 'تم الحفظ بدون نت — هيتزامن لما الشبكة ترجع',
   },
+  'offlineNeedCachedData': {
+    'en': 'Open the app once online so clients and stock are saved, then you can create invoices offline.',
+    'ar': 'افتح التطبيق مرة والنِت شغال عشان العملاء والمخزون يتحفظوا، وبعدين تقدر تعمل فواتير بدون نت.',
+  },
   'syncedItems': {'en': 'Synced {count} items', 'ar': 'تمت مزامنة {count} عناصر'},
   'nothingToSync': {'en': 'Nothing to sync', 'ar': 'لا يوجد ما يُزامَن'},
   'pendingSyncCount': {
@@ -949,6 +953,7 @@ class AppLocalizations {
   String get syncPending => _get('syncPending');
   String get syncSubtitle => _get('syncSubtitle');
   String get savedOfflineWillSync => _get('savedOfflineWillSync');
+  String get offlineNeedCachedData => _get('offlineNeedCachedData');
   String syncedItems(int count) => _get('syncedItems').replaceAll('{count}', '$count');
   String get nothingToSync => _get('nothingToSync');
   String pendingSyncCount(int count) =>

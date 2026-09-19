@@ -98,9 +98,25 @@ class CollectionRepository {
   }
 
   Future<List<Map<String, dynamic>>> listEmployees() async {
-    final response = await _api.get('${ApiConstants.collections}/employees');
-    final data = response.data as Map<String, dynamic>;
-    return (data['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    try {
+      final response = await _api.get('${ApiConstants.collections}/employees');
+      final data = response.data as Map<String, dynamic>;
+      final list = (data['data'] as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      await _cache.cacheData('collection_employees', {'items': list});
+      return list;
+    } catch (e) {
+      if (await _cache.shouldQueueError(e) || !await _cache.isOnline) {
+        final cached = _cache.getCached('collection_employees');
+        if (cached != null) {
+          return (cached['items'] as List? ?? [])
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+        }
+      }
+      rethrow;
+    }
   }
 
   Future<CollectionCreateResult> createInvoice({

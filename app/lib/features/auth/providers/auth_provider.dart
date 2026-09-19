@@ -165,13 +165,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logoutLocal() async {
     await _repo.clearSession();
-    invalidateAllAppData(_ref);
+    wipeLocalAppData(_ref);
     state = const AuthState();
   }
 
   Future<void> logout() async {
     await _repo.logout();
-    invalidateAllAppData(_ref);
+    wipeLocalAppData(_ref);
     state = const AuthState();
   }
 }
