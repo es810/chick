@@ -64,7 +64,6 @@ class MainActivity : FlutterActivity() {
             putExtra(Intent.EXTRA_STREAM, uri)
             if (text.isNotBlank()) {
                 putExtra(Intent.EXTRA_TEXT, text)
-                putExtra(Intent.EXTRA_CAPTION, text)
             }
             val normalizedJid = normalizeJid(jid)
             if (!normalizedJid.isNullOrBlank()) {
