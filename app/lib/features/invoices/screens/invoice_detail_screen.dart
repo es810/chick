@@ -30,6 +30,8 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   bool get _canManage =>
       widget.basePath.contains('admin') || widget.basePath.contains('employee');
 
+  bool get _isPendingOffline => widget.invoiceId.startsWith('pending-');
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +61,12 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   }
 
   Future<void> _confirmDelete(InvoiceModel invoice) async {
+    if (_isPendingOffline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.savedOfflineWillSync)),
+      );
+      return;
+    }
     final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
@@ -118,13 +126,13 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
       appBar: AppBar(
         title: Text(l10n.invoiceDetails),
         actions: [
-          if (_canManage && invoice != null && !_isDeleting)
+          if (_canManage && invoice != null && !_isDeleting && !_isPendingOffline)
             IconButton(
               icon: const Icon(Icons.delete_outline),
               tooltip: l10n.deleteInvoice,
               onPressed: () => _confirmDelete(invoice),
             ),
-          if (_canManage && invoice != null)
+          if (_canManage && invoice != null && !_isPendingOffline)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: l10n.editInvoice,

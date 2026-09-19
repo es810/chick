@@ -28,6 +28,12 @@ class CollectionRepository {
       await _cache.cacheData('collections', {
         'items': list.map((e) => Map<String, dynamic>.from(e as Map)).toList(),
       });
+      for (final entry in entries) {
+        await _cache.cacheData(
+          'collection_${entry.id}',
+          _collectionToCacheMap(entry),
+        );
+      }
       return _mergePendingCollections(entries);
     } catch (e) {
       if (await _cache.shouldQueueError(e) || !await _cache.isOnline) {
@@ -92,10 +98,79 @@ class CollectionRepository {
   }
 
   Future<TreasuryEntryItem> getInvoice(String id) async {
-    final response = await _api.get('${ApiConstants.collections}/$id');
-    final data = response.data as Map<String, dynamic>;
-    return TreasuryEntryItem.fromJson(data['data'] as Map<String, dynamic>);
+    final local = _collectionFromLocal(id);
+    if (id.startsWith('pending-')) {
+      if (local != null) return local;
+      throw StateError('Pending collection not found');
+    }
+
+    try {
+      final response = await _api.get('${ApiConstants.collections}/$id');
+      final data = response.data as Map<String, dynamic>;
+      final entry = TreasuryEntryItem.fromJson(data['data'] as Map<String, dynamic>);
+      await _cache.cacheData(
+        'collection_$id',
+        _collectionToCacheMap(entry),
+      );
+      return entry;
+    } catch (e) {
+      if (local != null) return local;
+      if (await _cache.shouldQueueError(e) || !await _cache.isOnline) {
+        throw StateError('Collection unavailable offline');
+      }
+      rethrow;
+    }
   }
+
+  TreasuryEntryItem? _collectionFromLocal(String id) {
+    if (id.startsWith('pending-')) {
+      for (final entry in _mergePendingCollections(const [])) {
+        if (entry.id == id) return entry;
+      }
+      return null;
+    }
+
+    final single = _cache.getCached('collection_$id');
+    if (single != null) {
+      try {
+        return TreasuryEntryItem.fromJson(single);
+      } catch (_) {}
+    }
+
+    final cached = _cache.getCached('collections');
+    final items = cached?['items'];
+    if (items is List) {
+      for (final raw in items) {
+        if (raw is! Map) continue;
+        try {
+          final entry =
+              TreasuryEntryItem.fromJson(Map<String, dynamic>.from(raw));
+          if (entry.id == id) return entry;
+        } catch (_) {}
+      }
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _collectionToCacheMap(TreasuryEntryItem entry) => {
+        'id': entry.id,
+        'category': entry.category,
+        'amount': entry.amount,
+        'description': entry.description,
+        'subtitle': entry.subtitle,
+        'createdAt': entry.createdAt?.toIso8601String(),
+        'clientId': entry.clientId,
+        'clientName': entry.clientName,
+        'clientPhone': entry.clientPhone,
+        'clientWhatsappGroupLink': entry.clientWhatsappGroupLink,
+        'employeeId': entry.employeeId,
+        'employeeName': entry.employeeName,
+        'collectionDate': entry.collectionDate?.toIso8601String(),
+        'amountPaid': entry.amountPaid,
+        'amountDeducted': entry.amountDeducted,
+        'balanceBefore': entry.balanceBefore,
+        'balanceAfter': entry.balanceAfter,
+      };
 
   Future<List<Map<String, dynamic>>> listEmployees() async {
     try {

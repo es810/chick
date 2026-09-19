@@ -37,6 +37,8 @@ class _CollectionInvoiceDetailScreenState
   bool _busy = false;
   String? _error;
 
+  bool get _isPendingOffline => widget.invoiceId.startsWith('pending');
+
   @override
   void initState() {
     super.initState();
@@ -144,6 +146,7 @@ class _CollectionInvoiceDetailScreenState
     final user = ref.watch(currentUserProvider);
     final canManage = entry != null &&
         !_busy &&
+        !_isPendingOffline &&
         (user?.role == UserRole.admin ||
             (user?.role == UserRole.employee && entry.employeeId == user?.id));
 

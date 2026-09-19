@@ -40,7 +40,7 @@ class CacheService {
   Stream<List<ConnectivityResult>> get onConnectivityChanged =>
       Connectivity().onConnectivityChanged;
 
-  /// Whether a failed mutation should be queued for later sync.
+  /// Whether a failed mutation should be queued / a read should use cache.
   Future<bool> shouldQueueError(Object e) async {
     if (!await isOnline) return true;
     if (e is! DioException) return false;
@@ -55,6 +55,10 @@ class CacheService {
         // Host unreachable / DNS / socket errors often surface as unknown
         // with no HTTP response.
         return e.response == null;
+      case DioExceptionType.badResponse:
+        // Captive portals sometimes return HTML 502/503 with no API body.
+        final code = e.response?.statusCode ?? 0;
+        return code == 502 || code == 503 || code == 504;
       default:
         return false;
     }

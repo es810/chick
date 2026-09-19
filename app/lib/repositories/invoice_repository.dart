@@ -47,6 +47,9 @@ class InvoiceRepository {
         'items': all.map((e) => e.toJson()).toList(),
         'total': total,
       });
+      for (final invoice in all) {
+        await _cache.cacheData('invoice_${invoice.id}', invoice.toJson());
+      }
 
       final merged = _mergePendingInvoices(all);
       return (
@@ -131,9 +134,55 @@ class InvoiceRepository {
   }
 
   Future<InvoiceModel> getInvoice(String id) async {
-    final response = await _api.get('${ApiConstants.invoices}/$id');
-    final data = response.data as Map<String, dynamic>;
-    return InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
+    final local = _invoiceFromLocal(id);
+    if (id.startsWith('pending-')) {
+      if (local != null) return local;
+      throw StateError('Pending invoice not found');
+    }
+
+    try {
+      final response = await _api.get('${ApiConstants.invoices}/$id');
+      final data = response.data as Map<String, dynamic>;
+      final invoice = InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
+      await _cache.cacheData('invoice_$id', invoice.toJson());
+      return invoice;
+    } catch (e) {
+      if (local != null) return local;
+      if (await _cache.shouldQueueError(e) || !await _cache.isOnline) {
+        throw StateError('Invoice unavailable offline');
+      }
+      rethrow;
+    }
+  }
+
+  InvoiceModel? _invoiceFromLocal(String id) {
+    if (id.startsWith('pending-')) {
+      for (final invoice in _mergePendingInvoices(const [])) {
+        if (invoice.id == id) return invoice;
+      }
+      return null;
+    }
+
+    final single = _cache.getCached('invoice_$id');
+    if (single != null) {
+      try {
+        return InvoiceModel.fromJson(single);
+      } catch (_) {}
+    }
+
+    final cached = _cache.getCached('invoices');
+    final items = cached?['items'];
+    if (items is List) {
+      for (final raw in items) {
+        if (raw is! Map) continue;
+        try {
+          final invoice =
+              InvoiceModel.fromJson(Map<String, dynamic>.from(raw));
+          if (invoice.id == id) return invoice;
+        } catch (_) {}
+      }
+    }
+    return null;
   }
 
   /// Creates an invoice. When offline (and [allowQueue] is true), queues locally
