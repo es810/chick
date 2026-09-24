@@ -270,11 +270,13 @@ class AppLocalizations {
   'items': {'en': 'items', 'ar': 'عناصر'},
 
   'invoiceDetails': {'en': 'Invoice Details', 'ar': 'تفاصيل الفاتورة'},
+  'printInvoice': {'en': 'Print', 'ar': 'طباعة'},
   'downloadPdf': {'en': 'Download PDF', 'ar': 'تحميل PDF'},
   'shareWhatsApp': {'en': 'Share via WhatsApp', 'ar': 'مشاركة عبر واتساب'},
   'generatingPdf': {'en': 'Generating PDF...', 'ar': 'جاري إنشاء PDF...'},
   'pdfSaved': {'en': 'PDF saved successfully', 'ar': 'تم حفظ PDF بنجاح'},
   'pdfShared': {'en': 'Invoice shared', 'ar': 'تمت مشاركة الفاتورة'},
+  'pdfPrinted': {'en': 'Print dialog opened', 'ar': 'تم فتح شاشة الطباعة'},
   'pdfError': {'en': 'Failed to generate PDF', 'ar': 'فشل إنشاء PDF'},
   'shareInvoice': {'en': 'Share Invoice', 'ar': 'مشاركة الفاتورة'},
   'client': {'en': 'Client', 'ar': 'العميل'},
@@ -836,11 +838,13 @@ class AppLocalizations {
   String get items => _get('items');
 
   String get invoiceDetails => _get('invoiceDetails');
+  String get printInvoice => _get('printInvoice');
   String get downloadPdf => _get('downloadPdf');
   String get shareWhatsApp => _get('shareWhatsApp');
   String get generatingPdf => _get('generatingPdf');
   String get pdfSaved => _get('pdfSaved');
   String get pdfShared => _get('pdfShared');
+  String get pdfPrinted => _get('pdfPrinted');
   String get pdfError => _get('pdfError');
   String get shareInvoice => _get('shareInvoice');
   String get client => _get('client');

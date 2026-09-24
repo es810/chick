@@ -19,6 +19,13 @@ class AccountStatementEntity {
       balance: (json['balance'] as num?)?.toDouble() ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'phone': phone,
+        'balance': balance,
+      };
 }
 
 class AccountStatementEntry {
@@ -63,6 +70,20 @@ class AccountStatementEntry {
       amountDeducted: (json['amountDeducted'] as num?)?.toDouble(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'type': type,
+        'date': date.toIso8601String(),
+        'description': description,
+        'subtitle': subtitle,
+        'debit': debit,
+        'credit': credit,
+        if (balanceAfter != null) 'balanceAfter': balanceAfter,
+        if (reference != null) 'reference': reference,
+        if (amountPaid != null) 'amountPaid': amountPaid,
+        if (amountDeducted != null) 'amountDeducted': amountDeducted,
+      };
 }
 
 class AccountStatement {
@@ -82,4 +103,9 @@ class AccountStatement {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'entity': entity.toJson(),
+        'entries': entries.map((e) => e.toJson()).toList(),
+      };
 }

@@ -27,14 +27,20 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
 
   Future<void> _runPdfAction(
     Future<void> Function() action, {
-    required String successMessage,
+    String? successMessage,
+    Duration? timeout,
   }) async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
 
     try {
-      await action().timeout(const Duration(seconds: 45));
-      if (mounted) {
+      final future = action();
+      if (timeout != null) {
+        await future.timeout(timeout);
+      } else {
+        await future;
+      }
+      if (mounted && successMessage != null && successMessage.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(successMessage),
@@ -56,10 +62,18 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
     }
   }
 
+  Future<void> _print() async {
+    // No timeout — system print UI stays open until the user finishes.
+    await _runPdfAction(
+      () => pdfService.printCollectionPdf(widget.entry),
+    );
+  }
+
   Future<void> _download() async {
     await _runPdfAction(
       () => pdfService.downloadCollectionPdf(widget.entry),
       successMessage: context.l10n.pdfSaved,
+      timeout: const Duration(seconds: 45),
     );
   }
 
@@ -72,6 +86,7 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
             widget.entry.clientWhatsappGroupLink,
       ),
       successMessage: context.l10n.pdfShared,
+      timeout: const Duration(seconds: 45),
     );
   }
 
@@ -102,6 +117,11 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
+            tooltip: l10n.printInvoice,
+            onPressed: _print,
+            icon: const Icon(Icons.print_outlined),
+          ),
+          IconButton(
             tooltip: l10n.downloadPdf,
             onPressed: _download,
             icon: const Icon(Icons.picture_as_pdf_outlined),
@@ -125,6 +145,17 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
               ),
         ),
         const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: _print,
+          icon: const Icon(Icons.print),
+          label: Text(l10n.printInvoice),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryGreen,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+        const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: _download,
           icon: const Icon(Icons.download_rounded),

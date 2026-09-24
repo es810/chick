@@ -43,12 +43,17 @@ class InvoiceRepository {
         page++;
       } while (page <= totalPages);
 
-      await _cache.cacheData('invoices', {
-        'items': all.map((e) => e.toJson()).toList(),
-        'total': total,
-      });
-      for (final invoice in all) {
-        await _cache.cacheData('invoice_${invoice.id}', invoice.toJson());
+      // Keep full offline list intact — never overwrite with filtered results.
+      final isFullList = (paymentStatus == null || paymentStatus.isEmpty) &&
+          (search == null || search.isEmpty);
+      if (isFullList) {
+        await _cache.cacheData('invoices', {
+          'items': all.map((e) => e.toJson()).toList(),
+          'total': total,
+        });
+        for (final invoice in all) {
+          await _cache.cacheData('invoice_${invoice.id}', invoice.toJson());
+        }
       }
 
       final merged = _mergePendingInvoices(all);

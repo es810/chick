@@ -28,6 +28,7 @@ class SyncService {
       await Future<void>.delayed(const Duration(seconds: 1));
       try {
         await syncPending();
+        await warmOfflineCaches();
       } catch (e) {
         debugPrint('Auto sync failed: $e');
       }
@@ -36,8 +37,39 @@ class SyncService {
     Future<void>.delayed(const Duration(seconds: 3), () async {
       try {
         await syncPending();
+        await warmOfflineCaches();
       } catch (_) {}
     });
+  }
+
+  /// Prefetch clients + invoices + collections (+ stock) so offline client work
+  /// (list, statements, details) is available without visiting every screen.
+  Future<void> warmOfflineCaches() async {
+    if (!await _cache.isOnline) return;
+    if (_ref.read(authProvider).user == null) return;
+
+    Future<void> safe(Future<void> Function() run) async {
+      try {
+        await run();
+      } catch (e) {
+        debugPrint('Warm offline cache step failed: $e');
+      }
+    }
+
+    await Future.wait([
+      safe(() async {
+        await _ref.read(clientRepositoryProvider).getClients();
+      }),
+      safe(() async {
+        await _ref.read(invoiceRepositoryProvider).getInvoices();
+      }),
+      safe(() async {
+        await _ref.read(collectionRepositoryProvider).listInvoices();
+      }),
+      safe(() async {
+        await _ref.read(stockRepositoryProvider).getStock();
+      }),
+    ]);
   }
 
   void dispose() {
@@ -132,6 +164,8 @@ class SyncService {
       if (synced > 0) {
         invalidateAllAppData(_ref);
       }
+      // Refresh offline snapshots after reconnect / successful flush.
+      await warmOfflineCaches();
     } finally {
       _syncing = false;
     }

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../core/utils/currency_formatter.dart';
@@ -358,6 +359,23 @@ class PdfService {
       return '$value@g.us';
     }
     return null;
+  }
+
+  /// Opens the system print dialog (connected printers + print apps).
+  Future<void> printInvoicePdf(InvoiceModel invoice) async {
+    final result = await buildInvoicePdf(invoice);
+    await Printing.layoutPdf(
+      onLayout: (_) async => result.bytes,
+      name: result.filename,
+    );
+  }
+
+  Future<void> printCollectionPdf(TreasuryEntryItem entry) async {
+    final result = await buildCollectionPdf(entry);
+    await Printing.layoutPdf(
+      onLayout: (_) async => result.bytes,
+      name: result.filename,
+    );
   }
 
   /// Opens system share / save dialog (works on mobile & desktop).

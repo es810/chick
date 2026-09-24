@@ -51,6 +51,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // ignore: unawaited_futures
         _refreshUserInBackground();
         unawaited(_ref.read(syncServiceProvider).syncPending());
+        unawaited(_ref.read(syncServiceProvider).warmOfflineCaches());
         return;
       }
 
@@ -61,6 +62,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           if (user != null) {
             state = AuthState(user: user, isLoading: false);
             unawaited(_ref.read(syncServiceProvider).syncPending());
+            unawaited(_ref.read(syncServiceProvider).warmOfflineCaches());
             return;
           }
         } catch (_) {
@@ -96,6 +98,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       invalidateAllAppData(_ref);
       state = AuthState(user: auth.user, isLoading: false);
       unawaited(_ref.read(syncServiceProvider).syncPending());
+      unawaited(_ref.read(syncServiceProvider).warmOfflineCaches());
       return true;
     } catch (_) {
       return false;
@@ -123,6 +126,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState(user: auth.user, isLoading: false);
       // Flush any offline invoice/collection/expense queue now that we have a session.
       unawaited(_ref.read(syncServiceProvider).syncPending());
+      // Prefetch clients/invoices/collections so offline client work is complete.
+      unawaited(_ref.read(syncServiceProvider).warmOfflineCaches());
       return true;
     } on DioException catch (e) {
       final message = _repo.parseError(e) ?? apiErrorMessage(e);
