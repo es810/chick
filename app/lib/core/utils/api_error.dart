@@ -56,6 +56,24 @@ String _localizeServerMessage(String message, Object? errors) {
   if (message == 'Insufficient employee treasury balance') {
     return 'رصيد خزنة الموظف غير كافٍ';
   }
+  if (message == 'Incorrect admin password') {
+    return 'الرقم السري للأدمن غلط';
+  }
+  if (message == 'Admin password is required to zero the treasury') {
+    return 'لازم الرقم السري للأدمن عشان تصفير الخزنة';
+  }
+  if (message == 'Editing invoices is disabled for this employee') {
+    return 'تعديل الفواتير مقفول للموظف ده';
+  }
+  if (message == 'Expenses are disabled for this employee') {
+    return 'المصروفات مقفولة للموظف ده';
+  }
+  if (message == 'Supplier payments are disabled for this employee') {
+    return 'دفع الموردين مقفول للموظف ده';
+  }
+  if (message == 'Transfers are disabled for this employee') {
+    return 'التحويلات مقفولة للموظف ده';
+  }
   if (message == 'Cannot transfer to the same employee') {
     return 'لا يمكن التحويل لنفس الموظف';
   }

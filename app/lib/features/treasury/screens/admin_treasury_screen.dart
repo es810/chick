@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../models/treasury_summary_model.dart';
 import '../../settings/screens/employees_screen.dart';
 import '../../stock/screens/stock_screen.dart';
 import '../../../models/treasury_entry_item.dart';
+import '../../../shared/widgets/admin_password_dialog.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../widgets/treasury_category_sheet.dart';
 
@@ -238,27 +240,17 @@ class _AdminTreasuryScreenState extends ConsumerState<AdminTreasuryScreen>
 
   Future<void> _confirmResetTreasury() async {
     final l10n = context.l10n;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.zeroTreasury),
-        content: Text(l10n.confirmZeroTreasury),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(l10n.zeroTreasury),
-          ),
-        ],
-      ),
+    final password = await showAdminPasswordDialog(
+      context,
+      title: l10n.zeroTreasury,
+      message: l10n.confirmZeroTreasuryPassword,
     );
 
-    if (ok != true || !mounted) return;
+    if (password == null || password.isEmpty || !mounted) return;
 
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(treasuryRepositoryProvider).resetMainTreasury();
+      await ref.read(treasuryRepositoryProvider).resetMainTreasury(password: password);
       await _refresh();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -268,7 +260,10 @@ class _AdminTreasuryScreenState extends ConsumerState<AdminTreasuryScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(apiErrorMessage(e, fallback: '$e')),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {

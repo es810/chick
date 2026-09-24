@@ -1,3 +1,4 @@
+const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const {
   getMainTreasury,
@@ -55,6 +56,17 @@ const withdrawFromTreasuryHandler = asyncHandler(async (req, res) => {
 });
 
 const resetMainTreasuryHandler = asyncHandler(async (req, res) => {
+  const password = req.body?.password;
+  if (!password || typeof password !== 'string') {
+    throw new ApiError(400, 'Admin password is required to zero the treasury');
+  }
+
+  const User = require('../models/User');
+  const admin = await User.findById(req.user._id).select('+password');
+  if (!admin) throw new ApiError(401, 'Not authorized');
+  const ok = await admin.comparePassword(password);
+  if (!ok) throw new ApiError(403, 'Incorrect admin password');
+
   const summary = await resetMainTreasury(req.user);
   res.json({ success: true, data: summary });
 });

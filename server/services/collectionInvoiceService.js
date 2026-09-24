@@ -6,6 +6,7 @@ const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 const { normalizeToCairoDayStart } = require('../utils/businessCalendar');
 const { isSameId } = require('../utils/refId');
+const { hasPermission } = require('../utils/employeePermissions');
 
 const toEntry = (doc) => ({
   id: doc._id,
@@ -48,6 +49,9 @@ const assertCanMutateCollection = (invoice, user) => {
   if (user.role !== 'employee') {
     throw new ApiError(403, 'Not authorized to access this collection invoice');
   }
+  if (!hasPermission(user, 'canEditInvoices')) {
+    throw new ApiError(403, 'Editing invoices is disabled for this employee');
+  }
   if (!isSameId(invoice.employeeId, user._id)) {
     throw new ApiError(403, 'Not authorized to access this collection invoice');
   }
@@ -58,8 +62,14 @@ const getCollectionInvoice = async (id, user) => {
     .populate('clientId', 'name phone whatsappGroupLink')
     .populate('employeeId', 'name');
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
-  // Employees may view any collection invoice; edit/delete stay owner-only.
   if (user && user.role !== 'admin' && user.role !== 'employee') {
+    throw new ApiError(403, 'Not authorized to access this collection invoice');
+  }
+  if (
+    user?.role === 'employee' &&
+    !hasPermission(user, 'canViewOthersWork') &&
+    !isSameId(invoice.employeeId, user._id)
+  ) {
     throw new ApiError(403, 'Not authorized to access this collection invoice');
   }
   return toEntry(invoice);

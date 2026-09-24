@@ -41,8 +41,11 @@ class TreasuryRepository {
     return TreasurySummaryModel.fromJson(data['data'] as Map<String, dynamic>);
   }
 
-  Future<TreasurySummaryModel> resetMainTreasury() async {
-    final response = await _api.post('${ApiConstants.treasury}/reset');
+  Future<TreasurySummaryModel> resetMainTreasury({required String password}) async {
+    final response = await _api.post(
+      '${ApiConstants.treasury}/reset',
+      data: {'password': password},
+    );
     final data = response.data as Map<String, dynamic>;
     return TreasurySummaryModel.fromJson(data['data'] as Map<String, dynamic>);
   }

@@ -77,6 +77,19 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
       text: employee != null ? ((employee['salary'] as num?)?.toString() ?? '') : '',
     );
     var isActive = employee?['isActive'] as bool? ?? true;
+    final permsRaw = employee?['permissions'];
+    var canEditInvoices = true;
+    var canViewOthersWork = false;
+    var canTransfer = false;
+    var canAddExpense = true;
+    var canPaySupplier = true;
+    if (permsRaw is Map) {
+      canEditInvoices = permsRaw['canEditInvoices'] as bool? ?? true;
+      canViewOthersWork = permsRaw['canViewOthersWork'] as bool? ?? false;
+      canTransfer = permsRaw['canTransfer'] as bool? ?? false;
+      canAddExpense = permsRaw['canAddExpense'] as bool? ?? true;
+      canPaySupplier = permsRaw['canPaySupplier'] as bool? ?? true;
+    }
     final formKey = GlobalKey<FormState>();
 
     final ok = await showDialog<bool>(
@@ -167,6 +180,46 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                       onChanged: (v) => setDialogState(() => isActive = v),
                     ),
                   ],
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      l10n.employeePermissions,
+                      style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.permCanEditInvoices),
+                    value: canEditInvoices,
+                    onChanged: (v) => setDialogState(() => canEditInvoices = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.permCanViewOthersWork),
+                    value: canViewOthersWork,
+                    onChanged: (v) => setDialogState(() => canViewOthersWork = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.permCanTransfer),
+                    value: canTransfer,
+                    onChanged: (v) => setDialogState(() => canTransfer = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.permCanAddExpense),
+                    value: canAddExpense,
+                    onChanged: (v) => setDialogState(() => canAddExpense = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.permCanPaySupplier),
+                    value: canPaySupplier,
+                    onChanged: (v) => setDialogState(() => canPaySupplier = v),
+                  ),
                 ],
               ),
             ),
@@ -211,6 +264,13 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
       'phone': phone,
       'email': email,
       'salary': double.parse(salaryText),
+      'permissions': {
+        'canEditInvoices': canEditInvoices,
+        'canViewOthersWork': canViewOthersWork,
+        'canTransfer': canTransfer,
+        'canAddExpense': canAddExpense,
+        'canPaySupplier': canPaySupplier,
+      },
     };
     if (password.isNotEmpty) {
       body['password'] = password;

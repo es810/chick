@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../services/cache_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../widgets/employee_ledger_section.dart';
@@ -13,6 +14,123 @@ import '../../../shared/widgets/stat_card.dart';
 
 class EmployeeDashboardScreen extends ConsumerWidget {
   const EmployeeDashboardScreen({super.key});
+
+  Future<void> _showTransferDialog(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final me = ref.read(currentUserProvider);
+    if (me == null) return;
+
+    List<Map<String, dynamic>> employees;
+    try {
+      employees = await ref.read(collectionRepositoryProvider).listEmployees();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e)), backgroundColor: AppColors.error),
+        );
+      }
+      return;
+    }
+
+    final others = employees
+        .where((e) => (e['_id'] ?? e['id'])?.toString() != me.id)
+        .toList();
+    if (others.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.noEmployees), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    String? toEmployeeId = (others.first['_id'] ?? others.first['id'])?.toString();
+    final amountController = TextEditingController();
+    final notesController = TextEditingController();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.employeeTreasuryTransfer),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: toEmployeeId,
+                  decoration: InputDecoration(labelText: l10n.transferToEmployee),
+                  items: others
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: (e['_id'] ?? e['id']).toString(),
+                          child: Text(e['name']?.toString() ?? ''),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setDialogState(() => toEmployeeId = v),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: l10n.transferAmount),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  decoration: InputDecoration(labelText: l10n.description),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.save),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final amount = double.tryParse(amountController.text.trim().replaceAll(',', ''));
+    final toId = toEmployeeId;
+    final notes = notesController.text.trim();
+    amountController.dispose();
+    notesController.dispose();
+
+    if (ok != true || !context.mounted) return;
+    if (toId == null || amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.invalidAmount), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(employeeRepositoryProvider).transferMyTreasury(
+            toEmployeeId: toId,
+            amount: amount,
+            notes: notes.isEmpty ? null : notes,
+          );
+      ref.invalidate(myTreasuryProvider);
+      ref.invalidate(myTreasuryStatementProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.transferRecorded), backgroundColor: AppColors.success),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(apiErrorMessage(e)),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _showAddExpenseDialog(BuildContext context, WidgetRef ref) async {
     final l10n = context.l10n;
@@ -154,15 +272,28 @@ class EmployeeDashboardScreen extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          FloatingActionButton.extended(
-            heroTag: 'expense',
-            onPressed: () => _showAddExpenseDialog(context, ref),
-            backgroundColor: const Color(0xFFE65100),
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.receipt_long),
-            label: Text(l10n.addExpense),
-          ),
-          const SizedBox(height: 12),
+          if (user?.permissions.canAddExpense ?? true) ...[
+            FloatingActionButton.extended(
+              heroTag: 'expense',
+              onPressed: () => _showAddExpenseDialog(context, ref),
+              backgroundColor: const Color(0xFFE65100),
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.receipt_long),
+              label: Text(l10n.addExpense),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (user?.permissions.canTransfer ?? false) ...[
+            FloatingActionButton.extended(
+              heroTag: 'transfer',
+              onPressed: () => _showTransferDialog(context, ref),
+              backgroundColor: const Color(0xFF1565C0),
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.swap_horiz),
+              label: Text(l10n.employeeTreasuryTransfer),
+            ),
+            const SizedBox(height: 12),
+          ],
           FloatingActionButton.extended(
             heroTag: 'collection',
             onPressed: () => context.go('/employee/collection-invoices'),

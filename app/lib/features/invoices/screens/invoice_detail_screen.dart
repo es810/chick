@@ -6,6 +6,7 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
+import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/invoice_model.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/invoice_pdf_actions.dart';
@@ -27,8 +28,12 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   String? _error;
   InvoiceModel? _invoice;
 
-  bool get _canManage =>
-      widget.basePath.contains('admin') || widget.basePath.contains('employee');
+  bool get _canManage {
+    if (widget.basePath.contains('admin')) return true;
+    if (!widget.basePath.contains('employee')) return false;
+    final user = ref.read(currentUserProvider);
+    return user?.permissions.canEditInvoices ?? true;
+  }
 
   bool get _isPendingOffline => widget.invoiceId.startsWith('pending-');
 

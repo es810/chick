@@ -170,6 +170,21 @@ class EmployeeRepository {
     );
   }
 
+  Future<void> transferMyTreasury({
+    required String toEmployeeId,
+    required double amount,
+    String? notes,
+  }) async {
+    await _api.post(
+      '${ApiConstants.myAccount}/treasury-transfers',
+      data: {
+        'toEmployeeId': toEmployeeId,
+        'amount': amount,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      },
+    );
+  }
+
   Future<EmployeeTreasurySummary> getMyTreasury() async {
     final response = await _api.get('${ApiConstants.myAccount}/treasury');
     final data = response.data as Map<String, dynamic>;

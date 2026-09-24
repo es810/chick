@@ -10,8 +10,9 @@ const { listEmployeesForPicker } = require('../services/treasuryEntriesService')
 const { getTreasurySummary } = require('../services/treasuryService');
 
 const listCollectionInvoicesHandler = asyncHandler(async (req, res) => {
+  const { hasPermission } = require('../utils/employeePermissions');
   const filters = {};
-  if (req.user.role === 'employee') {
+  if (req.user.role === 'employee' && !hasPermission(req.user, 'canViewOthersWork')) {
     filters.employeeId = req.user._id;
   }
   const data = await listCollectionInvoices(filters);

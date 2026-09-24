@@ -3,6 +3,7 @@ const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { logAction } = require('../services/auditService');
 const { attachTreasuryBalances } = require('../services/employeeTreasuryService');
+const { normalizePermissions } = require('../utils/employeePermissions');
 
 const getEmployees = asyncHandler(async (req, res) => {
   const { search, page = 1, limit = 20 } = req.query;
@@ -31,7 +32,7 @@ const getEmployees = asyncHandler(async (req, res) => {
 });
 
 const createEmployee = asyncHandler(async (req, res) => {
-  const { name, phone, email, password, salary = 0 } = req.body;
+  const { name, phone, email, password, salary = 0, permissions } = req.body;
   const exists = await User.findOne({ email });
   if (exists) throw new ApiError(400, 'Email already exists');
 
@@ -42,13 +43,14 @@ const createEmployee = asyncHandler(async (req, res) => {
     password,
     role: 'employee',
     salary,
+    permissions: normalizePermissions(permissions),
   });
   await logAction(req.user._id, req.user.name, 'CREATE_EMPLOYEE', employee.name);
   res.status(201).json({ success: true, data: employee });
 });
 
 const updateEmployee = asyncHandler(async (req, res) => {
-  const { name, phone, email, password, isActive, salary } = req.body;
+  const { name, phone, email, password, isActive, salary, permissions } = req.body;
   const employee = await User.findOne({ _id: req.params.id, role: 'employee' });
   if (!employee) throw new ApiError(404, 'Employee not found');
 
@@ -62,6 +64,12 @@ const updateEmployee = asyncHandler(async (req, res) => {
   if (isActive !== undefined) employee.isActive = isActive;
   if (salary !== undefined) employee.salary = salary;
   if (password) employee.password = password;
+  if (permissions !== undefined) {
+    employee.permissions = normalizePermissions({
+      ...normalizePermissions(employee.permissions),
+      ...permissions,
+    });
+  }
 
   await employee.save();
   await logAction(req.user._id, req.user.name, 'UPDATE_EMPLOYEE', employee.name);

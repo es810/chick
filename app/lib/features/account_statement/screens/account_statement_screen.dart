@@ -41,7 +41,10 @@ class AccountStatementScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('${l10n.accountStatement} — $entityName'),
       ),
-      floatingActionButton: kind == AccountStatementKind.supplier
+      floatingActionButton: kind == AccountStatementKind.supplier &&
+              (ref.watch(currentUserProvider)?.role != UserRole.employee ||
+                  (ref.watch(currentUserProvider)?.permissions.canPaySupplier ??
+                      true))
           ? statementAsync.maybeWhen(
               data: (statement) => statement.entity.balance > 0
                   ? FloatingActionButton.extended(

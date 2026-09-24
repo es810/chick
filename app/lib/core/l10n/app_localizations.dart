@@ -96,6 +96,16 @@ class AppLocalizations {
   'editTreasury': {'en': 'Edit treasury', 'ar': 'تعديل الخزينة'},
   'zeroTreasury': {'en': 'Zero Treasury', 'ar': 'تصفير الخزنة'},
   'resetTreasury': {'en': 'Zero Treasury', 'ar': 'تصفير الخزنة'},
+  'adminPasswordRequired': {
+    'en': 'Admin password',
+    'ar': 'الرقم السري للأدمن',
+  },
+  'confirmZeroTreasuryPassword': {
+    'en':
+        'Enter the admin password to zero the treasury. This clears opening balance, movements, and collection invoices.',
+    'ar':
+        'اكتب الرقم السري للأدمن عشان تصفّر الخزنة. هيتصفر رصيد أول المدة وتتمسح الحركات وفواتير التحصيل.',
+  },
   'confirmZeroTreasury': {
     'en':
         'Set opening balance to zero and clear external revenue and withdrawal records? Invoice and employee records will still affect the calculated total.',
@@ -107,6 +117,34 @@ class AppLocalizations {
         'Set opening balance to zero and clear external revenue and withdrawal records? Invoice and employee records will still affect the calculated total.',
     'ar':
         'تصفير رصيد أول المدة ومسح الإيرادات الخارجية والسحوبات؟ الفواتير وسجل الموظفين تبقى محسوبة في الإجمالي حتى تحذفها.',
+  },
+  'employeePermissions': {
+    'en': 'Employee permissions',
+    'ar': 'صلاحيات الموظف',
+  },
+  'permCanEditInvoices': {
+    'en': 'Edit / delete invoices',
+    'ar': 'تعديل ومسح الفواتير',
+  },
+  'permCanViewOthersWork': {
+    'en': 'Open other employees\' work',
+    'ar': 'فتح شغل الموظفين التانيين',
+  },
+  'permCanTransfer': {
+    'en': 'Transfer between employees',
+    'ar': 'التحويل بين الموظفين',
+  },
+  'permCanAddExpense': {
+    'en': 'Add expenses',
+    'ar': 'إضافة مصروفات',
+  },
+  'permCanPaySupplier': {
+    'en': 'Pay suppliers',
+    'ar': 'دفع الموردين',
+  },
+  'incorrectAdminPassword': {
+    'en': 'Incorrect admin password',
+    'ar': 'الرقم السري للأدمن غلط',
   },
   'treasuryZeroed': {'en': 'Treasury zeroed', 'ar': 'تم تصفير الخزنة'},
   'treasuryReset': {'en': 'Treasury zeroed', 'ar': 'تم تصفير الخزنة'},
@@ -697,8 +735,17 @@ class AppLocalizations {
   String get editTreasury => _get('editTreasury');
   String get zeroTreasury => _get('zeroTreasury');
   String get resetTreasury => _get('resetTreasury');
+  String get adminPasswordRequired => _get('adminPasswordRequired');
+  String get confirmZeroTreasuryPassword => _get('confirmZeroTreasuryPassword');
   String get confirmZeroTreasury => _get('confirmZeroTreasury');
   String get confirmResetTreasury => _get('confirmResetTreasury');
+  String get employeePermissions => _get('employeePermissions');
+  String get permCanEditInvoices => _get('permCanEditInvoices');
+  String get permCanViewOthersWork => _get('permCanViewOthersWork');
+  String get permCanTransfer => _get('permCanTransfer');
+  String get permCanAddExpense => _get('permCanAddExpense');
+  String get permCanPaySupplier => _get('permCanPaySupplier');
+  String get incorrectAdminPassword => _get('incorrectAdminPassword');
   String get treasuryZeroed => _get('treasuryZeroed');
   String get treasuryReset => _get('treasuryReset');
   String get financialTreasury => _get('financialTreasury');

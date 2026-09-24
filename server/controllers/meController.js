@@ -1,9 +1,12 @@
 const asyncHandler = require('../utils/asyncHandler');
+const ApiError = require('../utils/apiError');
 const { getEmployeeLedger, addLedgerEntry } = require('../services/employeeLedgerService');
 const {
   getEmployeeTreasurySummary,
   getEmployeeTreasuryStatement,
+  transferEmployeeTreasury,
 } = require('../services/employeeTreasuryService');
+const { hasPermission } = require('../utils/employeePermissions');
 
 const getMyLedger = asyncHandler(async (req, res) => {
   const data = await getEmployeeLedger(req.user._id);
@@ -18,6 +21,9 @@ const getMyLedger = asyncHandler(async (req, res) => {
 });
 
 const addMyExpense = asyncHandler(async (req, res) => {
+  if (!hasPermission(req.user, 'canAddExpense')) {
+    throw new ApiError(403, 'Expenses are disabled for this employee');
+  }
   const { amount, description, clientMutationId } = req.body;
   const entry = await addLedgerEntry(
     req.user._id,
@@ -33,6 +39,9 @@ const addMyExpense = asyncHandler(async (req, res) => {
 });
 
 const addMyDebt = asyncHandler(async (req, res) => {
+  if (!hasPermission(req.user, 'canPaySupplier')) {
+    throw new ApiError(403, 'Supplier payments are disabled for this employee');
+  }
   const { amount, description, supplierId, amountDeducted = 0 } = req.body;
   const entry = await addLedgerEntry(
     req.user._id,
@@ -56,10 +65,28 @@ const getMyTreasuryStatement = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
+const transferMyTreasury = asyncHandler(async (req, res) => {
+  if (!hasPermission(req.user, 'canTransfer')) {
+    throw new ApiError(403, 'Transfers are disabled for this employee');
+  }
+  const { toEmployeeId, amount, notes } = req.body;
+  const transfer = await transferEmployeeTreasury(
+    {
+      fromEmployeeId: req.user._id.toString(),
+      toEmployeeId,
+      amount,
+      notes,
+    },
+    req.user
+  );
+  res.status(201).json({ success: true, data: transfer });
+});
+
 module.exports = {
   getMyLedger,
   addMyExpense,
   addMyDebt,
   getMyTreasury,
   getMyTreasuryStatement,
+  transferMyTreasury,
 };

@@ -1,6 +1,13 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { getMyLedger, addMyExpense, addMyDebt, getMyTreasury, getMyTreasuryStatement } = require('../controllers/meController');
+const {
+  getMyLedger,
+  addMyExpense,
+  addMyDebt,
+  getMyTreasury,
+  getMyTreasuryStatement,
+  transferMyTreasury,
+} = require('../controllers/meController');
 const { protect, authorize } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 
@@ -24,5 +31,15 @@ router.get('/treasury', getMyTreasury);
 router.get('/treasury/statement', getMyTreasuryStatement);
 router.post('/ledger/expense', ledgerValidation, validate, addMyExpense);
 router.post('/ledger/debt', debtValidation, validate, addMyDebt);
+router.post(
+  '/treasury-transfers',
+  [
+    body('toEmployeeId').isMongoId().withMessage('Destination employee is required'),
+    body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
+    body('notes').optional().trim(),
+  ],
+  validate,
+  transferMyTreasury
+);
 
 module.exports = router;

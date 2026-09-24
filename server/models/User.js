@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { DEFAULT_PERMISSIONS } = require('../utils/employeePermissions');
+
+const permissionsSchema = new mongoose.Schema(
+  {
+    canEditInvoices: { type: Boolean, default: DEFAULT_PERMISSIONS.canEditInvoices },
+    canViewOthersWork: { type: Boolean, default: DEFAULT_PERMISSIONS.canViewOthersWork },
+    canTransfer: { type: Boolean, default: DEFAULT_PERMISSIONS.canTransfer },
+    canAddExpense: { type: Boolean, default: DEFAULT_PERMISSIONS.canAddExpense },
+    canPaySupplier: { type: Boolean, default: DEFAULT_PERMISSIONS.canPaySupplier },
+  },
+  { _id: false }
+);
 
 const userSchema = new mongoose.Schema(
   {
@@ -16,6 +28,10 @@ const userSchema = new mongoose.Schema(
     clientProfile: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
     salary: { type: Number, default: 0, min: 0 },
     isActive: { type: Boolean, default: true },
+    permissions: {
+      type: permissionsSchema,
+      default: () => ({ ...DEFAULT_PERMISSIONS }),
+    },
   },
   { timestamps: true }
 );

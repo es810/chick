@@ -2,6 +2,7 @@ const Invoice = require('../models/Invoice');
 const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { isSameId } = require('../utils/refId');
+const { hasPermission } = require('../utils/employeePermissions');
 const {
   createInvoice,
   updateInvoiceFull,
@@ -15,7 +16,7 @@ const getInvoices = asyncHandler(async (req, res) => {
 
   if (req.user.role === 'client' && req.user.clientProfile) {
     query.clientId = req.user.clientProfile;
-  } else if (req.user.role === 'employee') {
+  } else if (req.user.role === 'employee' && !hasPermission(req.user, 'canViewOthersWork')) {
     query.employeeId = req.user._id;
   }
 
@@ -64,8 +65,13 @@ const getInvoice = asyncHandler(async (req, res) => {
     }
   }
 
-  // Employees may view any distribution invoice (lists stay scoped to their own).
-  // Edit/delete remain owner-only below.
+  if (
+    req.user.role === 'employee' &&
+    !hasPermission(req.user, 'canViewOthersWork') &&
+    !isSameId(invoice.employeeId, req.user._id)
+  ) {
+    throw new ApiError(403, 'Not authorized to view this invoice');
+  }
 
   res.json({ success: true, data: invoice });
 });
@@ -75,15 +81,23 @@ const createInvoiceHandler = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: invoice });
 });
 
+const assertEmployeeCanEdit = (user, invoice) => {
+  if (user.role !== 'employee') return;
+  if (!hasPermission(user, 'canEditInvoices')) {
+    throw new ApiError(403, 'Editing invoices is disabled for this employee');
+  }
+  if (!isSameId(invoice.employeeId, user._id)) {
+    throw new ApiError(403, 'Not authorized to edit this invoice');
+  }
+};
+
 const updateInvoice = asyncHandler(async (req, res) => {
   const { paymentStatus, items, notes } = req.body;
 
   if (items?.length) {
     const existing = await Invoice.findById(req.params.id);
     if (!existing) throw new ApiError(404, 'Invoice not found');
-    if (req.user.role === 'employee' && !isSameId(existing.employeeId, req.user._id)) {
-      throw new ApiError(403, 'Not authorized to edit this invoice');
-    }
+    assertEmployeeCanEdit(req.user, existing);
     const updated = await updateInvoiceFull(req.params.id, req.body, req.user);
     return res.json({ success: true, data: updated });
   }
@@ -91,9 +105,7 @@ const updateInvoice = asyncHandler(async (req, res) => {
   const invoice = await Invoice.findById(req.params.id);
   if (!invoice) throw new ApiError(404, 'Invoice not found');
 
-  if (req.user.role === 'employee' && !isSameId(invoice.employeeId, req.user._id)) {
-    throw new ApiError(403, 'Not authorized to edit this invoice');
-  }
+  assertEmployeeCanEdit(req.user, invoice);
 
   if (paymentStatus) {
     const updated = await updatePaymentStatus(req.params.id, paymentStatus, req.user);
@@ -111,9 +123,7 @@ const updateInvoice = asyncHandler(async (req, res) => {
 const deleteInvoiceHandler = asyncHandler(async (req, res) => {
   const invoice = await Invoice.findById(req.params.id);
   if (!invoice) throw new ApiError(404, 'Invoice not found');
-  if (req.user.role === 'employee' && !isSameId(invoice.employeeId, req.user._id)) {
-    throw new ApiError(403, 'Not authorized to delete this invoice');
-  }
+  assertEmployeeCanEdit(req.user, invoice);
   const result = await deleteInvoice(req.params.id, req.user);
   res.status(200).json({ success: true, data: result });
 });

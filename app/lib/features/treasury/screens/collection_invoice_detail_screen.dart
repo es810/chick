@@ -148,7 +148,9 @@ class _CollectionInvoiceDetailScreenState
         !_busy &&
         !_isPendingOffline &&
         (user?.role == UserRole.admin ||
-            (user?.role == UserRole.employee && entry.employeeId == user?.id));
+            (user?.role == UserRole.employee &&
+                (user?.permissions.canEditInvoices ?? true) &&
+                entry.employeeId == user?.id));
 
     return Scaffold(
       appBar: AppBar(

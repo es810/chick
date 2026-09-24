@@ -8,6 +8,10 @@ const { addLedgerEntry } = require('./employeeLedgerService');
  * (employee ledger debt), which also reduces the main treasury via loading.
  */
 const createSupplierPayment = async (supplierId, data, user) => {
+  const { hasPermission } = require('../utils/employeePermissions');
+  if (user.role === 'employee' && !hasPermission(user, 'canPaySupplier')) {
+    throw new ApiError(403, 'Supplier payments are disabled for this employee');
+  }
   const { paymentDate, amount, notes = '' } = data;
   const amountDeducted = Number(data.amountDeducted) || 0;
   const employeeId =
