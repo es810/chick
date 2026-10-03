@@ -10,6 +10,7 @@ import '../../../core/utils/api_error.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/treasury_entry_item.dart';
 import '../../../models/user_model.dart';
+import '../../../services/cache_service.dart';
 import '../../../shared/widgets/collection_pdf_actions.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -128,6 +129,20 @@ class _CollectionInvoiceDetailScreenState
       } else {
         context.go('${widget.basePath}/collection-invoices');
       }
+    } on OfflineQueuedException {
+      await _refreshRelated();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.savedOfflineWillSync),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('${widget.basePath}/collection-invoices');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -192,9 +207,12 @@ class _CollectionInvoiceDetailScreenState
                                 const SizedBox(height: 8),
                                 Text('${l10n.client}: ${entry.clientName ?? '—'}'),
                                 Text('${l10n.collectorEmployee}: ${entry.employeeName ?? '—'}'),
-                                if (entry.collectionDate != null)
+                                if (entry.createdAt != null || entry.collectionDate != null)
                                   Text(
-                                    '${l10n.date}: ${DateFormat.yMMMd().format(entry.collectionDate!)}',
+                                    '${l10n.date}: ${DateFormat.yMMMd().add_jm().format(
+                                          (entry.createdAt ?? entry.collectionDate!)
+                                              .toLocal(),
+                                        )}',
                                   ),
                               ],
                             ),

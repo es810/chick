@@ -56,9 +56,9 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
   void initState() {
     super.initState();
     final existing = widget.existing;
-    final now = DateTime.now();
-    _collectionDate = existing?.collectionDate ??
-        DateTime(now.year, now.month, now.day);
+    _collectionDate = existing?.createdAt ??
+        existing?.collectionDate ??
+        DateTime.now();
 
     if (existing != null) {
       _selectedEmployeeId = existing.employeeId;
@@ -186,8 +186,16 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
+      final previous = _collectionDate;
       setState(
-        () => _collectionDate = DateTime(picked.year, picked.month, picked.day),
+        () => _collectionDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          previous.hour,
+          previous.minute,
+          previous.second,
+        ),
       );
     }
   }
@@ -380,7 +388,7 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
               labelText: l10n.date,
               suffixIcon: const Icon(Icons.calendar_today),
             ),
-            child: Text(DateFormat.yMMMd().format(_collectionDate)),
+            child: Text(DateFormat.yMMMd().add_jm().format(_collectionDate)),
           ),
         ),
         const SizedBox(height: 12),

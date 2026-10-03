@@ -119,6 +119,21 @@ class CacheService {
 
   Future<void> removePendingSync(String id) => _pending.delete(id);
 
+  /// Replace payload of an existing queued mutation (e.g. edit pending invoice).
+  Future<void> updatePendingSyncPayload(
+    String id,
+    Map<String, dynamic> payload,
+  ) async {
+    final raw = _pending.get(id);
+    if (raw is! Map) return;
+    final map = Map<String, dynamic>.from(raw);
+    final body = Map<String, dynamic>.from(payload);
+    body.putIfAbsent('clientMutationId', () => id);
+    map['payload'] = body;
+    map['timestamp'] = DateTime.now().toIso8601String();
+    await _pending.put(id, map);
+  }
+
   Future<void> clearCache() async {
     await _cache.clear();
   }

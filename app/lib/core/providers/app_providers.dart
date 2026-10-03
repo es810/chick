@@ -52,12 +52,18 @@ final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
   return EmployeeRepository(ref.watch(apiClientProvider), ref.watch(cacheServiceProvider));
 });
 
-final damagedStockRepositoryProvider = Provider<DamagedStockRepository>((ref) {
-  return DamagedStockRepository(ref.watch(apiClientProvider));
+final stockLoadRepositoryProvider = Provider<StockLoadRepository>((ref) {
+  return StockLoadRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(cacheServiceProvider),
+  );
 });
 
-final stockLoadRepositoryProvider = Provider<StockLoadRepository>((ref) {
-  return StockLoadRepository(ref.watch(apiClientProvider));
+final damagedStockRepositoryProvider = Provider<DamagedStockRepository>((ref) {
+  return DamagedStockRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(cacheServiceProvider),
+  );
 });
 
 final clientsProvider = FutureProvider((ref) async {
@@ -119,7 +125,7 @@ final damagedStockProvider = FutureProvider((ref) async {
 final stockLoadsProvider = FutureProvider((ref) async {
   ref.keepAlive();
   return ref.watch(stockLoadRepositoryProvider).list(
-        status: 'open,pending_writeoff',
+        status: 'open,pending_writeoff,closed',
       );
 });
 

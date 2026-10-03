@@ -282,6 +282,12 @@ class DamagedStockScreen extends ConsumerWidget {
                       onFinish: load.hasLoadAction
                           ? () => _finishLoad(context, ref, load)
                           : null,
+                      onOpen: () {
+                        final name = Uri.encodeComponent(load.chickenType);
+                        context.push(
+                          '$basePath/stock-loads/${load.id}/statement?name=$name',
+                        );
+                      },
                     ),
                   ),
                 if (hasEntries) ...[
@@ -410,11 +416,13 @@ class _StockLoadCard extends StatelessWidget {
     required this.load,
     required this.isAdmin,
     this.onFinish,
+    this.onOpen,
   });
 
   final StockLoadModel load;
   final bool isAdmin;
   final VoidCallback? onFinish;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -422,62 +430,82 @@ class _StockLoadCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: (load.isPendingWriteOff ? AppColors.warning : AppColors.primaryGreen)
-                .withValues(alpha: 0.12),
-            child: Icon(
-              Icons.inventory_2_outlined,
-              color: load.isPendingWriteOff ? AppColors.warning : AppColors.primaryGreen,
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: (load.isPendingWriteOff ? AppColors.warning : AppColors.primaryGreen)
+                  .withValues(alpha: 0.12),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                color: load.isPendingWriteOff ? AppColors.warning : AppColors.primaryGreen,
+              ),
             ),
-          ),
-          title: Text(load.chickenType),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                load.isPendingWriteOff
-                    ? l10n.loadPendingWriteOff
-                    : l10n.pendingWriteOffLoads,
-                style: TextStyle(
-                  color: load.isPendingWriteOff ? AppColors.warning : AppColors.primaryGreen,
-                  fontWeight: FontWeight.w600,
-                  fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
-                ),
-              ),
-              Text(
-                '${l10n.loadedLabel}: ${load.loadedQuantity}'
-                '${load.loadedNetWeight > 0 ? ' — ${load.loadedNetWeight.toStringAsFixed(1)} kg' : ''}',
-              ),
-              Text(
-                '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
-                '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}',
-              ),
-              if (load.createdAt != null)
-                Text(DateFormat.yMMMd().add_jm().format(load.createdAt!)),
-              if (onFinish != null) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: TextButton.icon(
-                    onPressed: onFinish,
-                    icon: Icon(
-                      load.canConfirmWriteOff
-                          ? Icons.check_circle_outline
-                          : Icons.flag_outlined,
-                      size: 18,
-                    ),
-                    label: Text(
-                      load.canConfirmWriteOff
-                          ? l10n.confirmWriteOff
-                          : l10n.finishDistribution,
-                    ),
+            title: Text(load.chickenType),
+            trailing: onOpen != null
+                ? Icon(Icons.chevron_left, color: Colors.grey.shade600)
+                : null,
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  load.isPendingWriteOff
+                      ? l10n.loadPendingWriteOff
+                      : load.isClosed
+                          ? l10n.loadClosed
+                          : l10n.pendingWriteOffLoads,
+                  style: TextStyle(
+                    color: load.isPendingWriteOff
+                        ? AppColors.warning
+                        : load.isClosed
+                            ? Colors.grey
+                            : AppColors.primaryGreen,
+                    fontWeight: FontWeight.w600,
+                    fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                   ),
                 ),
+                Text(
+                  '${l10n.loadedLabel}: ${load.loadedQuantity}'
+                  '${load.loadedNetWeight > 0 ? ' — ${load.loadedNetWeight.toStringAsFixed(1)} kg' : ''}',
+                ),
+                Text(
+                  '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
+                  '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}',
+                ),
+                if (load.createdAt != null)
+                  Text(DateFormat.yMMMd().add_jm().format(load.createdAt!)),
+                Text(
+                  l10n.viewLoadStatement,
+                  style: TextStyle(
+                    color: AppColors.primaryGreen,
+                    fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                  ),
+                ),
+                if (onFinish != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton.icon(
+                      onPressed: onFinish,
+                      icon: Icon(
+                        load.canConfirmWriteOff
+                            ? Icons.check_circle_outline
+                            : Icons.flag_outlined,
+                        size: 18,
+                      ),
+                      label: Text(
+                        load.canConfirmWriteOff
+                            ? l10n.confirmWriteOff
+                            : l10n.finishDistribution,
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

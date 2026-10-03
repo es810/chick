@@ -88,18 +88,20 @@ const settleDepletedLoad = async (session, load) => {
 
 /**
  * FIFO: reduce open loads for this chicken type by sold qty/kg.
- * Returns the last load touched (for linking surplus/remainder).
+ * Returns { lastTouched, allocations: [{ load, quantity, netWeight }] }.
  */
 const consumeFromLoads = async (session, chickenType, quantity, netWeight) => {
   let qtyLeft = Math.max(0, parseInt(quantity, 10) || 0);
   let kgLeft = round2(netWeight);
-  if (qtyLeft <= 0 && kgLeft <= 0) return null;
+  const empty = { lastTouched: null, allocations: [] };
+  if (qtyLeft <= 0 && kgLeft <= 0) return empty;
 
   const loads = await StockLoad.find({ chickenType, status: 'open' })
     .sort({ createdAt: 1 })
     .session(session);
 
   let lastTouched = null;
+  const allocations = [];
 
   for (const load of loads) {
     if (qtyLeft <= 0 && kgLeft <= 0) break;
@@ -108,7 +110,6 @@ const consumeFromLoads = async (session, chickenType, quantity, netWeight) => {
     let takeKg = 0;
     if (kgLeft > 0 && (load.remainingNetWeight || 0) > 0) {
       if (takeQty > 0 && (load.remainingQuantity || 0) > 0) {
-        // Prefer proportional kg for birds taken from this load.
         const proportional = round2(
           ((load.remainingNetWeight || 0) * takeQty) / load.remainingQuantity
         );
@@ -132,29 +133,35 @@ const consumeFromLoads = async (session, chickenType, quantity, netWeight) => {
     qtyLeft -= takeQty;
     kgLeft = round2(kgLeft - takeKg);
     lastTouched = load;
+    allocations.push({ load, quantity: takeQty, netWeight: takeKg });
 
-    // Keep leftover kg when cages are gone (lighter birds) — do not force zero.
     await load.save({ session });
     if ((load.remainingQuantity || 0) <= 0 && (load.remainingNetWeight || 0) <= 0.001) {
       await settleDepletedLoad(session, load);
     }
   }
 
-  return lastTouched;
+  return { lastTouched, allocations };
 };
 
 /**
- * Best-effort restore when an invoice is deleted: put qty/kg back on the
- * newest open load, or reopen the newest pending/closed load of that type.
+ * Restore qty/kg onto a specific load when possible, else newest open/closed load.
  */
-const restoreToLoads = async (session, chickenType, quantity, netWeight) => {
+const restoreToLoads = async (session, chickenType, quantity, netWeight, stockLoadId = null) => {
   const qty = Math.max(0, parseInt(quantity, 10) || 0);
   const kg = round2(netWeight);
   if (qty <= 0 && kg <= 0) return;
 
-  let load = await StockLoad.findOne({ chickenType, status: 'open' })
-    .sort({ createdAt: -1 })
-    .session(session);
+  let load = null;
+  if (stockLoadId) {
+    load = await StockLoad.findById(stockLoadId).session(session);
+  }
+
+  if (!load) {
+    load = await StockLoad.findOne({ chickenType, status: 'open' })
+      .sort({ createdAt: -1 })
+      .session(session);
+  }
 
   if (!load) {
     load = await StockLoad.findOne({
@@ -169,7 +176,6 @@ const restoreToLoads = async (session, chickenType, quantity, netWeight) => {
 
   load.remainingQuantity = (load.remainingQuantity || 0) + qty;
   load.remainingNetWeight = round2((load.remainingNetWeight || 0) + kg);
-  // Cap at loaded amounts so restore cannot invent stock on the load row.
   load.remainingQuantity = Math.min(
     load.remainingQuantity,
     load.loadedQuantity || load.remainingQuantity
@@ -413,6 +419,7 @@ const finishStockLoad = async (loadId, user) => {
           location: stock.location,
           reason: 'Load deficit write-off (finish distribution)',
           employeeId: user._id,
+          stockLoadId: load._id,
         },
       ],
       { session }
@@ -467,6 +474,144 @@ const closeLoadIfSettled = async (session, stockLoadId) => {
   }
 };
 
+/**
+ * Account-statement style view of everything distributed from one stock load.
+ */
+const getLoadStatement = async (loadId) => {
+  const Invoice = require('../models/Invoice');
+  const load = await StockLoad.findById(loadId).populate('createdBy', 'name');
+  if (!load) throw new ApiError(404, 'Stock load not found');
+
+  const movements = await StockMovement.find({
+    stockLoadId: load._id,
+    type: 'OUT',
+    invoiceId: { $ne: null },
+  }).sort({ createdAt: 1 });
+
+  const byInvoice = new Map();
+  for (const mov of movements) {
+    const key = mov.invoiceId.toString();
+    const prev = byInvoice.get(key) || {
+      invoiceId: key,
+      quantity: 0,
+      netWeight: 0,
+      date: mov.createdAt,
+    };
+    prev.quantity += mov.quantity || 0;
+    prev.netWeight = round2(prev.netWeight + (mov.netWeight || 0));
+    if (mov.createdAt && (!prev.date || mov.createdAt < prev.date)) {
+      prev.date = mov.createdAt;
+    }
+    byInvoice.set(key, prev);
+  }
+
+  const invoiceIds = [...byInvoice.keys()];
+  const invoices = invoiceIds.length
+    ? await Invoice.find({ _id: { $in: invoiceIds } }).populate('clientId', 'name phone')
+    : [];
+  const invoiceMap = new Map(invoices.map((inv) => [inv._id.toString(), inv]));
+
+  const entries = [];
+  for (const [invoiceId, alloc] of byInvoice) {
+    const inv = invoiceMap.get(invoiceId);
+    if (!inv) continue;
+
+    // Amount for this load: proportional share of invoice total by net weight / birds.
+    const item = (inv.items || []).find((i) => i.chickenType === load.chickenType);
+    const itemTotal = item
+      ? Number(item.total) ||
+        (Number(item.unitPrice) || 0) * (Number(item.weight) || 0)
+      : 0;
+    const itemQty = item ? Number(item.quantity) || 0 : 0;
+    const itemWeight = item ? Number(item.weight) || 0 : 0;
+    let amount = 0;
+    if (itemWeight > 0 && alloc.netWeight > 0) {
+      amount = round2(itemTotal * (alloc.netWeight / itemWeight));
+    } else if (itemQty > 0 && alloc.quantity > 0) {
+      amount = round2(itemTotal * (alloc.quantity / itemQty));
+    } else if (itemTotal > 0 && byInvoice.size === 1) {
+      amount = round2(itemTotal);
+    }
+
+    entries.push({
+      id: invoiceId,
+      type: 'distribution',
+      date: inv.createdAt || alloc.date,
+      invoiceNumber: inv.invoiceNumber,
+      description: `فاتورة توزيع #${inv.invoiceNumber}`,
+      subtitle: inv.clientId?.name || '',
+      clientId: inv.clientId?._id?.toString() || inv.clientId?.toString() || '',
+      clientName: inv.clientId?.name || '',
+      quantity: alloc.quantity,
+      netWeight: alloc.netWeight,
+      amount,
+      paymentStatus: inv.paymentStatus || 'pending',
+      debit: inv.paymentStatus === 'paid' ? 0 : amount,
+      credit: 0,
+    });
+  }
+
+  entries.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const variances = await DamagedStock.find({ stockLoadId: load._id })
+    .sort({ createdAt: 1 })
+    .lean();
+
+  for (const v of variances) {
+    entries.push({
+      id: v._id.toString(),
+      type: 'variance',
+      date: v.createdAt,
+      invoiceNumber: null,
+      description: v.reason || v.source || 'هالك / فرق',
+      subtitle: v.source || '',
+      clientId: '',
+      clientName: '',
+      quantity: v.quantity || 0,
+      netWeight: v.netWeight || 0,
+      amount: 0,
+      paymentStatus: v.status || 'open',
+      debit: 0,
+      credit: 0,
+      source: v.source,
+      status: v.status,
+    });
+  }
+
+  entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const distEntries = entries.filter((e) => e.type === 'distribution');
+  const totals = {
+    distributedQuantity: distEntries.reduce((s, e) => s + (e.quantity || 0), 0),
+    distributedNetWeight: round2(
+      distEntries.reduce((s, e) => s + (e.netWeight || 0), 0)
+    ),
+    distributedAmount: round2(distEntries.reduce((s, e) => s + (e.amount || 0), 0)),
+    unpaidAmount: round2(
+      distEntries
+        .filter((e) => e.paymentStatus !== 'paid')
+        .reduce((s, e) => s + (e.amount || 0), 0)
+    ),
+    invoiceCount: distEntries.length,
+  };
+
+  return {
+    load: {
+      id: load._id.toString(),
+      chickenType: load.chickenType,
+      loadedQuantity: load.loadedQuantity,
+      loadedNetWeight: load.loadedNetWeight,
+      remainingQuantity: load.remainingQuantity,
+      remainingNetWeight: load.remainingNetWeight,
+      status: load.status,
+      createdAt: load.createdAt,
+      createdByName: load.createdBy?.name || '',
+    },
+    totals,
+    entries,
+  };
+};
+
 module.exports = {
   createStockLoad,
   listStockLoads,
@@ -477,4 +622,5 @@ module.exports = {
   finishStockLoad,
   settleDepletedLoad,
   closeLoadIfSettled,
+  getLoadStatement,
 };

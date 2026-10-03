@@ -86,6 +86,8 @@ class EmployeeLedgerSummary extends Equatable {
     required this.totalExpenses,
     required this.totalDebt,
     required this.totalAdvances,
+    required this.totalAdvancesThisMonth,
+    required this.remainingAdvanceThisMonth,
     required this.treasuryBalance,
     required this.entries,
     required this.advances,
@@ -96,7 +98,10 @@ class EmployeeLedgerSummary extends Equatable {
   final double employeeSalary;
   final double totalExpenses;
   final double totalDebt;
+  /// Lifetime advances (treasury / history). Prefer [totalAdvancesThisMonth] in UI cards.
   final double totalAdvances;
+  final double totalAdvancesThisMonth;
+  final double remainingAdvanceThisMonth;
   final double treasuryBalance;
   final List<EmployeeLedgerEntry> entries;
   final List<SalaryAdvanceEntry> advances;
@@ -104,28 +109,56 @@ class EmployeeLedgerSummary extends Equatable {
   factory EmployeeLedgerSummary.fromJson(Map<String, dynamic> json) {
     final employee = json['employee'] as Map<String, dynamic>;
     final entries = json['entries'] as List? ?? [];
-    final advances = json['advances'] as List? ?? [];
+    final advancesRaw = json['advances'] as List? ?? [];
     final treasury = json['treasury'] as Map<String, dynamic>?;
+    final salary = (employee['salary'] as num?)?.toDouble() ?? 0;
+    final lifetimeAdvances = (json['totalAdvances'] as num?)?.toDouble() ?? 0;
+    final thisMonth = (json['totalAdvancesThisMonth'] as num?)?.toDouble();
+    final remaining = (json['remainingAdvanceThisMonth'] as num?)?.toDouble();
+
+    final advanceEntries = advancesRaw
+        .map((e) => SalaryAdvanceEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    // Fallback for older API: compute this month from advance rows.
+    final now = DateTime.now();
+    final computedThisMonth = advanceEntries
+        .where(
+          (a) =>
+              a.advanceDate.year == now.year && a.advanceDate.month == now.month,
+        )
+        .fold<double>(0, (sum, a) => sum + a.amount);
+
+    final advancesThisMonth = thisMonth ?? computedThisMonth;
+    final remainingThisMonth =
+        remaining ?? (salary - advancesThisMonth).clamp(0, double.infinity);
+
     return EmployeeLedgerSummary(
       employeeId: employee['_id']?.toString() ?? employee['id']?.toString() ?? '',
       employeeName: employee['name'] as String? ?? '',
-      employeeSalary: (employee['salary'] as num?)?.toDouble() ?? 0,
+      employeeSalary: salary,
       totalExpenses: (json['totalExpenses'] as num?)?.toDouble() ?? 0,
       totalDebt: (json['totalDebt'] as num?)?.toDouble() ?? 0,
-      totalAdvances: (json['totalAdvances'] as num?)?.toDouble() ?? 0,
+      totalAdvances: lifetimeAdvances,
+      totalAdvancesThisMonth: advancesThisMonth,
+      remainingAdvanceThisMonth: remainingThisMonth.toDouble(),
       treasuryBalance: (json['treasuryBalance'] as num?)?.toDouble() ??
           (treasury?['balance'] as num?)?.toDouble() ??
           0,
       entries: entries
           .map((e) => EmployeeLedgerEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
-      advances: advances
-          .map((e) => SalaryAdvanceEntry.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      advances: advanceEntries,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [employeeId, totalExpenses, totalDebt, totalAdvances, treasuryBalance];
+  List<Object?> get props => [
+        employeeId,
+        totalExpenses,
+        totalDebt,
+        totalAdvances,
+        totalAdvancesThisMonth,
+        treasuryBalance,
+      ];
 }

@@ -14,6 +14,7 @@ const stockMovementSchema = new mongoose.Schema(
     totalAmount: { type: Number, default: 0, min: 0 },
     reason: { type: String, required: true },
     invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
+    stockLoadId: { type: mongoose.Schema.Types.ObjectId, ref: 'StockLoad', default: null },
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
@@ -21,5 +22,7 @@ const stockMovementSchema = new mongoose.Schema(
 
 stockMovementSchema.index({ createdAt: -1 });
 stockMovementSchema.index({ stockId: 1 });
+stockMovementSchema.index({ stockLoadId: 1, invoiceId: 1 });
+stockMovementSchema.index({ invoiceId: 1, type: 1 });
 
 module.exports = mongoose.model('StockMovement', stockMovementSchema);

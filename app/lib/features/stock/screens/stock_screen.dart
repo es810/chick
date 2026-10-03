@@ -104,6 +104,12 @@ class StockScreen extends ConsumerWidget {
                                 )
                             : null,
                         onFinishLoad: (load) => _finishLoad(context, ref, load),
+                        onOpenLoad: (load) {
+                          final name = Uri.encodeComponent(load.chickenType);
+                          context.push(
+                            '$basePath/stock-loads/${load.id}/statement?name=$name',
+                          );
+                        },
                       );
                     },
                   ),
@@ -383,6 +389,7 @@ class _StockCard extends StatelessWidget {
     this.onDelete,
     this.onWriteOff,
     this.onFinishLoad,
+    this.onOpenLoad,
   });
 
   final StockModel item;
@@ -392,13 +399,23 @@ class _StockCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onWriteOff;
   final void Function(StockLoadModel load)? onFinishLoad;
+  final void Function(StockLoadModel load)? onOpenLoad;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final canWriteOff =
         onWriteOff != null && (item.usableQuantity > 0 || item.usableNetWeight > 0);
-    final openLoads = loads.where((l) => l.isOpen || l.isPendingWriteOff).toList();
+    final sortedLoads = loads
+        .where((l) => l.isOpen || l.isPendingWriteOff || l.isClosed)
+        .toList()
+      ..sort((a, b) {
+        int rank(StockLoadModel l) =>
+            l.isClosed ? 2 : (l.isPendingWriteOff ? 1 : 0);
+        final byStatus = rank(a).compareTo(rank(b));
+        if (byStatus != 0) return byStatus;
+        return (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0));
+      });
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -505,7 +522,7 @@ class _StockCard extends StatelessWidget {
                     color: AppColors.primaryGreen,
                   ),
             ),
-            if (openLoads.isNotEmpty) ...[
+            if (sortedLoads.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
                 l10n.pendingWriteOffLoads,
@@ -514,62 +531,95 @@ class _StockCard extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 6),
-              ...openLoads.map(
+              ...sortedLoads.map(
                 (load) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryGreen.withValues(alpha: 0.06),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onOpenLoad != null ? () => onOpenLoad!(load) : null,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: load.isPendingWriteOff
-                            ? AppColors.warning.withValues(alpha: 0.5)
-                            : AppColors.primaryGreen.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          load.isPendingWriteOff
-                              ? l10n.loadPendingWriteOff
-                              : '${l10n.loadedLabel}: ${load.loadedQuantity}'
-                                  '${load.loadedNetWeight > 0 ? ' — ${load.loadedNetWeight.toStringAsFixed(1)} kg' : ''}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: load.isPendingWriteOff
+                                ? AppColors.warning.withValues(alpha: 0.5)
+                                : load.isClosed
+                                    ? Colors.grey.withValues(alpha: 0.4)
+                                    : AppColors.primaryGreen.withValues(alpha: 0.25),
+                          ),
                         ),
-                        if (load.isOpen)
-                          Text(
-                            '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
-                            '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}',
-                          ),
-                        if (onFinishLoad != null && load.canFinishDistribution) ...[
-                          const SizedBox(height: 6),
-                          Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: TextButton.icon(
-                              onPressed: () => onFinishLoad!(load),
-                              icon: const Icon(Icons.flag_outlined, size: 18),
-                              label: Text(l10n.finishDistribution),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    load.isPendingWriteOff
+                                        ? l10n.loadPendingWriteOff
+                                        : load.isClosed
+                                            ? l10n.loadClosed
+                                            : '${l10n.loadedLabel}: ${load.loadedQuantity}'
+                                                '${load.loadedNetWeight > 0 ? ' — ${load.loadedNetWeight.toStringAsFixed(1)} kg' : ''}',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.chevron_left,
+                                  size: 18,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                        if (onFinishLoad != null && load.canConfirmWriteOff) ...[
-                          const SizedBox(height: 6),
-                          Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: TextButton.icon(
-                              onPressed: () => onFinishLoad!(load),
-                              icon: const Icon(Icons.check_circle_outline, size: 18),
-                              label: Text(l10n.confirmWriteOff),
-                              style: TextButton.styleFrom(foregroundColor: AppColors.warning),
+                            if (load.isOpen)
+                              Text(
+                                '${l10n.loadRemainingLabel}: ${load.remainingQuantity}'
+                                '${load.remainingNetWeight > 0 ? ' — ${load.remainingNetWeight.toStringAsFixed(1)} kg' : ''}',
+                              ),
+                            if (load.isClosed)
+                              Text(
+                                '${l10n.loadedLabel}: ${load.loadedQuantity}'
+                                '${load.loadedNetWeight > 0 ? ' — ${load.loadedNetWeight.toStringAsFixed(1)} kg' : ''}',
+                              ),
+                            Text(
+                              l10n.viewLoadStatement,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.primaryGreen,
+                                  ),
                             ),
-                          ),
-                        ],
-                      ],
+                            if (onFinishLoad != null && load.canFinishDistribution) ...[
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: TextButton.icon(
+                                  onPressed: () => onFinishLoad!(load),
+                                  icon: const Icon(Icons.flag_outlined, size: 18),
+                                  label: Text(l10n.finishDistribution),
+                                ),
+                              ),
+                            ],
+                            if (onFinishLoad != null && load.canConfirmWriteOff) ...[
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: TextButton.icon(
+                                  onPressed: () => onFinishLoad!(load),
+                                  icon: const Icon(Icons.check_circle_outline, size: 18),
+                                  label: Text(l10n.confirmWriteOff),
+                                  style: TextButton.styleFrom(foregroundColor: AppColors.warning),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),

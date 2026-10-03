@@ -12,6 +12,7 @@ import '../../../core/utils/number_input_utils.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/account_statement_model.dart';
 import '../../../models/user_model.dart';
+import '../../../services/cache_service.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/invoice_number_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -259,9 +260,23 @@ class AccountStatementScreen extends ConsumerWidget {
       ref.invalidate(suppliersProvider);
       ref.invalidate(treasurySummaryProvider);
       ref.invalidate(dashboardProvider);
+      ref.invalidate(myTreasuryProvider);
+      ref.invalidate(myTreasuryStatementProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.supplierPaymentRecorded)),
+        );
+      }
+    } on OfflineQueuedException {
+      ref.invalidate(supplierStatementProvider(entityId));
+      ref.invalidate(suppliersProvider);
+      ref.invalidate(myTreasuryProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.savedOfflineWillSync),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     } on DioException catch (e) {
@@ -391,7 +406,7 @@ class _StatementBody extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      DateFormat.yMMMd().format(entry.date),
+                      DateFormat.yMMMd().add_jm().format(entry.date.toLocal()),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     if (canOpen) ...[

@@ -18,6 +18,8 @@ const getLedger = asyncHandler(async (req, res) => {
       totalDebt: ledger.totalDebt,
       entries: ledger.entries,
       totalAdvances: advanceData.totalAdvances,
+      totalAdvancesThisMonth: advanceData.totalAdvancesThisMonth,
+      remainingAdvanceThisMonth: advanceData.remainingAdvanceThisMonth,
       advances: advanceData.advances,
       treasuryBalance: treasury.balance,
       treasury: {

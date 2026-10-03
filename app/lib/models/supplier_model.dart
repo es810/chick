@@ -26,6 +26,8 @@ class SupplierModel extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
+        '_id': id,
+        'id': id,
         'name': name,
         'phone': phone,
         'location': location,

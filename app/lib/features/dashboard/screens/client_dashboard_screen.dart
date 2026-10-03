@@ -72,7 +72,7 @@ class ClientDashboardScreen extends ConsumerWidget {
                               title: Text(invoice.invoiceNumber),
                               subtitle: Text(
                                 invoice.createdAt != null
-                                    ? DateFormat.yMMMd().format(invoice.createdAt!)
+                                    ? DateFormat.yMMMd().add_jm().format(invoice.createdAt!.toLocal())
                                     : '',
                               ),
                               trailing: Text(

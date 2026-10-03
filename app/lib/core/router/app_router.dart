@@ -24,6 +24,7 @@ import '../../features/settings/screens/employee_detail_screen.dart';
 import '../../features/settings/screens/employees_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/stock/screens/damaged_stock_screen.dart';
+import '../../features/stock/screens/stock_load_statement_screen.dart';
 import '../../features/stock/screens/stock_screen.dart';
 import '../../models/user_model.dart';
 import '../../shared/widgets/app_shell.dart';
@@ -132,6 +133,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
+        path: '/admin/stock-loads/:id/statement',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => StockLoadStatementScreen(
+          loadId: state.pathParameters['id']!,
+          basePath: '/admin',
+          title: state.uri.queryParameters['name'] ?? '',
+        ),
+      ),
+
+      GoRoute(
         path: '/admin/suppliers/:id/stock',
         parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) => SupplierStockScreen(
@@ -173,6 +184,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/employee/damaged-stock',
         parentNavigatorKey: rootNavigatorKey,
         builder: (_, __) => const DamagedStockScreen(basePath: '/employee'),
+      ),
+
+      GoRoute(
+        path: '/employee/stock-loads/:id/statement',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) => StockLoadStatementScreen(
+          loadId: state.pathParameters['id']!,
+          basePath: '/employee',
+          title: state.uri.queryParameters['name'] ?? '',
+        ),
       ),
 
       GoRoute(

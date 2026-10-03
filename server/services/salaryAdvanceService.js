@@ -30,7 +30,8 @@ const listEmployeeAdvances = async (employeeId) => {
   const employee = await User.findOne({ _id: employeeId, role: 'employee' });
   if (!employee) throw new ApiError(404, 'Employee not found');
 
-  const [advances, totalAgg] = await Promise.all([
+  const now = new Date();
+  const [advances, totalAgg, totalAdvancesThisMonth] = await Promise.all([
     SalaryAdvance.find({ employeeId })
       .populate('createdBy', 'name')
       .sort({ advanceDate: -1, createdAt: -1 })
@@ -39,11 +40,20 @@ const listEmployeeAdvances = async (employeeId) => {
       { $match: { employeeId: new mongoose.Types.ObjectId(employeeId) } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
+    getAdvancesTakenInMonth(employeeId, now),
   ]);
 
   const totalAdvances = totalAgg[0]?.total || 0;
+  const salary = employee.salary || 0;
+  const remainingAdvanceThisMonth = Math.max(0, salary - totalAdvancesThisMonth);
 
-  return { employee, advances, totalAdvances };
+  return {
+    employee,
+    advances,
+    totalAdvances,
+    totalAdvancesThisMonth,
+    remainingAdvanceThisMonth,
+  };
 };
 
 const createSalaryAdvance = async (employeeId, data, user) => {

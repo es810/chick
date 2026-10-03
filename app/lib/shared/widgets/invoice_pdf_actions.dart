@@ -78,12 +78,21 @@ class _InvoicePdfActionsState extends State<InvoicePdfActions> {
   }
 
   Future<void> _shareWhatsApp() async {
+    final link =
+        widget.whatsappGroupLink ?? widget.invoice.clientWhatsappGroupLink;
+    if (pdfService.isWhatsAppInviteLinkOnly(link) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.whatsappInviteLinkWarning),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+    }
     await _runPdfAction(
       () => pdfService.shareViaWhatsApp(
         widget.invoice,
         clientPhone: widget.clientPhone,
-        whatsappGroupLink:
-            widget.whatsappGroupLink ?? widget.invoice.clientWhatsappGroupLink,
+        whatsappGroupLink: link,
       ),
       successMessage: context.l10n.pdfShared,
       timeout: const Duration(seconds: 45),
@@ -135,55 +144,50 @@ class _InvoicePdfActionsState extends State<InvoicePdfActions> {
       );
     }
 
-    return Card(
-      margin: const EdgeInsets.only(top: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              l10n.shareInvoice,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _print,
-              icon: const Icon(Icons.print),
-              label: Text(l10n.printInvoice),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 16),
+        Text(
+          l10n.shareInvoice,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: _download,
-              icon: const Icon(Icons.download_rounded),
-              label: Text(l10n.downloadPdf),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                foregroundColor: AppColors.primaryGreen,
-                side: const BorderSide(color: AppColors.primaryGreen),
-              ),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: _shareWhatsApp,
-              icon: const Icon(Icons.chat, color: Colors.white),
-              label: Text(l10n.shareWhatsApp),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(PdfService.whatsAppGreen),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
-          ],
         ),
-      ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: _print,
+          icon: const Icon(Icons.print),
+          label: Text(l10n.printInvoice),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryGreen,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _download,
+          icon: const Icon(Icons.download_rounded),
+          label: Text(l10n.downloadPdf),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            foregroundColor: AppColors.primaryGreen,
+            side: const BorderSide(color: AppColors.primaryGreen),
+          ),
+        ),
+        const SizedBox(height: 10),
+        ElevatedButton.icon(
+          onPressed: _shareWhatsApp,
+          icon: const Icon(Icons.chat, color: Colors.white),
+          label: Text(l10n.shareWhatsApp),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(PdfService.whatsAppGreen),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+      ],
     );
   }
 }

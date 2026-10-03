@@ -10,6 +10,7 @@ import '../../../core/utils/api_error.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/treasury_entry_item.dart';
 import '../../../models/user_model.dart';
+import '../../../services/cache_service.dart';
 import '../../../shared/widgets/collection_pdf_actions.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -187,6 +188,19 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
           SnackBar(content: Text(l10n.entryDeleted), backgroundColor: AppColors.success),
         );
       }
+    } on OfflineQueuedException {
+      if (entry.clientId != null) {
+        ref.invalidate(clientStatementProvider(entry.clientId!));
+      }
+      await _refreshAll();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.savedOfflineWillSync),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -283,10 +297,11 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
                                       );
                                     }
                                     final entry = row.entry!;
-                                    final time = entry.collectionDate != null
+                                    final stamp = entry.createdAt ?? entry.collectionDate;
+                                    final time = stamp != null
                                         ? DateFormat.jm(
                                                 Localizations.localeOf(context).toString())
-                                            .format(entry.collectionDate!.toLocal())
+                                            .format(stamp.toLocal())
                                         : '';
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),

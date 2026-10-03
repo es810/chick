@@ -284,7 +284,10 @@ const applyStockDelta = async (session, chickenType, delta, user, reason, option
 
   // Record purchase-cost reduction even when only the money/weight changes (qty unchanged).
   const amountOut = amountDelta < 0 ? Math.abs(amountDelta) : Math.abs(delta.totalAmount || 0);
-  if (outQty > 0 || amountDelta < 0 || netDelta < 0) {
+  if (
+    !options.skipMovement &&
+    (outQty > 0 || amountDelta < 0 || netDelta < 0)
+  ) {
     await StockMovement.create(
       [
         {
@@ -299,6 +302,7 @@ const applyStockDelta = async (session, chickenType, delta, user, reason, option
           reason,
           employeeId: user._id,
           invoiceId: options.invoiceId,
+          stockLoadId: options.stockLoadId || null,
         },
       ],
       { session }
@@ -385,16 +389,54 @@ const deductStockForInvoice = async (
       invoiceId,
       strict: true,
       skipLoadConsume: true,
+      skipMovement: true,
     });
 
     // FIFO: reduce قيد التهليك by birds/kg actually taken from books (not leftover).
     const { consumeFromLoads, attachVarianceToLoad } = require('./stockLoadService');
-    const touchedLoad = await consumeFromLoads(
+    const { lastTouched: touchedLoad, allocations } = await consumeFromLoads(
       session,
       chickenType,
       deductQty,
       soldKg
     );
+
+    if (allocations.length > 0) {
+      for (const alloc of allocations) {
+        await StockMovement.create(
+          [
+            {
+              type: 'OUT',
+              stockId,
+              chickenType,
+              quantity: alloc.quantity || 0,
+              netWeight: alloc.netWeight || 0,
+              reason,
+              employeeId: user._id,
+              invoiceId,
+              stockLoadId: alloc.load._id,
+            },
+          ],
+          { session }
+        );
+      }
+    } else if (deductQty > 0 || soldKg > 0) {
+      await StockMovement.create(
+        [
+          {
+            type: 'OUT',
+            stockId,
+            chickenType,
+            quantity: deductQty,
+            netWeight: soldKg,
+            reason,
+            employeeId: user._id,
+            invoiceId,
+          },
+        ],
+        { session }
+      );
+    }
 
     if (qtySurplus > 0 || surplusKg > 0) {
       const { recordDistributionSurplus } = require('./damagedStockService');
@@ -446,10 +488,51 @@ const deductStockForInvoice = async (
       },
       user,
       reason,
-      { invoiceId, strict: false, skipLoadConsume: true }
+      { invoiceId, strict: false, skipLoadConsume: true, skipMovement: true }
     );
     const { consumeFromLoads, attachVarianceToLoad } = require('./stockLoadService');
-    const touchedLoad = await consumeFromLoads(session, chickenType, 0, takeKg);
+    const { lastTouched: touchedLoad, allocations } = await consumeFromLoads(
+      session,
+      chickenType,
+      0,
+      takeKg
+    );
+    if (allocations.length > 0) {
+      for (const alloc of allocations) {
+        await StockMovement.create(
+          [
+            {
+              type: 'OUT',
+              stockId,
+              chickenType,
+              quantity: alloc.quantity || 0,
+              netWeight: alloc.netWeight || 0,
+              reason,
+              employeeId: user._id,
+              invoiceId,
+              stockLoadId: alloc.load._id,
+            },
+          ],
+          { session }
+        );
+      }
+    } else {
+      await StockMovement.create(
+        [
+          {
+            type: 'OUT',
+            stockId,
+            chickenType,
+            quantity: 0,
+            netWeight: takeKg,
+            reason,
+            employeeId: user._id,
+            invoiceId,
+          },
+        ],
+        { session }
+      );
+    }
     const weightSurplus = Math.max(0, Math.round((weight - beforeNet) * 100) / 100);
     if (weightSurplus > 0 || qtySurplus > 0) {
       const { recordDistributionSurplus } = require('./damagedStockService');
@@ -531,7 +614,8 @@ const restoreStockForInvoice = async (session, invoiceId, user, reason) => {
       session,
       mov.chickenType,
       mov.quantity || 0,
-      mov.netWeight || 0
+      mov.netWeight || 0,
+      mov.stockLoadId || null
     );
   }
   await StockMovement.deleteMany({ invoiceId }).session(session);

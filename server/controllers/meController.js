@@ -69,13 +69,14 @@ const transferMyTreasury = asyncHandler(async (req, res) => {
   if (!hasPermission(req.user, 'canTransfer')) {
     throw new ApiError(403, 'Transfers are disabled for this employee');
   }
-  const { toEmployeeId, amount, notes } = req.body;
+  const { toEmployeeId, amount, notes, clientMutationId } = req.body;
   const transfer = await transferEmployeeTreasury(
     {
       fromEmployeeId: req.user._id.toString(),
       toEmployeeId,
       amount,
       notes,
+      clientMutationId,
     },
     req.user
   );

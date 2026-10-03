@@ -134,11 +134,13 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: whatsappGroupController,
-                  keyboardType: TextInputType.url,
+                  keyboardType: TextInputType.text,
                   textDirection: TextDirection.ltr,
                   decoration: InputDecoration(
                     labelText: l10n.whatsappGroupLink,
                     hintText: l10n.whatsappGroupLinkHint,
+                    helperText: l10n.whatsappGroupLinkHelp,
+                    helperMaxLines: 4,
                     prefixIcon: const Icon(Icons.groups_outlined),
                   ),
                 ),

@@ -219,13 +219,101 @@ class InvoiceRepository {
     }
   }
 
-  Future<InvoiceModel> updateInvoice(String id, Map<String, dynamic> updates) async {
-    final response = await _api.patch('${ApiConstants.invoices}/$id', data: updates);
-    final data = response.data as Map<String, dynamic>;
-    return InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
+  Future<InvoiceModel> updateInvoice(
+    String id,
+    Map<String, dynamic> updates, {
+    bool allowQueue = true,
+  }) async {
+    if (id.startsWith('pending-')) {
+      final queueId = id.substring('pending-'.length);
+      final body = Map<String, dynamic>.from(updates);
+      body['clientMutationId'] = queueId;
+      await _cache.updatePendingSyncPayload(queueId, body);
+      throw OfflineQueuedException('create_invoice', clientMutationId: queueId);
+    }
+
+    final mutationId = _cache.newMutationId();
+    final body = Map<String, dynamic>.from(updates);
+    body['clientMutationId'] = mutationId;
+
+    try {
+      final response =
+          await _api.patch('${ApiConstants.invoices}/$id', data: body);
+      final data = response.data as Map<String, dynamic>;
+      final invoice =
+          InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
+      await _cache.cacheData('invoice_$id', invoice.toJson());
+      return invoice;
+    } catch (e) {
+      if (allowQueue && await _cache.shouldQueueError(e)) {
+        await _cache.addPendingSync(
+          'update_invoice',
+          {'id': id, ...body},
+          clientMutationId: mutationId,
+        );
+        // Patch local cache so UI reflects the edit before sync.
+        final local = _invoiceFromLocal(id);
+        if (local != null) {
+          final patched = local.toJson();
+          if (body['clientId'] != null) patched['clientId'] = body['clientId'];
+          if (body['notes'] != null) patched['notes'] = body['notes'];
+          if (body['itemCount'] != null) patched['itemCount'] = body['itemCount'];
+          if (body['grossWeight'] != null) {
+            patched['grossWeight'] = body['grossWeight'];
+          }
+          if (body['tareWeight'] != null) patched['tareWeight'] = body['tareWeight'];
+          if (body['items'] is List) patched['items'] = body['items'];
+          await _cache.cacheData('invoice_$id', patched);
+        }
+        throw OfflineQueuedException(
+          'update_invoice',
+          clientMutationId: mutationId,
+        );
+      }
+      rethrow;
+    }
   }
 
-  Future<void> deleteInvoice(String id) async {
-    await _api.delete('${ApiConstants.invoices}/$id');
+  Future<void> deleteInvoice(String id, {bool allowQueue = true}) async {
+    if (id.startsWith('pending-')) {
+      final queueId = id.substring('pending-'.length);
+      await _cache.removePendingSync(queueId);
+      return;
+    }
+
+    final mutationId = _cache.newMutationId();
+    try {
+      await _api.delete('${ApiConstants.invoices}/$id');
+      // Drop from local list cache if present.
+      final cached = _cache.getCached('invoices');
+      if (cached != null) {
+        final items = (cached['items'] as List? ?? [])
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .where((e) {
+              final itemId = e['_id']?.toString() ?? e['id']?.toString() ?? '';
+              return itemId != id;
+            })
+            .toList();
+        await _cache.cacheData('invoices', {
+          ...cached,
+          'items': items,
+          'total': items.length,
+        });
+      }
+    } catch (e) {
+      if (allowQueue && await _cache.shouldQueueError(e)) {
+        await _cache.addPendingSync(
+          'delete_invoice',
+          {'id': id, 'clientMutationId': mutationId},
+          clientMutationId: mutationId,
+        );
+        throw OfflineQueuedException(
+          'delete_invoice',
+          clientMutationId: mutationId,
+        );
+      }
+      rethrow;
+    }
   }
 }

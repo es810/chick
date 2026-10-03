@@ -31,6 +31,8 @@ class StockLoadModel extends Equatable {
 
   bool get isPendingWriteOff => status == 'pending_writeoff';
 
+  bool get isClosed => status == 'closed';
+
   /// Open load still has birds/kg on the قيد — use «إنهاء التوزيع».
   bool get canFinishDistribution =>
       isOpen && (remainingQuantity > 0 || remainingNetWeight > 0);

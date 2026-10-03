@@ -10,6 +10,7 @@ import '../../../core/utils/number_input_utils.dart';
 import '../../../models/client_model.dart';
 import '../../../models/invoice_model.dart';
 import '../../../models/stock_model.dart';
+import '../../../services/cache_service.dart';
 import '../../../shared/widgets/client_picker_field.dart';
 import '../../../shared/widgets/invoice_number_field.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -298,6 +299,21 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
           SnackBar(content: Text(l10n.invoiceUpdated)),
         );
         context.go('${widget.basePath}/invoices/${widget.invoiceId}');
+      }
+    } on OfflineQueuedException {
+      if (mounted) {
+        ref.invalidate(invoicesProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.savedOfflineWillSync),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        if (widget.invoiceId.startsWith('pending-')) {
+          context.go('${widget.basePath}/invoices');
+        } else {
+          context.go('${widget.basePath}/invoices/${widget.invoiceId}');
+        }
       }
     } catch (e) {
       if (mounted) {

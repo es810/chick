@@ -260,14 +260,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
 
   double _remainingAdvanceThisMonth() {
     if (_ledger == null) return 0;
-    final now = DateTime.now();
-    final taken = _ledger!.advances
-        .where(
-          (a) =>
-              a.advanceDate.year == now.year && a.advanceDate.month == now.month,
-        )
-        .fold<double>(0, (sum, a) => sum + a.amount);
-    return (_ledger!.employeeSalary - taken).clamp(0, double.infinity);
+    return _ledger!.remainingAdvanceThisMonth;
   }
 
   Future<void> _showAddAdvanceDialog() async {
@@ -474,8 +467,10 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                               children: [
                                 Expanded(
                                   child: _SummaryCard(
-                                    title: l10n.salaryAdvance,
-                                    amount: _ledger!.totalAdvances,
+                                    title: l10n.salaryAdvanceThisMonth,
+                                    amount: _ledger!.totalAdvancesThisMonth,
+                                    subtitle:
+                                        '${l10n.remainingSalaryAdvance}: ${context.formatCurrency(_ledger!.remainingAdvanceThisMonth)}',
                                     icon: Icons.payments_outlined,
                                     color: AppColors.primaryGreen,
                                   ),

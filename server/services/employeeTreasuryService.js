@@ -154,7 +154,7 @@ const getEmployeeTreasuryStatement = async (employeeId) => {
     entries.push({
       id: invoice._id.toString(),
       type: 'collection',
-      date: invoice.collectionDate,
+      date: invoice.createdAt || invoice.collectionDate,
       description: 'فاتورة تحصيل',
       subtitle: invoice.clientId?.name ?? '',
       debit: 0,
@@ -266,7 +266,7 @@ const getEmployeeTreasuryStatement = async (employeeId) => {
 };
 
 const transferEmployeeTreasury = async (
-  { fromEmployeeId, toEmployeeId, amount, notes },
+  { fromEmployeeId, toEmployeeId, amount, notes, clientMutationId = null },
   user
 ) => {
   const fromId = String(fromEmployeeId);
@@ -278,6 +278,14 @@ const transferEmployeeTreasury = async (
   }
   if (fromId === toId) {
     throw new ApiError(400, 'Cannot transfer to the same employee');
+  }
+
+  if (clientMutationId) {
+    const existing = await EmployeeTreasuryTransfer.findOne({ clientMutationId })
+      .populate('fromEmployeeId', 'name')
+      .populate('toEmployeeId', 'name')
+      .populate('createdBy', 'name');
+    if (existing) return existing;
   }
 
   const [fromEmployee, toEmployee] = await Promise.all([
@@ -300,6 +308,7 @@ const transferEmployeeTreasury = async (
     amount: transferAmount,
     notes: notes || '',
     createdBy: user._id,
+    ...(clientMutationId ? { clientMutationId } : {}),
   });
 
   await logAction(user._id, user.name, 'EMPLOYEE_TREASURY_TRANSFER', fromEmployee.name, {

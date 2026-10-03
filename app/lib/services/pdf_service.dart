@@ -21,6 +21,9 @@ class PdfInvoiceResult {
 
 class PdfService {
   static const whatsAppGreen = 0xFF25D366;
+  static const companyName = 'دواجن المهدي';
+  static const companyPhone = '01090807054';
+  static const companyChickenTypes = 'احمر - بط - بلدي - ساسو';
 
   pw.Font? _arabicRegular;
   pw.Font? _arabicBold;
@@ -66,6 +69,8 @@ class PdfService {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
+              _companyHeader(),
+              pw.SizedBox(height: 16),
               pw.Center(
                 child: pw.Text(
                   'إيصال توزيع',
@@ -85,6 +90,17 @@ class PdfService {
               pw.SizedBox(height: 24),
               _receiptTable(invoice),
               pw.Spacer(),
+              pw.Center(
+                child: pw.Text(
+                  companyChickenTypes,
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 10),
               pw.Center(
                 child: pw.Text(
                   'تم إنشاء هذا الإيصال تلقائياً بواسطة النظام',
@@ -119,7 +135,7 @@ class PdfService {
       ),
     );
 
-    final date = entry.collectionDate ?? entry.createdAt ?? DateTime.now();
+    final date = entry.createdAt ?? entry.collectionDate ?? DateTime.now();
     final paid = entry.amountPaid ?? entry.amount;
     final deducted = entry.amountDeducted ?? 0;
 
@@ -132,6 +148,8 @@ class PdfService {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
+              _companyHeader(),
+              pw.SizedBox(height: 16),
               pw.Center(
                 child: pw.Text(
                   'إيصال تحصيل',
@@ -165,6 +183,17 @@ class PdfService {
               pw.Spacer(),
               pw.Center(
                 child: pw.Text(
+                  companyChickenTypes,
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Center(
+                child: pw.Text(
                   'تم إنشاء هذا الإيصال تلقائياً بواسطة النظام',
                   style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                 ),
@@ -176,6 +205,29 @@ class PdfService {
     );
 
     return pdf.save();
+  }
+
+  pw.Widget _companyHeader() {
+    return pw.Column(
+      children: [
+        pw.Center(
+          child: pw.Text(
+            companyName,
+            style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold),
+            textAlign: pw.TextAlign.center,
+          ),
+        ),
+        pw.SizedBox(height: 6),
+        pw.Center(
+          child: pw.Text(
+            companyPhone,
+            style: const pw.TextStyle(fontSize: 14),
+            textAlign: pw.TextAlign.center,
+            textDirection: pw.TextDirection.ltr,
+          ),
+        ),
+      ],
+    );
   }
 
   pw.Widget _receiptTable(InvoiceModel invoice) {
@@ -319,6 +371,10 @@ class PdfService {
       MethodChannel('com.chickenfarm.chicken_farm/whatsapp');
 
   /// Shares the PDF into WhatsApp with the file attached.
+  ///
+  /// When [whatsappGroupLink] contains a real group JID (`…@g.us`), Android opens
+  /// that group chat with the PDF attached (no chat picker). WhatsApp still
+  /// requires one Send tap — silent send is not allowed by WhatsApp.
   Future<void> _sharePdfToWhatsApp(
     PdfInvoiceResult result, {
     required String message,
@@ -348,17 +404,37 @@ class PdfService {
     );
   }
 
-  /// Invite links cannot target SEND; only a real chat JID can.
+  /// Invite links (`chat.whatsapp.com`) cannot target SEND.
+  /// Only a real chat JID opens the group directly.
   String? _whatsAppJidFromStoredLink(String? raw) {
     final value = (raw ?? '').trim();
     if (value.isEmpty) return null;
-    if (value.contains('@g.us') || value.contains('@s.whatsapp.net')) {
-      return value;
+
+    final embedded = RegExp(
+      r'(\d+(?:-\d+)?)@(?:g\.us|s\.whatsapp\.net)',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (embedded != null) {
+      final local = embedded.group(1)!;
+      final host = value.toLowerCase().contains('@s.whatsapp.net')
+          ? 's.whatsapp.net'
+          : 'g.us';
+      return '$local@$host';
     }
+
     if (RegExp(r'^\d+(-\d+)?$').hasMatch(value)) {
       return '$value@g.us';
     }
+
     return null;
+  }
+
+  /// True when the stored value is an invite URL that cannot auto-target a group.
+  bool isWhatsAppInviteLinkOnly(String? raw) {
+    final value = (raw ?? '').trim().toLowerCase();
+    if (value.isEmpty) return false;
+    if (_whatsAppJidFromStoredLink(raw) != null) return false;
+    return value.contains('chat.whatsapp.com') || value.contains('whatsapp.com/');
   }
 
   /// Opens the system print dialog (connected printers + print apps).
@@ -478,8 +554,15 @@ class PdfService {
         'المبلغ المحصل: $paid$hint';
   }
 
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  String _formatDate(DateTime date) {
+    final local = date.toLocal();
+    final d = local.day.toString().padLeft(2, '0');
+    final m = local.month.toString().padLeft(2, '0');
+    final y = local.year.toString();
+    final h = local.hour.toString().padLeft(2, '0');
+    final min = local.minute.toString().padLeft(2, '0');
+    return '$d/$m/$y $h:$min';
+  }
 }
 
 final pdfService = PdfService();

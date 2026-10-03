@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../models/invoice_model.dart';
+import '../../../services/cache_service.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/invoice_pdf_actions.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -66,13 +67,38 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   }
 
   Future<void> _confirmDelete(InvoiceModel invoice) async {
+    final l10n = context.l10n;
     if (_isPendingOffline) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.savedOfflineWillSync)),
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.deleteInvoice),
+          content: Text(l10n.confirmDeleteInvoice),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
+              child: Text(l10n.delete),
+            ),
+          ],
+        ),
       );
+      if (ok != true || !mounted) return;
+      await ref.read(invoiceRepositoryProvider).deleteInvoice(widget.invoiceId);
+      ref.invalidate(invoicesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.invoiceDeleted), backgroundColor: AppColors.success),
+        );
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('${widget.basePath}/invoices');
+        }
+      }
       return;
     }
-    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -101,6 +127,21 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.invoiceDeleted), backgroundColor: AppColors.success),
+        );
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('${widget.basePath}/invoices');
+        }
+      }
+    } on OfflineQueuedException {
+      ref.invalidate(invoicesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.savedOfflineWillSync),
+            backgroundColor: AppColors.success,
+          ),
         );
         if (context.canPop()) {
           context.pop();
@@ -252,6 +293,19 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                         ),
                         if (_canManage) ...[
                           const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: _isDeleting || _isPendingOffline
+                                ? null
+                                : () => context.push(
+                                      '${widget.basePath}/invoices/${widget.invoiceId}/edit',
+                                    ),
+                            icon: const Icon(Icons.edit_outlined),
+                            label: Text(l10n.editInvoice),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           OutlinedButton.icon(
                             onPressed: _isDeleting ? null : () => _confirmDelete(invoice),
                             icon: const Icon(Icons.delete_outline, color: AppColors.error),

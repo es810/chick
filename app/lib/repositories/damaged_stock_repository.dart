@@ -1,24 +1,57 @@
 import '../core/constants/api_constants.dart';
 import '../models/damaged_stock_model.dart';
 import '../services/api_client.dart';
+import '../services/cache_service.dart';
 
 class DamagedStockRepository {
-  DamagedStockRepository(this._api);
+  DamagedStockRepository(this._api, this._cache);
 
   final ApiClient _api;
+  final CacheService _cache;
 
-  Future<({List<DamagedStockEntry> entries, int totalQuantity, double totalNetWeight})> list() async {
-    final response = await _api.get(ApiConstants.damagedStock);
-    final data = response.data as Map<String, dynamic>;
-    final summary = data['summary'] as Map<String, dynamic>? ?? {};
-    final list = data['data'] as List? ?? [];
-    return (
-      entries: list
-          .map((e) => DamagedStockEntry.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      totalQuantity: (summary['totalQuantity'] as num?)?.toInt() ?? 0,
-      totalNetWeight: (summary['totalNetWeight'] as num?)?.toDouble() ?? 0,
-    );
+  Future<({List<DamagedStockEntry> entries, int totalQuantity, double totalNetWeight})>
+      list() async {
+    try {
+      final response = await _api.get(ApiConstants.damagedStock);
+      final data = response.data as Map<String, dynamic>;
+      final summary = data['summary'] as Map<String, dynamic>? ?? {};
+      final list = data['data'] as List? ?? [];
+      await _cache.cacheData('damaged_stock', {
+        'summary': Map<String, dynamic>.from(summary),
+        'items': list
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+      });
+      return (
+        entries: list
+            .map((e) => DamagedStockEntry.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        totalQuantity: (summary['totalQuantity'] as num?)?.toInt() ?? 0,
+        totalNetWeight: (summary['totalNetWeight'] as num?)?.toDouble() ?? 0,
+      );
+    } catch (e) {
+      if (await _cache.shouldQueueError(e) || !await _cache.isOnline) {
+        final cached = _cache.getCached('damaged_stock');
+        if (cached != null) {
+          final summary =
+              Map<String, dynamic>.from(cached['summary'] as Map? ?? {});
+          final items = (cached['items'] as List? ?? [])
+              .map(
+                (e) => DamagedStockEntry.fromJson(
+                  Map<String, dynamic>.from(e as Map),
+                ),
+              )
+              .toList();
+          return (
+            entries: items,
+            totalQuantity: (summary['totalQuantity'] as num?)?.toInt() ?? 0,
+            totalNetWeight:
+                (summary['totalNetWeight'] as num?)?.toDouble() ?? 0,
+          );
+        }
+      }
+      rethrow;
+    }
   }
 
   Future<DamagedStockEntry> record({
@@ -42,7 +75,8 @@ class DamagedStockRepository {
 
   /// Confirm هلك of distribution surplus (clears pending; does not deduct stock again).
   Future<DamagedStockEntry> writeOff(String id) async {
-    final response = await _api.patch('${ApiConstants.damagedStock}/$id/write-off');
+    final response =
+        await _api.patch('${ApiConstants.damagedStock}/$id/write-off');
     final data = response.data as Map<String, dynamic>;
     return DamagedStockEntry.fromJson(data['data'] as Map<String, dynamic>);
   }

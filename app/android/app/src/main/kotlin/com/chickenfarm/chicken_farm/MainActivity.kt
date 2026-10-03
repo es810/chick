@@ -1,5 +1,9 @@
 package com.chickenfarm.chicken_farm
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -38,6 +42,13 @@ class MainActivity : FlutterActivity() {
             }
     }
 
+    /**
+     * Shares a PDF into WhatsApp.
+     *
+     * When [jid] is a real group/chat id (`…@g.us` / `…@s.whatsapp.net`), WhatsApp
+     * opens that chat with the file attached (no contact picker). The user still
+     * taps Send once — WhatsApp does not allow silent send from other apps.
+     */
     private fun shareFileToWhatsApp(
         path: String,
         text: String,
@@ -59,41 +70,112 @@ class MainActivity : FlutterActivity() {
         val target = packages.firstOrNull { isInstalled(it) }
             ?: throw IllegalStateException("WhatsApp is not installed")
 
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = mime
-            putExtra(Intent.EXTRA_STREAM, uri)
-            if (text.isNotBlank()) {
-                putExtra(Intent.EXTRA_TEXT, text)
-            }
-            val normalizedJid = normalizeJid(jid)
-            if (!normalizedJid.isNullOrBlank()) {
-                putExtra("jid", normalizedJid)
-            }
-            setPackage(target)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val normalizedJid = normalizeJid(jid)
+
+        // Caption + EXTRA_STREAM together often make WhatsApp ignore `jid` and show
+        // the picker. Keep caption on the clipboard instead when targeting a chat.
+        if (text.isNotBlank()) {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("invoice", text))
         }
 
-        // WhatsApp needs explicit grant on the content URI.
         grantUriPermission(
             target,
             uri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION,
         )
 
-        startActivity(intent)
+        if (!normalizedJid.isNullOrBlank()) {
+            if (tryDirectShare(target, uri, mime, normalizedJid)) {
+                return
+            }
+        }
+
+        // Fallback: open WhatsApp with the file (user picks the chat).
+        val fallback = Intent(Intent.ACTION_SEND).apply {
+            type = mime
+            putExtra(Intent.EXTRA_STREAM, uri)
+            if (text.isNotBlank() && normalizedJid.isNullOrBlank()) {
+                putExtra(Intent.EXTRA_TEXT, text)
+            }
+            setPackage(target)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(fallback)
+    }
+
+    private fun tryDirectShare(
+        packageName: String,
+        uri: Uri,
+        mime: String,
+        jid: String,
+    ): Boolean {
+        // Prefer ContactPicker — it honors `jid` more reliably than a bare SEND.
+        val classNames = listOf(
+            "$packageName.ContactPicker",
+            "com.whatsapp.ContactPicker",
+            "com.whatsapp.contact.ContactPicker",
+            "com.whatsapp.contact.ui.ContactPicker",
+        )
+
+        for (className in classNames) {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = mime
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra("jid", jid)
+                setPackage(packageName)
+                component = ComponentName(packageName, className)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (intent.resolveActivity(packageManager) == null) continue
+            try {
+                startActivity(intent)
+                return true
+            } catch (_: Exception) {
+                // try next component
+            }
+        }
+
+        // Package-targeted SEND with jid (no component).
+        val plain = Intent(Intent.ACTION_SEND).apply {
+            type = mime
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra("jid", jid)
+            setPackage(packageName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            startActivity(plain)
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun normalizeJid(raw: String?): String? {
         val value = raw?.trim().orEmpty()
         if (value.isEmpty()) return null
-        if (value.contains("@g.us") || value.contains("@s.whatsapp.net")) {
-            return value
+
+        // Full JID already (possibly embedded in other text).
+        val embedded = Regex(
+            """(\d+(?:-\d+)?)@(g\.us|s\.whatsapp\.net)""",
+            RegexOption.IGNORE_CASE,
+        ).find(value)
+        if (embedded != null) {
+            val local = embedded.groupValues[1]
+            val host = embedded.groupValues[2].lowercase()
+            return "$local@$host"
         }
-        // Accept bare group ids like 1203630...-123456@g.us without suffix typed wrong.
+
+        // Bare numeric group id (must already be in WhatsApp chat list).
         if (value.matches(Regex("""^\d+(-\d+)?$"""))) {
             return "$value@g.us"
         }
+
+        // Invite links cannot target ACTION_SEND — caller should store a real JID.
         return null
     }
 

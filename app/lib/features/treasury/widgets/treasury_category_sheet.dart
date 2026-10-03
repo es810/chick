@@ -98,8 +98,10 @@ class _TreasuryCategorySheetState extends ConsumerState<_TreasuryCategorySheet> 
       final parts = <String>[
         if (entry.clientName != null && entry.clientName!.isNotEmpty) entry.clientName!,
         if (entry.employeeName != null && entry.employeeName!.isNotEmpty) entry.employeeName!,
-        if (entry.collectionDate != null)
-          DateFormat.yMMMd().format(entry.collectionDate!),
+        if (entry.createdAt != null || entry.collectionDate != null)
+          DateFormat.yMMMd().add_jm().format(
+                (entry.createdAt ?? entry.collectionDate!).toLocal(),
+              ),
         '${context.l10n.balanceBeforePayment}: ${entry.balanceBefore?.toStringAsFixed(2) ?? '0'}',
         '${context.l10n.balanceAfterPayment}: ${entry.balanceAfter?.toStringAsFixed(2) ?? '0'}',
       ];

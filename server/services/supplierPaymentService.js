@@ -12,7 +12,7 @@ const createSupplierPayment = async (supplierId, data, user) => {
   if (user.role === 'employee' && !hasPermission(user, 'canPaySupplier')) {
     throw new ApiError(403, 'Supplier payments are disabled for this employee');
   }
-  const { paymentDate, amount, notes = '' } = data;
+  const { paymentDate, amount, notes = '', clientMutationId = null } = data;
   const amountDeducted = Number(data.amountDeducted) || 0;
   const employeeId =
     user.role === 'employee' ? user._id.toString() : data.employeeId?.toString();
@@ -43,7 +43,8 @@ const createSupplierPayment = async (supplierId, data, user) => {
     description,
     user,
     supplierId,
-    amountDeducted
+    amountDeducted,
+    clientMutationId
   );
 
   const payment = await SupplierPayment.findOne({ employeeLedgerId: entry._id });

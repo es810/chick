@@ -78,12 +78,21 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
   }
 
   Future<void> _shareWhatsApp() async {
+    final link =
+        widget.whatsappGroupLink ?? widget.entry.clientWhatsappGroupLink;
+    if (pdfService.isWhatsAppInviteLinkOnly(link) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.whatsappInviteLinkWarning),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+    }
     await _runPdfAction(
       () => pdfService.shareCollectionViaWhatsApp(
         widget.entry,
         clientPhone: widget.clientPhone ?? widget.entry.clientPhone,
-        whatsappGroupLink: widget.whatsappGroupLink ??
-            widget.entry.clientWhatsappGroupLink,
+        whatsappGroupLink: link,
       ),
       successMessage: context.l10n.pdfShared,
       timeout: const Duration(seconds: 45),
@@ -138,6 +147,7 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const SizedBox(height: 16),
         Text(
           l10n.shareInvoice,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(

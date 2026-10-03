@@ -233,10 +233,22 @@ class CollectionRepository {
           body,
           clientMutationId: mutationId,
         );
+        await _patchCachedTreasuryCollection(amountPaid);
         throw OfflineQueuedException('create_collection', clientMutationId: mutationId);
       }
       rethrow;
     }
+  }
+
+  Future<void> _patchCachedTreasuryCollection(double amountPaid) async {
+    final cached = _cache.getCached('my_treasury');
+    if (cached == null) return;
+    final map = Map<String, dynamic>.from(cached);
+    final balance = (map['balance'] as num?)?.toDouble() ?? 0;
+    final collection = (map['collection'] as num?)?.toDouble() ?? 0;
+    map['balance'] = balance + amountPaid;
+    map['collection'] = collection + amountPaid;
+    await _cache.cacheData('my_treasury', map);
   }
 
   Future<TreasuryEntryItem> updateInvoice({
@@ -248,10 +260,12 @@ class CollectionRepository {
     required double amountDeducted,
     required double balanceBefore,
     required double balanceAfter,
+    String? clientMutationId,
+    bool allowQueue = true,
   }) async {
-    final response = await _api.patch(
-      '${ApiConstants.collections}/$id',
-      data: {
+    if (id.startsWith('pending-')) {
+      final queueId = id.substring('pending-'.length);
+      final body = {
         'clientId': clientId,
         'employeeId': employeeId,
         'collectionDate': collectionDate.toIso8601String(),
@@ -259,14 +273,76 @@ class CollectionRepository {
         'amountDeducted': amountDeducted,
         'balanceBefore': balanceBefore,
         'balanceAfter': balanceAfter,
-      },
-    );
-    final data = response.data as Map<String, dynamic>;
-    final payload = data['data'] as Map<String, dynamic>;
-    return TreasuryEntryItem.fromJson(payload['entry'] as Map<String, dynamic>);
+        'clientMutationId': queueId,
+      };
+      await _cache.updatePendingSyncPayload(queueId, body);
+      throw OfflineQueuedException(
+        'create_collection',
+        clientMutationId: queueId,
+      );
+    }
+
+    final mutationId = clientMutationId ?? _cache.newMutationId();
+    final body = {
+      'clientId': clientId,
+      'employeeId': employeeId,
+      'collectionDate': collectionDate.toIso8601String(),
+      'amountPaid': amountPaid,
+      'amountDeducted': amountDeducted,
+      'balanceBefore': balanceBefore,
+      'balanceAfter': balanceAfter,
+      'clientMutationId': mutationId,
+    };
+    try {
+      final response = await _api.patch(
+        '${ApiConstants.collections}/$id',
+        data: body,
+      );
+      final data = response.data as Map<String, dynamic>;
+      final payload = data['data'] as Map<String, dynamic>;
+      final entry =
+          TreasuryEntryItem.fromJson(payload['entry'] as Map<String, dynamic>);
+      await _cache.cacheData('collection_$id', _collectionToCacheMap(entry));
+      return entry;
+    } catch (e) {
+      if (allowQueue && await _cache.shouldQueueError(e)) {
+        await _cache.addPendingSync(
+          'update_collection',
+          {'id': id, ...body},
+          clientMutationId: mutationId,
+        );
+        throw OfflineQueuedException(
+          'update_collection',
+          clientMutationId: mutationId,
+        );
+      }
+      rethrow;
+    }
   }
 
-  Future<void> deleteInvoice(String id) async {
-    await _api.delete('${ApiConstants.collections}/$id');
+  Future<void> deleteInvoice(String id, {bool allowQueue = true}) async {
+    if (id.startsWith('pending-')) {
+      final queueId = id.substring('pending-'.length);
+      await _cache.removePendingSync(queueId);
+      return;
+    }
+
+    final mutationId = _cache.newMutationId();
+    try {
+      await _api.delete('${ApiConstants.collections}/$id');
+    } catch (e) {
+      if (allowQueue && await _cache.shouldQueueError(e)) {
+        await _cache.addPendingSync(
+          'delete_collection',
+          {'id': id, 'clientMutationId': mutationId},
+          clientMutationId: mutationId,
+        );
+        throw OfflineQueuedException(
+          'delete_collection',
+          clientMutationId: mutationId,
+        );
+      }
+      rethrow;
+    }
   }
 }

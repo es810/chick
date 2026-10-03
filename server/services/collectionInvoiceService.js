@@ -4,7 +4,6 @@ const TreasuryMovement = require('../models/TreasuryMovement');
 const CollectionInvoice = require('../models/CollectionInvoice');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
-const { normalizeToCairoDayStart } = require('../utils/businessCalendar');
 const { isSameId } = require('../utils/refId');
 const { hasPermission } = require('../utils/employeePermissions');
 
@@ -133,7 +132,7 @@ const createCollectionInvoice = async (data, user) => {
   const invoice = await CollectionInvoice.create({
     clientId,
     employeeId,
-    collectionDate: normalizeToCairoDayStart(collectionDate),
+    collectionDate: new Date(collectionDate),
     amountPaid,
     amountDeducted,
     balanceBefore,
@@ -200,7 +199,7 @@ const updateCollectionInvoice = async (id, data, user) => {
 
   invoice.clientId = client._id;
   invoice.employeeId = employeeId;
-  invoice.collectionDate = normalizeToCairoDayStart(collectionDate);
+  invoice.collectionDate = new Date(collectionDate);
   invoice.amountPaid = amountPaid;
   invoice.amountDeducted = amountDeducted;
   invoice.balanceBefore = balanceBefore;

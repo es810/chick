@@ -2,6 +2,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const {
   listStockLoads,
   finishStockLoad,
+  getLoadStatement,
 } = require('../services/stockLoadService');
 
 const listHandler = asyncHandler(async (req, res) => {
@@ -18,4 +19,9 @@ const finishHandler = asyncHandler(async (req, res) => {
   res.json({ success: true, data: load });
 });
 
-module.exports = { listHandler, finishHandler };
+const statementHandler = asyncHandler(async (req, res) => {
+  const data = await getLoadStatement(req.params.id);
+  res.json({ success: true, data });
+});
+
+module.exports = { listHandler, finishHandler, statementHandler };

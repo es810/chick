@@ -136,7 +136,7 @@ class EmployeeTreasuryStatementScreen extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    DateFormat.yMMMd().format(entry.date),
+                    DateFormat.yMMMd().add_jm().format(entry.date.toLocal()),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

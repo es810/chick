@@ -120,6 +120,17 @@ class EmployeeDashboardScreen extends ConsumerWidget {
           SnackBar(content: Text(l10n.transferRecorded), backgroundColor: AppColors.success),
         );
       }
+    } on OfflineQueuedException {
+      ref.invalidate(myTreasuryProvider);
+      ref.invalidate(myTreasuryStatementProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.savedOfflineWillSync),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

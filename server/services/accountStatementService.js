@@ -102,7 +102,7 @@ const getClientStatement = async (clientId) => {
     entries.push({
       id: collection._id.toString(),
       type: 'collection',
-      date: collection.collectionDate,
+      date: collection.createdAt || collection.collectionDate,
       description: 'فاتورة تحصيل',
       subtitle: collection.employeeId?.name ?? '',
       debit: 0,

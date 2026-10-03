@@ -215,10 +215,16 @@ class AppLocalizations {
     'ar': 'أرباح الفترة − سلف الموظفين في الشهر (الراتب للتعريف فقط)',
   },
   'salaryAdvance': {'en': 'Salary advance', 'ar': 'طلب سلفة'},
+  'salaryAdvanceThisMonth': {
+    'en': 'Advances this month',
+    'ar': 'سلف هذا الشهر',
+  },
   'addSalaryAdvance': {'en': 'Add salary advance', 'ar': 'إضافة سلفة'},
   'salaryAdvanceHint': {
-    'en': 'Paid from treasury; counts in monthly profit. Salary field is the monthly allowance cap only.',
-    'ar': 'تُصرف من الخزينة وتُخصم من الأرباح الشهرية. الراتب = سقف التعريف فقط وليس خصم تلقائي',
+    'en':
+        'Paid from treasury and counted in that month’s profit. Allowance resets each calendar month (salary is the monthly cap only).',
+    'ar':
+        'تُصرف من الخزينة وتُخصم من أرباح نفس الشهر. سقف السلف يتصفر كل شهر جديد (الراتب = سقف الشهر فقط وليس خصم تلقائي)',
   },
   'salaryAdvanceRecorded': {'en': 'Salary advance recorded', 'ar': 'تم تسجيل السلفة'},
   'employeeSalary': {'en': 'Monthly salary', 'ar': 'الراتب الشهري'},
@@ -409,6 +415,20 @@ class AppLocalizations {
   },
   'loadedLabel': {'en': 'Loaded', 'ar': 'محمّل'},
   'loadRemainingLabel': {'en': 'Remaining in load', 'ar': 'متبقي في القيد'},
+  'loadStatement': {'en': 'Load statement', 'ar': 'كشف حساب التحميلة'},
+  'loadDistributions': {
+    'en': 'Distributions from this load',
+    'ar': 'التوزيعات من التحميلة دي',
+  },
+  'noLoadDistributionsYet': {
+    'en': 'No distributions linked to this load yet',
+    'ar': 'لسه مفيش توزيعات مربوطة بالتحميلة دي',
+  },
+  'loadClosed': {'en': 'Closed', 'ar': 'منتهية'},
+  'loadDistributedQty': {'en': 'Distributed qty', 'ar': 'العدد الموزّع'},
+  'loadDistributedWeight': {'en': 'Distributed weight', 'ar': 'الوزن الموزّع'},
+  'loadUnpaidAmount': {'en': 'Unpaid', 'ar': 'غير محصّل'},
+  'viewLoadStatement': {'en': 'View load statement', 'ar': 'عرض كشف التحميلة'},
   'loadDeficitLabel': {'en': 'Load deficit', 'ar': 'عجز الحمولة'},
   'loadPendingWriteOff': {
     'en': 'Awaiting write-off confirmation',
@@ -488,12 +508,24 @@ class AppLocalizations {
   'name': {'en': 'Name', 'ar': 'الاسم'},
   'phone': {'en': 'Phone', 'ar': 'رقم الهاتف'},
   'whatsappGroupLink': {
-    'en': 'WhatsApp group (for invoice share)',
-    'ar': 'جروب واتساب (لإرسال الفاتورة)',
+    'en': 'WhatsApp group ID (for direct invoice share)',
+    'ar': 'معرف جروب واتساب (للإرسال المباشر)',
   },
   'whatsappGroupLinkHint': {
-    'en': 'Optional — share opens WhatsApp with the PDF attached',
-    'ar': 'اختياري — المشاركة تفتح واتساب والفاتورة PDF مرفقة',
+    'en': 'Example: 1203630…@g.us — not the invite link',
+    'ar': 'مثال: 1203630…@g.us — مش لينك الدعوة',
+  },
+  'whatsappGroupLinkHelp': {
+    'en':
+        'Paste the group JID so share opens that group with the PDF. Invite links (chat.whatsapp.com) cannot send files directly. WhatsApp still needs one Send tap.',
+    'ar':
+        'حط معرف الجروب (JID) عشان المشاركة تفتح الجروب بالفاتورة على طول من غير ما تختار. لينك الدعوة chat.whatsapp.com مش بينفع للإرسال المباشر. واتساب بيلزم ضغط إرسال مرة',
+  },
+  'whatsappInviteLinkWarning': {
+    'en':
+        'Invite link cannot open the group directly. Save the group ID (…@g.us) on the client.',
+    'ar':
+        'لينك الدعوة مش بيفتح الجروب على طول. سجّل معرف الجروب (…@g.us) عند العميل.',
   },
   'address': {'en': 'Address', 'ar': 'العنوان'},
   'clientDebt': {'en': 'Debt (EGP)', 'ar': 'المديونية (ج.م)'},
@@ -798,6 +830,7 @@ class AppLocalizations {
   String get afterSalariesDeduction => _get('afterSalariesDeduction');
   String get monthlyProfitFormula => _get('monthlyProfitFormula');
   String get salaryAdvance => _get('salaryAdvance');
+  String get salaryAdvanceThisMonth => _get('salaryAdvanceThisMonth');
   String get addSalaryAdvance => _get('addSalaryAdvance');
   String get salaryAdvanceHint => _get('salaryAdvanceHint');
   String get salaryAdvanceRecorded => _get('salaryAdvanceRecorded');
@@ -916,6 +949,14 @@ class AppLocalizations {
   String get finishDistributionDone => _get('finishDistributionDone');
   String get loadedLabel => _get('loadedLabel');
   String get loadRemainingLabel => _get('loadRemainingLabel');
+  String get loadStatement => _get('loadStatement');
+  String get loadDistributions => _get('loadDistributions');
+  String get noLoadDistributionsYet => _get('noLoadDistributionsYet');
+  String get loadClosed => _get('loadClosed');
+  String get loadDistributedQty => _get('loadDistributedQty');
+  String get loadDistributedWeight => _get('loadDistributedWeight');
+  String get loadUnpaidAmount => _get('loadUnpaidAmount');
+  String get viewLoadStatement => _get('viewLoadStatement');
   String get loadDeficitLabel => _get('loadDeficitLabel');
   String get loadPendingWriteOff => _get('loadPendingWriteOff');
   String get noPendingLoads => _get('noPendingLoads');
@@ -968,6 +1009,8 @@ class AppLocalizations {
   String get phone => _get('phone');
   String get whatsappGroupLink => _get('whatsappGroupLink');
   String get whatsappGroupLinkHint => _get('whatsappGroupLinkHint');
+  String get whatsappGroupLinkHelp => _get('whatsappGroupLinkHelp');
+  String get whatsappInviteLinkWarning => _get('whatsappInviteLinkWarning');
   String get address => _get('address');
   String get clientDebt => _get('clientDebt');
   String get supplierDebt => _get('supplierDebt');
