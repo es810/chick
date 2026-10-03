@@ -4,6 +4,7 @@ const {
   getRevenueReport,
   getAuditLogs,
   getDashboard,
+  getMonthlyProfitStatement,
 } = require('../controllers/reportController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -15,6 +16,7 @@ router.use(authorize('admin'));
 router.get('/dashboard', getDashboard);
 router.get('/sales', getSalesReport);
 router.get('/revenue', getRevenueReport);
+router.get('/profit/daily', getMonthlyProfitStatement);
 router.get('/audit-logs', getAuditLogs);
 
 module.exports = router;

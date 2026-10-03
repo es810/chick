@@ -208,6 +208,18 @@ class AppLocalizations {
     'ar': 'دين قديم فقط — لا يدخل الأرباح. تكلفة التحميل تُحسب عند إضافة البضاعة من مخزون المورد',
   },
   'monthlyProfit': {'en': 'Monthly Profit', 'ar': 'أرباح شهرية'},
+  'monthlyProfitStatement': {
+    'en': 'Monthly profit statement',
+    'ar': 'كشف أرباح الشهر',
+  },
+  'dailyProfitBreakdown': {
+    'en': 'Daily profit breakdown',
+    'ar': 'توزيع الأرباح اليومي',
+  },
+  'dailyProfitsTotal': {
+    'en': 'Sum of daily profits',
+    'ar': 'مجموع أرباح الأيام',
+  },
   'selectMonth': {'en': 'Select month', 'ar': 'اختيار الشهر'},
   'afterSalariesDeduction': {'en': 'After advances', 'ar': 'بعد خصم السلف'},
   'monthlyProfitFormula': {
@@ -826,6 +838,9 @@ class AppLocalizations {
   String get dailyProfitHint => _get('dailyProfitHint');
   String get profitLoadCost => _get('profitLoadCost');
   String get monthlyProfit => _get('monthlyProfit');
+  String get monthlyProfitStatement => _get('monthlyProfitStatement');
+  String get dailyProfitBreakdown => _get('dailyProfitBreakdown');
+  String get dailyProfitsTotal => _get('dailyProfitsTotal');
   String get selectMonth => _get('selectMonth');
   String get afterSalariesDeduction => _get('afterSalariesDeduction');
   String get monthlyProfitFormula => _get('monthlyProfitFormula');

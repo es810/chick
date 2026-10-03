@@ -9,6 +9,7 @@ import '../../features/suppliers/screens/suppliers_screen.dart';
 import '../../features/suppliers/screens/supplier_stock_screen.dart';
 import '../../features/account_statement/screens/account_statement_screen.dart';
 import '../../features/dashboard/screens/admin_dashboard_screen.dart';
+import '../../features/dashboard/screens/monthly_profit_statement_screen.dart';
 import '../../features/treasury/screens/collection_invoices_screen.dart';
 import '../../features/treasury/screens/collection_invoice_detail_screen.dart';
 import '../../features/treasury/screens/employee_treasury_statement_screen.dart';
@@ -130,6 +131,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/damaged-stock',
         parentNavigatorKey: rootNavigatorKey,
         builder: (_, __) => const DamagedStockScreen(basePath: '/admin'),
+      ),
+
+      GoRoute(
+        path: '/admin/profit-statement',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) {
+          final now = DateTime.now();
+          final year = int.tryParse(state.uri.queryParameters['year'] ?? '') ??
+              now.year;
+          final month = int.tryParse(state.uri.queryParameters['month'] ?? '') ??
+              now.month;
+          return MonthlyProfitStatementScreen(year: year, month: month);
+        },
       ),
 
       GoRoute(

@@ -157,21 +157,6 @@ class _MonthlyProfitCard extends ConsumerWidget {
 
   final MonthlyProfitSummary monthlyProfit;
 
-  Future<void> _pickMonth(BuildContext context, WidgetRef ref) async {
-    final l10n = context.l10n;
-    final selected = ref.read(dashboardMonthProvider);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: selected,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      helpText: l10n.selectMonth,
-      initialDatePickerMode: DatePickerMode.year,
-    );
-    if (picked == null) return;
-    ref.read(dashboardMonthProvider.notifier).state = DateTime(picked.year, picked.month);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
@@ -187,7 +172,9 @@ class _MonthlyProfitCard extends ConsumerWidget {
       color: AppColors.lightGreen,
       subtitle:
           '$monthLabel · ${l10n.profitLoadCost}: ${context.formatCurrencyCompact(monthlyProfit.loading)}',
-      onTap: () => _pickMonth(context, ref),
+      onTap: () => context.push(
+        '/admin/profit-statement?year=${monthlyProfit.year}&month=${monthlyProfit.month}',
+      ),
     );
   }
 }

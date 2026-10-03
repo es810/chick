@@ -2,7 +2,7 @@ const Invoice = require('../models/Invoice');
 const Stock = require('../models/Stock');
 const Client = require('../models/Client');
 const AuditLog = require('../models/AuditLog');
-const { getTreasurySummary, computeDailyProfit, computeMonthlyProfit } = require('../services/treasuryService');
+const { getTreasurySummary, computeDailyProfit, computeMonthlyProfit, computeDailyProfitsForMonth } = require('../services/treasuryService');
 const { getDamagedStockSummary } = require('../services/damagedStockService');
 const { getCairoDayRange, getCairoMonthRange } = require('../utils/businessCalendar');
 const asyncHandler = require('../utils/asyncHandler');
@@ -193,4 +193,22 @@ const getDashboard = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { getSalesReport, getRevenueReport, getAuditLogs, getDashboard };
+const getMonthlyProfitStatement = asyncHandler(async (req, res) => {
+  const now = new Date();
+  const year = parseInt(req.query.year, 10) || now.getFullYear();
+  const month = parseInt(req.query.month, 10) || now.getMonth() + 1;
+  if (month < 1 || month > 12) {
+    return res.status(400).json({ success: false, message: 'Invalid month' });
+  }
+
+  const data = await computeDailyProfitsForMonth(year, month);
+  res.json({ success: true, data });
+});
+
+module.exports = {
+  getSalesReport,
+  getRevenueReport,
+  getAuditLogs,
+  getDashboard,
+  getMonthlyProfitStatement,
+};

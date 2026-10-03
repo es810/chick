@@ -1,5 +1,6 @@
 import '../core/constants/api_constants.dart';
 import '../models/dashboard_model.dart';
+import '../models/monthly_profit_statement_model.dart';
 import '../services/api_client.dart';
 
 class ReportRepository {
@@ -14,6 +15,20 @@ class ReportRepository {
     );
     final data = response.data as Map<String, dynamic>;
     return DashboardData.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
+  Future<MonthlyProfitStatement> getMonthlyProfitStatement({
+    required int year,
+    required int month,
+  }) async {
+    final response = await _api.get(
+      ApiConstants.dailyProfitStatement,
+      queryParameters: {'year': year, 'month': month},
+    );
+    final data = response.data as Map<String, dynamic>;
+    return MonthlyProfitStatement.fromJson(
+      Map<String, dynamic>.from(data['data'] as Map),
+    );
   }
 
   Future<List<SalesReportItem>> getSalesReport({String? startDate, String? endDate}) async {

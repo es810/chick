@@ -9,7 +9,7 @@ const SupplierStock = require('../models/SupplierStock');
 const SalaryAdvance = require('../models/SalaryAdvance');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
-const { getCairoMonthRange } = require('../utils/businessCalendar');
+const { getCairoMonthRange, CAIRO_OFFSET_MS } = require('../utils/businessCalendar');
 
 const MAIN_KEY = 'main';
 
@@ -147,6 +147,62 @@ const computeMonthlyProfit = async (year, month) => {
     salaryAdvances,
     profit: dailyProfitsTotal - salaryAdvances,
     breakdown: periodProfit,
+  };
+};
+
+/**
+ * Day-by-day profit for a Cairo business month (noon → noon each day).
+ * Month net profit still subtracts salary advances once at the summary level.
+ */
+const computeDailyProfitsForMonth = async (year, month) => {
+  const { start: startOfMonth, end: startOfNextMonth } = getCairoMonthRange(year, month);
+  const monthly = await computeMonthlyProfit(year, month);
+
+  const dayStarts = [];
+  for (
+    let t = startOfMonth.getTime();
+    t < startOfNextMonth.getTime();
+    t += 24 * 60 * 60 * 1000
+  ) {
+    dayStarts.push(new Date(t));
+  }
+
+  const days = await Promise.all(
+    dayStarts.map(async (dayStart) => {
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const profit = await computeProfitForPeriod(dayStart, dayEnd);
+      // Business-day label = Cairo calendar date of the noon start.
+      const cairo = new Date(dayStart.getTime() + CAIRO_OFFSET_MS);
+      const y = cairo.getUTCFullYear();
+      const m = String(cairo.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(cairo.getUTCDate()).padStart(2, '0');
+      return {
+        date: `${y}-${m}-${d}`,
+        revenue: profit.revenue,
+        loading: profit.loading,
+        expenses: profit.expenses,
+        discount: profit.discount,
+        profit: profit.profit,
+      };
+    })
+  );
+
+  // Newest business day first (statement style).
+  days.reverse();
+
+  return {
+    year,
+    month,
+    days,
+    summary: {
+      revenue: monthly.breakdown.revenue,
+      loading: monthly.breakdown.loading,
+      expenses: monthly.breakdown.expenses,
+      discount: monthly.breakdown.discount,
+      dailyProfitsTotal: monthly.dailyProfitsTotal,
+      salaryAdvances: monthly.salaryAdvances,
+      profit: monthly.profit,
+    },
   };
 };
 
@@ -361,4 +417,5 @@ module.exports = {
   computeProfitForPeriod,
   computeDailyProfit,
   computeMonthlyProfit,
+  computeDailyProfitsForMonth,
 };
