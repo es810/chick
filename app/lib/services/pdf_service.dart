@@ -135,7 +135,7 @@ class PdfService {
       ),
     );
 
-    final date = entry.createdAt ?? entry.collectionDate ?? DateTime.now();
+    final date = entry.collectionDate ?? entry.createdAt ?? DateTime.now();
     final paid = entry.amountPaid ?? entry.amount;
     final deducted = entry.amountDeducted ?? 0;
 

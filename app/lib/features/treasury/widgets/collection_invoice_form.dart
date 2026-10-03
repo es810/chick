@@ -56,8 +56,8 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
   void initState() {
     super.initState();
     final existing = widget.existing;
-    _collectionDate = existing?.createdAt ??
-        existing?.collectionDate ??
+    _collectionDate = existing?.collectionDate ??
+        existing?.createdAt ??
         DateTime.now();
 
     if (existing != null) {
@@ -329,7 +329,7 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
       }
 
       if (mounted) Navigator.pop(context, saved);
-    } on OfflineQueuedException {
+    } on OfflineQueuedException catch (queued) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -338,10 +338,13 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
         ),
       );
       unawaited(ref.read(syncServiceProvider).syncPending());
+      final pendingId = queued.clientMutationId != null
+          ? 'pending-${queued.clientMutationId}'
+          : 'pending-local';
       Navigator.pop(
         context,
         TreasuryEntryItem(
-          id: 'pending-local',
+          id: pendingId,
           category: 'collection',
           amount: amountPaid,
           description: _selectedClient?.name ?? '',
@@ -355,6 +358,7 @@ class _CollectionInvoiceDialogState extends ConsumerState<_CollectionInvoiceDial
           amountDeducted: _amountDeducted,
           balanceBefore: _balanceBefore,
           balanceAfter: _balanceAfter,
+          createdAt: DateTime.now(),
         ),
       );
     } catch (e) {

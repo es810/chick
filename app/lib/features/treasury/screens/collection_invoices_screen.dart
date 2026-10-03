@@ -297,7 +297,7 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
                                       );
                                     }
                                     final entry = row.entry!;
-                                    final stamp = entry.createdAt ?? entry.collectionDate;
+                                    final stamp = entry.collectionDate ?? entry.createdAt;
                                     final time = stamp != null
                                         ? DateFormat.jm(
                                                 Localizations.localeOf(context).toString())

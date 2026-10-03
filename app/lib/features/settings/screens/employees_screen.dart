@@ -8,6 +8,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../services/api_client.dart';
+import '../../../services/cache_service.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
@@ -460,6 +461,16 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.transferRecorded), backgroundColor: AppColors.success),
+        );
+      }
+    } on OfflineQueuedException {
+      await _loadEmployees();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.savedOfflineWillSync),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     } on DioException catch (e) {

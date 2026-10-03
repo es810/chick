@@ -210,7 +210,7 @@ class _CollectionInvoiceDetailScreenState
                                 if (entry.createdAt != null || entry.collectionDate != null)
                                   Text(
                                     '${l10n.date}: ${DateFormat.yMMMd().add_jm().format(
-                                          (entry.createdAt ?? entry.collectionDate!)
+                                          (entry.collectionDate ?? entry.createdAt!)
                                               .toLocal(),
                                         )}',
                                   ),

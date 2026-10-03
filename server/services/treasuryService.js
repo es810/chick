@@ -89,7 +89,7 @@ const computeProfitForPeriod = async (startDate, endDate = null) => {
       CollectionInvoice.aggregate([
         {
           $match: {
-            createdAt: createdAtFilter,
+            collectionDate: createdAtFilter,
             amountDeducted: { $gt: 0 },
           },
         },
@@ -152,6 +152,7 @@ const computeMonthlyProfit = async (year, month) => {
 
 /**
  * Day-by-day profit for a Cairo business month (noon → noon each day).
+ * Loads month data once and buckets in memory (avoids ~150 aggregations).
  * Month net profit still subtracts salary advances once at the summary level.
  */
 const computeDailyProfitsForMonth = async (year, month) => {
@@ -167,25 +168,109 @@ const computeDailyProfitsForMonth = async (year, month) => {
     dayStarts.push(new Date(t));
   }
 
-  const days = await Promise.all(
-    dayStarts.map(async (dayStart) => {
-      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-      const profit = await computeProfitForPeriod(dayStart, dayEnd);
-      // Business-day label = Cairo calendar date of the noon start.
-      const cairo = new Date(dayStart.getTime() + CAIRO_OFFSET_MS);
-      const y = cairo.getUTCFullYear();
-      const m = String(cairo.getUTCMonth() + 1).padStart(2, '0');
-      const d = String(cairo.getUTCDate()).padStart(2, '0');
-      return {
-        date: `${y}-${m}-${d}`,
-        revenue: profit.revenue,
-        loading: profit.loading,
-        expenses: profit.expenses,
-        discount: profit.discount,
-        profit: profit.profit,
-      };
+  const dateFilter = { $gte: startOfMonth, $lt: startOfNextMonth };
+  const [
+    invoices,
+    loadingIns,
+    loadingAdjOuts,
+    expenses,
+    discounts,
+  ] = await Promise.all([
+    Invoice.find({ createdAt: dateFilter }).select('createdAt totalPrice').lean(),
+    StockMovement.find({
+      type: 'IN',
+      createdAt: dateFilter,
+      reason: { $not: /stock restored/i },
     })
-  );
+      .select('createdAt totalAmount')
+      .lean(),
+    StockMovement.find({
+      type: 'OUT',
+      createdAt: dateFilter,
+      $and: [
+        { $or: [{ invoiceId: null }, { invoiceId: { $exists: false } }] },
+        { reason: { $not: /Damaged stock/i } },
+      ],
+    })
+      .select('createdAt totalAmount')
+      .lean(),
+    EmployeeLedger.find({ type: 'expense', createdAt: dateFilter })
+      .select('createdAt amount')
+      .lean(),
+    CollectionInvoice.find({
+      collectionDate: dateFilter,
+      amountDeducted: { $gt: 0 },
+    })
+      .select('collectionDate amountDeducted')
+      .lean(),
+  ]);
+
+  const dayKey = (date) => {
+    const t = new Date(date).getTime();
+    // Snap to Cairo business-day start (noon).
+    const cairo = new Date(t + CAIRO_OFFSET_MS);
+    const y = cairo.getUTCFullYear();
+    const m = cairo.getUTCMonth();
+    const d = cairo.getUTCDate();
+    const hour = cairo.getUTCHours();
+    const dayOffset = hour < 12 ? -1 : 0;
+    const labelCairo = new Date(Date.UTC(y, m, d + dayOffset, 12, 0, 0, 0));
+    const yy = labelCairo.getUTCFullYear();
+    const mm = String(labelCairo.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(labelCairo.getUTCDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
+  };
+
+  const buckets = new Map();
+  for (const dayStart of dayStarts) {
+    const cairo = new Date(dayStart.getTime() + CAIRO_OFFSET_MS);
+    const y = cairo.getUTCFullYear();
+    const m = String(cairo.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(cairo.getUTCDate()).padStart(2, '0');
+    buckets.set(`${y}-${m}-${d}`, {
+      date: `${y}-${m}-${d}`,
+      revenue: 0,
+      loadingIn: 0,
+      loadingOut: 0,
+      expenses: 0,
+      discount: 0,
+    });
+  }
+
+  const bump = (key, field, amount) => {
+    const row = buckets.get(key);
+    if (!row) return;
+    row[field] += amount;
+  };
+
+  for (const inv of invoices) {
+    bump(dayKey(inv.createdAt), 'revenue', Number(inv.totalPrice) || 0);
+  }
+  for (const m of loadingIns) {
+    bump(dayKey(m.createdAt), 'loadingIn', Number(m.totalAmount) || 0);
+  }
+  for (const m of loadingAdjOuts) {
+    bump(dayKey(m.createdAt), 'loadingOut', Number(m.totalAmount) || 0);
+  }
+  for (const e of expenses) {
+    bump(dayKey(e.createdAt), 'expenses', Number(e.amount) || 0);
+  }
+  for (const c of discounts) {
+    bump(dayKey(c.collectionDate), 'discount', Number(c.amountDeducted) || 0);
+  }
+
+  const days = [...buckets.values()].map((row) => {
+    const loading = Math.max(0, row.loadingIn - row.loadingOut);
+    const profit = row.revenue - loading - row.expenses - row.discount;
+    return {
+      date: row.date,
+      revenue: row.revenue,
+      loading,
+      expenses: row.expenses,
+      discount: row.discount,
+      profit,
+    };
+  });
 
   // Newest business day first (statement style).
   days.reverse();

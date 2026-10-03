@@ -52,8 +52,49 @@ class CollectionRepository {
   }
 
   List<TreasuryEntryItem> _mergePendingCollections(List<TreasuryEntryItem> remote) {
+    final deletedIds = _cache
+        .getPendingSyncs(action: 'delete_collection')
+        .map((e) => (e['payload'] as Map?)?['id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    final updateById = <String, Map<String, dynamic>>{};
+    for (final item in _cache.getPendingSyncs(action: 'update_collection')) {
+      final payload = Map<String, dynamic>.from(item['payload'] as Map? ?? {});
+      final id = payload['id']?.toString() ?? '';
+      if (id.isNotEmpty) updateById[id] = payload;
+    }
+
+    var list = remote.where((e) => !deletedIds.contains(e.id)).map((entry) {
+      final upd = updateById[entry.id];
+      if (upd == null) return entry;
+      return TreasuryEntryItem(
+        id: entry.id,
+        category: entry.category,
+        amount: (upd['amountPaid'] as num?)?.toDouble() ?? entry.amount,
+        description: entry.description,
+        subtitle: entry.subtitle,
+        createdAt: entry.createdAt,
+        clientId: upd['clientId']?.toString() ?? entry.clientId,
+        clientName: entry.clientName,
+        clientPhone: entry.clientPhone,
+        clientWhatsappGroupLink: entry.clientWhatsappGroupLink,
+        employeeId: upd['employeeId']?.toString() ?? entry.employeeId,
+        employeeName: entry.employeeName,
+        collectionDate: DateTime.tryParse(upd['collectionDate']?.toString() ?? '') ??
+            entry.collectionDate,
+        amountPaid: (upd['amountPaid'] as num?)?.toDouble() ?? entry.amountPaid,
+        amountDeducted:
+            (upd['amountDeducted'] as num?)?.toDouble() ?? entry.amountDeducted,
+        balanceBefore:
+            (upd['balanceBefore'] as num?)?.toDouble() ?? entry.balanceBefore,
+        balanceAfter:
+            (upd['balanceAfter'] as num?)?.toDouble() ?? entry.balanceAfter,
+      );
+    }).toList();
+
     final pending = _cache.getPendingSyncs(action: 'create_collection');
-    if (pending.isEmpty) return remote;
+    if (pending.isEmpty) return list;
 
     final clientNames = <String, String>{};
     final cachedClients = _cache.getCached('clients');
@@ -70,6 +111,7 @@ class CollectionRepository {
     final pendingEntries = <TreasuryEntryItem>[];
     for (final item in pending.reversed) {
       final id = item['id']?.toString() ?? '';
+      if (deletedIds.contains('pending-$id')) continue;
       final payload = Map<String, dynamic>.from(item['payload'] as Map? ?? {});
       final clientId = payload['clientId']?.toString();
       final amountPaid = (payload['amountPaid'] as num?)?.toDouble() ?? 0;
@@ -94,7 +136,7 @@ class CollectionRepository {
       );
     }
 
-    return [...pendingEntries, ...remote];
+    return [...pendingEntries, ...list];
   }
 
   Future<TreasuryEntryItem> getInvoice(String id) async {
@@ -311,6 +353,27 @@ class CollectionRepository {
           {'id': id, ...body},
           clientMutationId: mutationId,
         );
+        final patched = TreasuryEntryItem(
+          id: id,
+          category: 'collection',
+          amount: amountPaid,
+          description: '',
+          clientId: clientId,
+          employeeId: employeeId,
+          collectionDate: collectionDate,
+          amountPaid: amountPaid,
+          amountDeducted: amountDeducted,
+          balanceBefore: balanceBefore,
+          balanceAfter: balanceAfter,
+          createdAt: _collectionFromLocal(id)?.createdAt,
+          clientName: _collectionFromLocal(id)?.clientName,
+          clientPhone: _collectionFromLocal(id)?.clientPhone,
+          clientWhatsappGroupLink:
+              _collectionFromLocal(id)?.clientWhatsappGroupLink,
+          employeeName: _collectionFromLocal(id)?.employeeName,
+        );
+        await _cache.cacheData('collection_$id', _collectionToCacheMap(patched));
+        await _upsertCollectionInListCache(patched);
         throw OfflineQueuedException(
           'update_collection',
           clientMutationId: mutationId,
@@ -330,6 +393,7 @@ class CollectionRepository {
     final mutationId = _cache.newMutationId();
     try {
       await _api.delete('${ApiConstants.collections}/$id');
+      await _removeCollectionFromCache(id);
     } catch (e) {
       if (allowQueue && await _cache.shouldQueueError(e)) {
         await _cache.addPendingSync(
@@ -337,6 +401,7 @@ class CollectionRepository {
           {'id': id, 'clientMutationId': mutationId},
           clientMutationId: mutationId,
         );
+        await _removeCollectionFromCache(id);
         throw OfflineQueuedException(
           'delete_collection',
           clientMutationId: mutationId,
@@ -344,5 +409,41 @@ class CollectionRepository {
       }
       rethrow;
     }
+  }
+
+  Future<void> _removeCollectionFromCache(String id) async {
+    final cached = _cache.getCached('collections');
+    if (cached == null) return;
+    final items = (cached['items'] as List? ?? [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((e) {
+          final itemId = e['_id']?.toString() ?? e['id']?.toString() ?? '';
+          return itemId != id;
+        })
+        .toList();
+    await _cache.cacheData('collections', {...cached, 'items': items});
+  }
+
+  Future<void> _upsertCollectionInListCache(TreasuryEntryItem entry) async {
+    final cached = _cache.getCached('collections');
+    if (cached == null) return;
+    final map = _collectionToCacheMap(entry);
+    final items = (cached['items'] as List? ?? [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    var found = false;
+    for (var i = 0; i < items.length; i++) {
+      final itemId =
+          items[i]['_id']?.toString() ?? items[i]['id']?.toString() ?? '';
+      if (itemId == entry.id) {
+        items[i] = map;
+        found = true;
+        break;
+      }
+    }
+    if (!found) items.insert(0, map);
+    await _cache.cacheData('collections', {...cached, 'items': items});
   }
 }

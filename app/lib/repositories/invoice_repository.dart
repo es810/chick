@@ -80,8 +80,27 @@ class InvoiceRepository {
   }
 
   List<InvoiceModel> _mergePendingInvoices(List<InvoiceModel> remote) {
+    final deletedIds = _cache
+        .getPendingSyncs(action: 'delete_invoice')
+        .map((e) => (e['payload'] as Map?)?['id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    final updateById = <String, Map<String, dynamic>>{};
+    for (final item in _cache.getPendingSyncs(action: 'update_invoice')) {
+      final payload = Map<String, dynamic>.from(item['payload'] as Map? ?? {});
+      final id = payload['id']?.toString() ?? '';
+      if (id.isNotEmpty) updateById[id] = payload;
+    }
+
+    var list = remote.where((inv) => !deletedIds.contains(inv.id)).map((inv) {
+      final upd = updateById[inv.id];
+      if (upd == null) return inv;
+      return _applyInvoiceUpdate(inv, upd);
+    }).toList();
+
     final pending = _cache.getPendingSyncs(action: 'create_invoice');
-    if (pending.isEmpty) return remote;
+    if (pending.isEmpty) return list;
 
     final clientNames = <String, String>{};
     final cachedClients = _cache.getCached('clients');
@@ -98,6 +117,7 @@ class InvoiceRepository {
     final pendingModels = <InvoiceModel>[];
     for (final item in pending.reversed) {
       final id = item['id']?.toString() ?? '';
+      if (deletedIds.contains('pending-$id')) continue;
       final payload = Map<String, dynamic>.from(item['payload'] as Map? ?? {});
       final clientId = payload['clientId']?.toString() ?? '';
       final itemsRaw = payload['items'];
@@ -135,7 +155,39 @@ class InvoiceRepository {
       );
     }
 
-    return [...pendingModels, ...remote];
+    return [...pendingModels, ...list];
+  }
+
+  InvoiceModel _applyInvoiceUpdate(InvoiceModel inv, Map<String, dynamic> upd) {
+    final itemsRaw = upd['items'];
+    final items = itemsRaw is List
+        ? itemsRaw
+            .whereType<Map>()
+            .map((e) => InvoiceItemModel.fromJson(Map<String, dynamic>.from(e)))
+            .toList()
+        : inv.items;
+    var totalWeight = 0.0;
+    var totalPrice = 0.0;
+    for (final line in items) {
+      totalWeight += line.weight;
+      totalPrice += line.weight * line.unitPrice;
+    }
+    return InvoiceModel(
+      id: inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      clientId: upd['clientId']?.toString() ?? inv.clientId,
+      employeeId: inv.employeeId,
+      items: items,
+      itemCount: (upd['itemCount'] as num?)?.toInt() ?? items.length,
+      grossWeight: (upd['grossWeight'] as num?)?.toDouble() ?? inv.grossWeight,
+      tareWeight: (upd['tareWeight'] as num?)?.toDouble() ?? inv.tareWeight,
+      totalWeight: totalWeight,
+      totalPrice: totalPrice,
+      paymentStatus: inv.paymentStatus,
+      clientName: inv.clientName,
+      notes: upd['notes']?.toString() ?? inv.notes,
+      createdAt: inv.createdAt,
+    );
   }
 
   Future<InvoiceModel> getInvoice(String id) async {
@@ -254,16 +306,22 @@ class InvoiceRepository {
         // Patch local cache so UI reflects the edit before sync.
         final local = _invoiceFromLocal(id);
         if (local != null) {
-          final patched = local.toJson();
-          if (body['clientId'] != null) patched['clientId'] = body['clientId'];
-          if (body['notes'] != null) patched['notes'] = body['notes'];
-          if (body['itemCount'] != null) patched['itemCount'] = body['itemCount'];
-          if (body['grossWeight'] != null) {
-            patched['grossWeight'] = body['grossWeight'];
-          }
-          if (body['tareWeight'] != null) patched['tareWeight'] = body['tareWeight'];
-          if (body['items'] is List) patched['items'] = body['items'];
+          final patchedModel = _applyInvoiceUpdate(local, body);
+          final patched = patchedModel.toJson();
           await _cache.cacheData('invoice_$id', patched);
+          final cached = _cache.getCached('invoices');
+          if (cached != null) {
+            final items = (cached['items'] as List? ?? [])
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .map((e) {
+                  final itemId =
+                      e['_id']?.toString() ?? e['id']?.toString() ?? '';
+                  return itemId == id ? patched : e;
+                })
+                .toList();
+            await _cache.cacheData('invoices', {...cached, 'items': items});
+          }
         }
         throw OfflineQueuedException(
           'update_invoice',
@@ -284,23 +342,7 @@ class InvoiceRepository {
     final mutationId = _cache.newMutationId();
     try {
       await _api.delete('${ApiConstants.invoices}/$id');
-      // Drop from local list cache if present.
-      final cached = _cache.getCached('invoices');
-      if (cached != null) {
-        final items = (cached['items'] as List? ?? [])
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
-            .where((e) {
-              final itemId = e['_id']?.toString() ?? e['id']?.toString() ?? '';
-              return itemId != id;
-            })
-            .toList();
-        await _cache.cacheData('invoices', {
-          ...cached,
-          'items': items,
-          'total': items.length,
-        });
-      }
+      await _removeInvoiceFromCache(id);
     } catch (e) {
       if (allowQueue && await _cache.shouldQueueError(e)) {
         await _cache.addPendingSync(
@@ -308,12 +350,32 @@ class InvoiceRepository {
           {'id': id, 'clientMutationId': mutationId},
           clientMutationId: mutationId,
         );
+        await _removeInvoiceFromCache(id);
         throw OfflineQueuedException(
           'delete_invoice',
           clientMutationId: mutationId,
         );
       }
       rethrow;
+    }
+  }
+
+  Future<void> _removeInvoiceFromCache(String id) async {
+    final cached = _cache.getCached('invoices');
+    if (cached != null) {
+      final items = (cached['items'] as List? ?? [])
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((e) {
+            final itemId = e['_id']?.toString() ?? e['id']?.toString() ?? '';
+            return itemId != id;
+          })
+          .toList();
+      await _cache.cacheData('invoices', {
+        ...cached,
+        'items': items,
+        'total': items.length,
+      });
     }
   }
 }

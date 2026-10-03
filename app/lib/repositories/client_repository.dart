@@ -194,8 +194,8 @@ class ClientRepository {
         AccountStatementEntry(
           id: collection.id,
           type: 'collection',
-          date: collection.createdAt ??
-              collection.collectionDate ??
+          date: collection.collectionDate ??
+              collection.createdAt ??
               DateTime.now(),
           description: 'فاتورة تحصيل',
           subtitle: collection.employeeName ?? '',
