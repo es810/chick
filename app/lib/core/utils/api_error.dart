@@ -77,6 +77,9 @@ String _localizeServerMessage(String message, Object? errors) {
   if (message == 'Transfers are disabled for this employee') {
     return 'التحويلات مقفولة للموظف ده';
   }
+  if (message == 'Adding clients is disabled for this employee') {
+    return 'إضافة العملاء مقفولة للموظف ده';
+  }
   if (message == 'Cannot transfer to the same employee') {
     return 'لا يمكن التحويل لنفس الموظف';
   }

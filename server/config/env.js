@@ -18,6 +18,6 @@ module.exports = {
   nodeEnv,
   mongoUri,
   jwtSecret,
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '30d',
   bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS, 10) || 12,
 };

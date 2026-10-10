@@ -34,6 +34,13 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
 
   bool _isAdmin() => ref.read(currentUserProvider)?.role == UserRole.admin;
 
+  bool _canAddClients() {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return false;
+    if (user.role == UserRole.admin) return true;
+    return user.permissions.canAddClients;
+  }
+
   List<ClientModel> _filterClients(List<ClientModel> clients) {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return clients;
@@ -293,12 +300,13 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
     final l10n = context.l10n;
     final clientsAsync = ref.watch(clientsProvider);
     final isAdmin = _isAdmin();
+    final canAddClients = _canAddClients();
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.clients),
         actions: [
-          if (isAdmin)
+          if (canAddClients)
             IconButton(
               icon: const Icon(Icons.person_add),
               tooltip: l10n.addClient,
@@ -309,7 +317,11 @@ class _ClientsScreenState extends ConsumerState<ClientsScreen> {
       body: Column(
         children: [
           RoleHintBanner(
-            text: isAdmin ? l10n.clientsRoleHint : l10n.clientsEmployeeRoleHint,
+            text: isAdmin
+                ? l10n.clientsRoleHint
+                : (canAddClients
+                    ? l10n.clientsEmployeeCanAddHint
+                    : l10n.clientsEmployeeRoleHint),
           ),
           _searchBar(l10n),
           Expanded(

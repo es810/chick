@@ -74,7 +74,7 @@ const updateMe = asyncHandler(async (req, res) => {
       throw new ApiError(400, 'Current password is required');
     }
     if (!(await user.comparePassword(currentPassword))) {
-      throw new ApiError(401, 'Current password is incorrect');
+      throw new ApiError(400, 'Current password is incorrect');
     }
     if (String(newPassword).length < 6) {
       throw new ApiError(400, 'Password must be at least 6 characters');

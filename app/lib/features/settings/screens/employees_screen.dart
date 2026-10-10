@@ -84,12 +84,14 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
     var canTransfer = false;
     var canAddExpense = true;
     var canPaySupplier = true;
+    var canAddClients = true;
     if (permsRaw is Map) {
       canEditInvoices = permsRaw['canEditInvoices'] as bool? ?? true;
       canViewOthersWork = permsRaw['canViewOthersWork'] as bool? ?? false;
       canTransfer = permsRaw['canTransfer'] as bool? ?? false;
       canAddExpense = permsRaw['canAddExpense'] as bool? ?? true;
       canPaySupplier = permsRaw['canPaySupplier'] as bool? ?? true;
+      canAddClients = permsRaw['canAddClients'] as bool? ?? true;
     }
     final formKey = GlobalKey<FormState>();
 
@@ -221,6 +223,12 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                     value: canPaySupplier,
                     onChanged: (v) => setDialogState(() => canPaySupplier = v),
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.permCanAddClients),
+                    value: canAddClients,
+                    onChanged: (v) => setDialogState(() => canAddClients = v),
+                  ),
                 ],
               ),
             ),
@@ -271,6 +279,7 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
         'canTransfer': canTransfer,
         'canAddExpense': canAddExpense,
         'canPaySupplier': canPaySupplier,
+        'canAddClients': canAddClients,
       },
     };
     if (password.isNotEmpty) {

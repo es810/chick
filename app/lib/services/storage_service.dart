@@ -14,28 +14,41 @@ class StorageService {
 
   static const _secureTimeout = Duration(seconds: 4);
 
+  /// Persist token in secure storage and SharedPreferences fallback.
+  /// Android Keystore / encrypted prefs can flake; prefs keeps the session alive.
   Future<void> saveToken(String token) async {
+    await _prefs.setString(AppConstants.tokenKey, token);
     try {
       await _secure.write(key: AppConstants.tokenKey, value: token).timeout(_secureTimeout);
     } catch (e) {
-      debugPrint('saveToken failed: $e');
+      debugPrint('saveToken secure failed (prefs kept): $e');
     }
   }
 
   Future<String?> getToken() async {
     try {
-      return await _secure.read(key: AppConstants.tokenKey).timeout(_secureTimeout);
+      final secure = await _secure.read(key: AppConstants.tokenKey).timeout(_secureTimeout);
+      if (secure != null && secure.isNotEmpty) {
+        // Keep prefs mirror in sync for next secure-storage failure.
+        if (_prefs.getString(AppConstants.tokenKey) != secure) {
+          await _prefs.setString(AppConstants.tokenKey, secure);
+        }
+        return secure;
+      }
     } catch (e) {
-      debugPrint('getToken failed: $e');
-      return null;
+      debugPrint('getToken secure failed, trying prefs: $e');
     }
+    final fallback = _prefs.getString(AppConstants.tokenKey);
+    if (fallback != null && fallback.isNotEmpty) return fallback;
+    return null;
   }
 
   Future<void> clearToken() async {
+    await _prefs.remove(AppConstants.tokenKey);
     try {
       await _secure.delete(key: AppConstants.tokenKey).timeout(_secureTimeout);
     } catch (e) {
-      debugPrint('clearToken failed: $e');
+      debugPrint('clearToken secure failed: $e');
     }
   }
 

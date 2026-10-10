@@ -9,6 +9,7 @@ const permissionsSchema = new mongoose.Schema(
     canTransfer: { type: Boolean, default: DEFAULT_PERMISSIONS.canTransfer },
     canAddExpense: { type: Boolean, default: DEFAULT_PERMISSIONS.canAddExpense },
     canPaySupplier: { type: Boolean, default: DEFAULT_PERMISSIONS.canPaySupplier },
+    canAddClients: { type: Boolean, default: DEFAULT_PERMISSIONS.canAddClients },
   },
   { _id: false }
 );

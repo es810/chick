@@ -21,7 +21,7 @@ router.get('/:id', authorize('admin', 'employee'), getClient);
 
 router.post(
   '/',
-  authorize('admin'),
+  authorize('admin', 'employee'),
   [
     body('name').trim().notEmpty(),
     body('phone').trim().notEmpty(),

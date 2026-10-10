@@ -1,6 +1,6 @@
 /// Keep in sync with `pubspec.yaml` version (name + build number).
 class AppVersion {
-  static const String name = '1.8.42';
+  static const String name = '1.8.44';
   static const int build = 52;
 
   static String get label => '$name+$build';

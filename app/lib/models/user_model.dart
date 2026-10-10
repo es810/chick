@@ -9,6 +9,7 @@ class EmployeePermissions extends Equatable {
     this.canTransfer = false,
     this.canAddExpense = true,
     this.canPaySupplier = true,
+    this.canAddClients = true,
   });
 
   final bool canEditInvoices;
@@ -16,6 +17,7 @@ class EmployeePermissions extends Equatable {
   final bool canTransfer;
   final bool canAddExpense;
   final bool canPaySupplier;
+  final bool canAddClients;
 
   factory EmployeePermissions.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const EmployeePermissions();
@@ -25,6 +27,7 @@ class EmployeePermissions extends Equatable {
       canTransfer: json['canTransfer'] as bool? ?? false,
       canAddExpense: json['canAddExpense'] as bool? ?? true,
       canPaySupplier: json['canPaySupplier'] as bool? ?? true,
+      canAddClients: json['canAddClients'] as bool? ?? true,
     );
   }
 
@@ -34,6 +37,7 @@ class EmployeePermissions extends Equatable {
         'canTransfer': canTransfer,
         'canAddExpense': canAddExpense,
         'canPaySupplier': canPaySupplier,
+        'canAddClients': canAddClients,
       };
 
   EmployeePermissions copyWith({
@@ -42,6 +46,7 @@ class EmployeePermissions extends Equatable {
     bool? canTransfer,
     bool? canAddExpense,
     bool? canPaySupplier,
+    bool? canAddClients,
   }) {
     return EmployeePermissions(
       canEditInvoices: canEditInvoices ?? this.canEditInvoices,
@@ -49,6 +54,7 @@ class EmployeePermissions extends Equatable {
       canTransfer: canTransfer ?? this.canTransfer,
       canAddExpense: canAddExpense ?? this.canAddExpense,
       canPaySupplier: canPaySupplier ?? this.canPaySupplier,
+      canAddClients: canAddClients ?? this.canAddClients,
     );
   }
 
@@ -59,6 +65,7 @@ class EmployeePermissions extends Equatable {
         canTransfer,
         canAddExpense,
         canPaySupplier,
+        canAddClients,
       ];
 }
 

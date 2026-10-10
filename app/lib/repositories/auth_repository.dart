@@ -45,8 +45,16 @@ class AuthRepository {
       return user;
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
-        await _storage.clearAll();
-        return null;
+        final message = parseError(e);
+        final definiteExpiry = message == 'Session expired. Please login again.' ||
+            message == 'Invalid token' ||
+            message == 'User not found or inactive.';
+        if (definiteExpiry) {
+          await _storage.clearAll();
+          return null;
+        }
+        // Missing-header / transient 401: keep cached session.
+        return cached;
       }
       return cached;
     } catch (_) {

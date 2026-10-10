@@ -8,6 +8,7 @@ const DEFAULT_PERMISSIONS = {
   canTransfer: false,
   canAddExpense: true,
   canPaySupplier: true,
+  canAddClients: true,
 };
 
 const normalizePermissions = (raw) => {
@@ -33,6 +34,10 @@ const normalizePermissions = (raw) => {
       src.canPaySupplier !== undefined
         ? Boolean(src.canPaySupplier)
         : DEFAULT_PERMISSIONS.canPaySupplier,
+    canAddClients:
+      src.canAddClients !== undefined
+        ? Boolean(src.canAddClients)
+        : DEFAULT_PERMISSIONS.canAddClients,
   };
 };
 
@@ -44,6 +49,7 @@ const getPermissions = (user) => {
       canTransfer: true,
       canAddExpense: true,
       canPaySupplier: true,
+      canAddClients: true,
     };
   }
   return normalizePermissions(user.permissions);

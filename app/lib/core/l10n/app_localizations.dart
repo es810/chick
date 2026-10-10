@@ -52,6 +52,10 @@ class AppLocalizations {
     'en': 'View client accounts and statements — editing is admin only.',
     'ar': 'عرض حسابات العملاء وكشوف الحساب — التعديل للإدارة فقط',
   },
+  'clientsEmployeeCanAddHint': {
+    'en': 'You can add new clients. Editing and deleting remain admin only.',
+    'ar': 'تقدر تضيف عملاء جدد — التعديل والحذف للإدارة فقط',
+  },
   'suppliers': {'en': 'Suppliers', 'ar': 'الموردين'},
   'suppliersRoleHint': {
     'en': 'Suppliers are where we receive goods from. Received goods sync to distribution stock.',
@@ -141,6 +145,10 @@ class AppLocalizations {
   'permCanPaySupplier': {
     'en': 'Pay suppliers',
     'ar': 'دفع الموردين',
+  },
+  'permCanAddClients': {
+    'en': 'Add clients',
+    'ar': 'إضافة عملاء',
   },
   'incorrectAdminPassword': {
     'en': 'Incorrect admin password',
@@ -757,6 +765,7 @@ class AppLocalizations {
   String get clients => _get('clients');
   String get clientsRoleHint => _get('clientsRoleHint');
   String get clientsEmployeeRoleHint => _get('clientsEmployeeRoleHint');
+  String get clientsEmployeeCanAddHint => _get('clientsEmployeeCanAddHint');
   String get suppliers => _get('suppliers');
   String get suppliersRoleHint => _get('suppliersRoleHint');
   String get settings => _get('settings');
@@ -796,6 +805,7 @@ class AppLocalizations {
   String get permCanTransfer => _get('permCanTransfer');
   String get permCanAddExpense => _get('permCanAddExpense');
   String get permCanPaySupplier => _get('permCanPaySupplier');
+  String get permCanAddClients => _get('permCanAddClients');
   String get incorrectAdminPassword => _get('incorrectAdminPassword');
   String get treasuryZeroed => _get('treasuryZeroed');
   String get treasuryReset => _get('treasuryReset');

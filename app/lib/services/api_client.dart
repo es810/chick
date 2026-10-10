@@ -25,13 +25,26 @@ class ApiClient {
         final status = error.response?.statusCode;
         final path = error.requestOptions.path;
 
-        if (status == 401 && !_isAuthExemptPath(path) && !_sessionExpiryHandling) {
-          _sessionExpiryHandling = true;
-          try {
-            await _storage.clearAll();
-            await onSessionExpired?.call();
-          } finally {
-            _sessionExpiryHandling = false;
+        if (status == 401 &&
+            !_isAuthExemptPath(path) &&
+            !_sessionExpiryHandling &&
+            _isSessionExpiryError(error)) {
+          // Confirm the token is actually gone/invalid before wiping the session.
+          // Missing Authorization from a secure-storage flake must not log the user out.
+          final stillHasToken = (await _storage.getToken()) != null;
+          final message = _responseMessage(error);
+          final definiteExpiry = message == 'Session expired. Please login again.' ||
+              message == 'Invalid token' ||
+              message == 'User not found or inactive.';
+
+          if (definiteExpiry || !stillHasToken) {
+            _sessionExpiryHandling = true;
+            try {
+              await _storage.clearAll();
+              await onSessionExpired?.call();
+            } finally {
+              _sessionExpiryHandling = false;
+            }
           }
         }
         handler.next(error);
@@ -49,6 +62,24 @@ class ApiClient {
 
   static bool _isAuthExemptPath(String path) =>
       path.contains('/auth/login') || path.contains('/auth/logout');
+
+  static String? _responseMessage(DioException error) {
+    final data = error.response?.data;
+    if (data is Map && data['message'] != null) {
+      return data['message'].toString();
+    }
+    return null;
+  }
+
+  /// Only real auth/session failures — not wrong password, treasury checks, etc.
+  static bool _isSessionExpiryError(DioException error) {
+    final message = _responseMessage(error);
+    if (message == null) return false;
+    return message == 'Not authorized. Please login.' ||
+        message == 'Session expired. Please login again.' ||
+        message == 'Invalid token' ||
+        message == 'User not found or inactive.';
+  }
 
   Dio get dio => _dio;
 

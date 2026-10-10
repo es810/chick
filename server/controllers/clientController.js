@@ -59,6 +59,13 @@ const getClientAccountStatement = asyncHandler(async (req, res) => {
 });
 
 const createClient = asyncHandler(async (req, res) => {
+  if (req.user.role === 'employee') {
+    const { hasPermission } = require('../utils/employeePermissions');
+    if (!hasPermission(req.user, 'canAddClients')) {
+      throw new ApiError(403, 'Adding clients is disabled for this employee');
+    }
+  }
+
   const {
     name,
     phone,

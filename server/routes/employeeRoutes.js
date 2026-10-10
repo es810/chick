@@ -70,6 +70,7 @@ router.post(
     body('permissions.canTransfer').optional().isBoolean(),
     body('permissions.canAddExpense').optional().isBoolean(),
     body('permissions.canPaySupplier').optional().isBoolean(),
+    body('permissions.canAddClients').optional().isBoolean(),
   ],
   validate,
   createEmployee
@@ -90,6 +91,7 @@ router.put(
     body('permissions.canTransfer').optional().isBoolean(),
     body('permissions.canAddExpense').optional().isBoolean(),
     body('permissions.canPaySupplier').optional().isBoolean(),
+    body('permissions.canAddClients').optional().isBoolean(),
   ],
   validate,
   updateEmployee

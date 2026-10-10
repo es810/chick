@@ -63,7 +63,7 @@ const resetMainTreasuryHandler = asyncHandler(async (req, res) => {
 
   const User = require('../models/User');
   const admin = await User.findById(req.user._id).select('+password');
-  if (!admin) throw new ApiError(401, 'Not authorized');
+  if (!admin) throw new ApiError(403, 'Not authorized');
   const ok = await admin.comparePassword(password);
   if (!ok) throw new ApiError(403, 'Incorrect admin password');
 

@@ -110,7 +110,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _repo.getCurrentUser();
       if (user != null) {
         state = AuthState(user: user, isLoading: false);
-      } else {
+        return;
+      }
+      // Only drop the session if the token was cleared (confirmed expiry).
+      // Network / storage flakes must keep the cached user logged in.
+      final stillHasToken = await _repo.hasToken();
+      if (!stillHasToken && state.user != null) {
         state = const AuthState(isLoading: false);
       }
     } catch (_) {
