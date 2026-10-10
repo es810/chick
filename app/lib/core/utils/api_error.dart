@@ -56,6 +56,9 @@ String _localizeServerMessage(String message, Object? errors) {
   if (message == 'Insufficient employee treasury balance') {
     return 'رصيد خزنة الموظف غير كافٍ';
   }
+  if (message.contains('Cannot edit salary advance withdrawal amount')) {
+    return 'مبلغ سلفة الراتب متقدرش تعدّله من السحوبات — الغي السلفة من صفحة الموظف';
+  }
   if (message == 'Incorrect admin password') {
     return 'الرقم السري للأدمن غلط';
   }

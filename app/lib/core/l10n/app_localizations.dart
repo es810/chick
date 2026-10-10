@@ -239,6 +239,11 @@ class AppLocalizations {
         'تُصرف من الخزينة وتُخصم من أرباح نفس الشهر. سقف السلف يتصفر كل شهر جديد (الراتب = سقف الشهر فقط وليس خصم تلقائي)',
   },
   'salaryAdvanceRecorded': {'en': 'Salary advance recorded', 'ar': 'تم تسجيل السلفة'},
+  'salaryAdvanceDeleted': {'en': 'Salary advance cancelled', 'ar': 'تم إلغاء السلفة'},
+  'confirmDeleteSalaryAdvance': {
+    'en': 'Cancel this salary advance? It will be removed from the employee and restored to the main treasury.',
+    'ar': 'إلغاء السلفة دي؟ هتتشال من الموظف وترجع للخزنة الرئيسية',
+  },
   'employeeSalary': {'en': 'Monthly salary', 'ar': 'الراتب الشهري'},
   'remainingSalaryAdvance': {'en': 'Remaining advance allowance', 'ar': 'المتبقي من السلفة لهذا الشهر'},
   'advanceExceedsSalary': {
@@ -849,6 +854,8 @@ class AppLocalizations {
   String get addSalaryAdvance => _get('addSalaryAdvance');
   String get salaryAdvanceHint => _get('salaryAdvanceHint');
   String get salaryAdvanceRecorded => _get('salaryAdvanceRecorded');
+  String get salaryAdvanceDeleted => _get('salaryAdvanceDeleted');
+  String get confirmDeleteSalaryAdvance => _get('confirmDeleteSalaryAdvance');
   String get employeeSalary => _get('employeeSalary');
   String get remainingSalaryAdvance => _get('remainingSalaryAdvance');
   String get advanceExceedsSalary => _get('advanceExceedsSalary');

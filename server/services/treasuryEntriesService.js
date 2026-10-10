@@ -69,8 +69,20 @@ const createMovement = async (type, amount, description, user) => {
 };
 
 const updateMovement = async (id, { amount, description }) => {
+  const SalaryAdvance = require('../models/SalaryAdvance');
   const movement = await TreasuryMovement.findById(id);
   if (!movement) throw new ApiError(404, 'Entry not found');
+
+  // Keep salary advances in sync: amount changes must go through cancel + recreate.
+  if (movement.type === 'withdrawal') {
+    const linked = await SalaryAdvance.findOne({ treasuryMovementId: movement._id });
+    if (linked && amount != null && Number(amount) !== Number(movement.amount)) {
+      throw new ApiError(
+        400,
+        'Cannot edit salary advance withdrawal amount. Cancel the advance from the employee instead.'
+      );
+    }
+  }
 
   if (amount != null) {
     if (amount <= 0) throw new ApiError(400, 'Amount must be greater than zero');
@@ -83,8 +95,17 @@ const updateMovement = async (id, { amount, description }) => {
 };
 
 const deleteMovement = async (id) => {
-  const movement = await TreasuryMovement.findByIdAndDelete(id);
+  const { deleteAdvanceByTreasuryMovementId } = require('./salaryAdvanceService');
+
+  const movement = await TreasuryMovement.findById(id);
   if (!movement) throw new ApiError(404, 'Entry not found');
+
+  // Salary advances create a linked withdrawal — remove both sides together.
+  if (movement.type === 'withdrawal') {
+    await deleteAdvanceByTreasuryMovementId(movement._id);
+  }
+
+  await TreasuryMovement.deleteOne({ _id: movement._id });
   return movement;
 };
 

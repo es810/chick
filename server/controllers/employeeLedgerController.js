@@ -1,6 +1,6 @@
 const asyncHandler = require('../utils/asyncHandler');
 const { getEmployeeLedger, addLedgerEntry } = require('../services/employeeLedgerService');
-const { listEmployeeAdvances, createSalaryAdvance } = require('../services/salaryAdvanceService');
+const { listEmployeeAdvances, createSalaryAdvance, deleteSalaryAdvance } = require('../services/salaryAdvanceService');
 const { getEmployeeTreasurySummary, getEmployeeTreasuryStatement } = require('../services/employeeTreasuryService');
 
 const getLedger = asyncHandler(async (req, res) => {
@@ -74,9 +74,21 @@ const addSalaryAdvance = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: advance });
 });
 
+const removeSalaryAdvance = asyncHandler(async (req, res) => {
+  const advance = await deleteSalaryAdvance(req.params.id, req.params.advanceId, req.user);
+  res.json({ success: true, data: { id: advance._id } });
+});
+
 const getTreasuryStatement = asyncHandler(async (req, res) => {
   const data = await getEmployeeTreasuryStatement(req.params.id);
   res.json({ success: true, data });
 });
 
-module.exports = { getLedger, addExpense, addDebt, addSalaryAdvance, getTreasuryStatement };
+module.exports = {
+  getLedger,
+  addExpense,
+  addDebt,
+  addSalaryAdvance,
+  removeSalaryAdvance,
+  getTreasuryStatement,
+};

@@ -92,6 +92,46 @@ const createSalaryAdvance = async (employeeId, data, user) => {
   return SalaryAdvance.findById(advance._id).populate('createdBy', 'name');
 };
 
+/**
+ * Cancel an advance: remove SalaryAdvance + linked treasury withdrawal together
+ * so employee balance, main treasury, and monthly profit stay consistent.
+ */
+const deleteSalaryAdvance = async (employeeId, advanceId, user) => {
+  const TreasuryMovement = require('../models/TreasuryMovement');
+
+  const advance = await SalaryAdvance.findOne({
+    _id: advanceId,
+    employeeId,
+  });
+  if (!advance) throw new ApiError(404, 'Salary advance not found');
+
+  const employee = await User.findById(employeeId).select('name');
+  const movementId = advance.treasuryMovementId;
+
+  await SalaryAdvance.deleteOne({ _id: advance._id });
+  if (movementId) {
+    await TreasuryMovement.deleteOne({ _id: movementId });
+  }
+
+  await logAction(
+    user._id,
+    user.name,
+    'SALARY_ADVANCE_DELETE',
+    employee?.name || String(employeeId),
+    { amount: advance.amount, advanceId: String(advance._id) }
+  );
+
+  return advance;
+};
+
+/**
+ * When a withdrawal movement is deleted from treasury, also drop the linked advance.
+ */
+const deleteAdvanceByTreasuryMovementId = async (movementId) => {
+  if (!movementId) return null;
+  return SalaryAdvance.findOneAndDelete({ treasuryMovementId: movementId });
+};
+
 const sumAdvancesInMonth = async (year, month) => {
   const startOfMonth = new Date(year, month - 1, 1);
   const startOfNextMonth = new Date(year, month, 1);
@@ -107,6 +147,8 @@ const sumAdvancesInMonth = async (year, month) => {
 module.exports = {
   listEmployeeAdvances,
   createSalaryAdvance,
+  deleteSalaryAdvance,
+  deleteAdvanceByTreasuryMovementId,
   sumAdvancesInMonth,
   getAdvancesTakenInMonth,
 };

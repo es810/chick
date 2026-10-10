@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/api_error.dart';
 import '../../../core/utils/number_input_utils.dart';
 import '../../../models/employee_ledger_model.dart';
 import '../../../models/supplier_model.dart';
@@ -579,13 +580,73 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
               if (entry.notes.isNotEmpty) entry.notes,
             ].join(' · '),
           ),
-          trailing: Text(
-            context.formatCurrency(entry.amount),
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.formatCurrency(entry.amount),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                tooltip: l10n.delete,
+                onPressed: () => _confirmDeleteAdvance(entry),
+              ),
+            ],
           ),
         ),
       );
     }).toList();
+  }
+
+  Future<void> _confirmDeleteAdvance(SalaryAdvanceEntry entry) async {
+    final l10n = context.l10n;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.salaryAdvance),
+        content: Text(
+          '${l10n.confirmDeleteSalaryAdvance}\n\n'
+          '${context.formatCurrency(entry.amount)} · ${DateFormat.yMMMd().format(entry.advanceDate)}',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    try {
+      await ref.read(employeeRepositoryProvider).deleteSalaryAdvance(
+            employeeId: widget.employeeId,
+            advanceId: entry.id,
+          );
+      ref.invalidate(dashboardProvider);
+      ref.invalidate(treasurySummaryProvider);
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.salaryAdvanceDeleted),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(apiErrorMessage(e)),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   List<Widget> _buildEntries(List<EmployeeLedgerEntry> entries, AppLocalizations l10n) {

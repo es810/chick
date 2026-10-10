@@ -7,7 +7,7 @@ const {
   deleteEmployee,
 } = require('../controllers/employeeController');
 const { createEmployeeTreasuryTransfer } = require('../controllers/employeeTreasuryController');
-const { getLedger, addExpense, addDebt, addSalaryAdvance, getTreasuryStatement } = require('../controllers/employeeLedgerController');
+const { getLedger, addExpense, addDebt, addSalaryAdvance, removeSalaryAdvance, getTreasuryStatement } = require('../controllers/employeeLedgerController');
 const { protect, authorize } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 
@@ -54,6 +54,7 @@ router.post(
   validate,
   addSalaryAdvance
 );
+router.delete('/:id/advances/:advanceId', removeSalaryAdvance);
 
 router.post(
   '/',

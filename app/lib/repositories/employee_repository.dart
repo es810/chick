@@ -93,6 +93,15 @@ class EmployeeRepository {
     return SalaryAdvanceEntry.fromJson(data['data'] as Map<String, dynamic>);
   }
 
+  Future<void> deleteSalaryAdvance({
+    required String employeeId,
+    required String advanceId,
+  }) async {
+    await _api.delete(
+      '${ApiConstants.employees}/$employeeId/advances/$advanceId',
+    );
+  }
+
   Future<({double totalExpenses, double totalDebt, List<EmployeeLedgerEntry> entries})>
       getMyLedger() async {
     try {

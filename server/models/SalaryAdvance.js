@@ -18,5 +18,6 @@ const salaryAdvanceSchema = new mongoose.Schema(
 
 salaryAdvanceSchema.index({ employeeId: 1, advanceDate: -1 });
 salaryAdvanceSchema.index({ advanceDate: 1 });
+salaryAdvanceSchema.index({ treasuryMovementId: 1 }, { unique: true });
 
 module.exports = mongoose.model('SalaryAdvance', salaryAdvanceSchema);
