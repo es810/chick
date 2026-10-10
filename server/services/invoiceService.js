@@ -5,6 +5,7 @@ const Client = require('../models/Client');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 const { deductStockForInvoice, restoreStockForInvoice } = require('./stockService');
+const { syncClientBalanceFromLedger } = require('./clientBalanceService');
 
 /** Tare weight (kg) = item count × TARE_KG_PER_UNIT */
 const TARE_KG_PER_UNIT = 8;
@@ -140,9 +141,8 @@ const createInvoice = async (data, employee) => {
     }
 
     if (paymentStatus !== 'paid') {
-      client.balance += totalPrice;
-      await client.save({ session });
-      invoice.balanceAfter = client.balance;
+      const balanceAfter = await syncClientBalanceFromLedger(clientId, session);
+      invoice.balanceAfter = balanceAfter;
       await invoice.save({ session });
     } else {
       invoice.balanceAfter = balanceBefore;
@@ -187,8 +187,6 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     if (!items?.length) throw new ApiError(400, 'At least one item is required');
 
     const oldClientId = invoice.clientId.toString();
-    const oldTotalPrice = invoice.totalPrice;
-    const oldPaymentStatus = invoice.paymentStatus;
     const invoiceReason = `Invoice #${invoice.invoiceNumber}`;
 
     await restoreStockForInvoice(
@@ -197,14 +195,6 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
       user,
       `${invoiceReason} updated - stock restored`
     );
-
-    if (oldPaymentStatus !== 'paid') {
-      const oldClient = await Client.findById(oldClientId).session(session);
-      if (oldClient) {
-        oldClient.balance = Math.max(0, oldClient.balance - oldTotalPrice);
-        await oldClient.save({ session });
-      }
-    }
 
     const newClientId = clientId || oldClientId;
     const client = await Client.findById(newClientId).session(session);
@@ -252,16 +242,17 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     invoice.totalPrice = totalPrice;
     invoice.paymentStatus = newPaymentStatus;
     if (notes !== undefined) invoice.notes = notes;
-    invoice.balanceBefore = client.balance;
 
-    if (newPaymentStatus !== 'paid') {
-      client.balance += totalPrice;
-      await client.save({ session });
-      invoice.balanceAfter = client.balance;
-    } else {
-      invoice.balanceAfter = client.balance;
+    // Snapshot balance before rebuild; then derive balance from invoices − collections
+    // so edits after partial/full collection never invent «مديونية سابقة».
+    invoice.balanceBefore = client.balance || 0;
+    await invoice.save({ session });
+
+    const balanceAfter = await syncClientBalanceFromLedger(newClientId, session);
+    if (String(oldClientId) !== String(newClientId)) {
+      await syncClientBalanceFromLedger(oldClientId, session);
     }
-
+    invoice.balanceAfter = balanceAfter;
     await invoice.save({ session });
 
     for (const item of processedItems) {
@@ -300,14 +291,10 @@ const updatePaymentStatus = async (invoiceId, paymentStatus, user) => {
 
   const oldStatus = invoice.paymentStatus;
   invoice.paymentStatus = paymentStatus;
-
-  if (paymentStatus === 'paid' && oldStatus !== 'paid') {
-    const client = await Client.findById(invoice.clientId._id || invoice.clientId);
-    client.balance = Math.max(0, client.balance - invoice.totalPrice);
-    await client.save();
-  }
-
   await invoice.save();
+
+  const clientId = invoice.clientId._id || invoice.clientId;
+  await syncClientBalanceFromLedger(clientId);
 
   await logAction(user._id, user.name, 'UPDATE_PAYMENT', invoice.invoiceNumber, {
     from: oldStatus,
@@ -325,13 +312,7 @@ const deleteInvoice = async (invoiceId, user) => {
     const invoice = await Invoice.findById(invoiceId).session(session);
     if (!invoice) throw new ApiError(404, 'Invoice not found');
 
-    if (invoice.paymentStatus !== 'paid') {
-      const client = await Client.findById(invoice.clientId).session(session);
-      if (client) {
-        client.balance = Math.max(0, client.balance - invoice.totalPrice);
-        await client.save({ session });
-      }
-    }
+    const clientId = invoice.clientId;
 
     await restoreStockForInvoice(
       session,
@@ -340,6 +321,7 @@ const deleteInvoice = async (invoiceId, user) => {
       `Invoice #${invoice.invoiceNumber} deleted - stock restored`
     );
     await Invoice.findByIdAndDelete(invoice._id).session(session);
+    await syncClientBalanceFromLedger(clientId, session);
 
     await session.commitTransaction();
 

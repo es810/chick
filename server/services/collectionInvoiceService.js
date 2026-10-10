@@ -6,6 +6,7 @@ const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 const { isSameId } = require('../utils/refId');
 const { hasPermission } = require('../utils/employeePermissions');
+const { syncClientBalanceFromLedger } = require('./clientBalanceService');
 
 const toEntry = (doc) => ({
   id: doc._id,
@@ -116,7 +117,7 @@ const createCollectionInvoice = async (data, user) => {
   if (!employee) throw new ApiError(404, 'Employee not found');
 
   const balanceBefore = client.balance;
-  const balanceAfter = validateAmounts({
+  const balanceAfterPreview = validateAmounts({
     amountPaid,
     amountDeducted,
     balanceBefore,
@@ -136,14 +137,15 @@ const createCollectionInvoice = async (data, user) => {
     amountPaid,
     amountDeducted,
     balanceBefore,
-    balanceAfter,
+    balanceAfter: balanceAfterPreview,
     treasuryMovementId: movement._id,
     createdBy: user._id,
     ...(clientMutationId ? { clientMutationId } : {}),
   });
 
-  client.balance = balanceAfter;
-  await client.save();
+  const balanceAfter = await syncClientBalanceFromLedger(clientId);
+  invoice.balanceAfter = balanceAfter;
+  await invoice.save();
 
   await logAction(user._id, user.name, 'CREATE_COLLECTION_INVOICE', client.name, {
     amountPaid,
@@ -160,12 +162,6 @@ const updateCollectionInvoice = async (id, data, user) => {
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
   assertCanMutateCollection(invoice, user);
 
-  const oldClient = await Client.findById(invoice.clientId);
-  if (oldClient) {
-    oldClient.balance += invoice.amountPaid + invoice.amountDeducted;
-    await oldClient.save();
-  }
-
   const {
     clientId,
     collectionDate,
@@ -177,14 +173,22 @@ const updateCollectionInvoice = async (id, data, user) => {
   const employeeId =
     user.role === 'employee' ? user._id.toString() : data.employeeId;
 
-  const client = await Client.findById(clientId);
+  const oldClientId = invoice.clientId.toString();
+  const newClientId = String(clientId);
+
+  const client = await Client.findById(newClientId);
   if (!client) throw new ApiError(404, 'Client not found');
 
   const employee = await User.findOne({ _id: employeeId, role: 'employee' });
   if (!employee) throw new ApiError(404, 'Employee not found');
 
-  const balanceBefore = client.balance;
-  const balanceAfter = validateAmounts({
+  // Validate against balance as if this collection were reversed first.
+  const creditOld = (invoice.amountPaid || 0) + (invoice.amountDeducted || 0);
+  const balanceBefore =
+    oldClientId === newClientId
+      ? (client.balance || 0) + creditOld
+      : client.balance || 0;
+  const balanceAfterPreview = validateAmounts({
     amountPaid,
     amountDeducted,
     balanceBefore,
@@ -203,11 +207,15 @@ const updateCollectionInvoice = async (id, data, user) => {
   invoice.amountPaid = amountPaid;
   invoice.amountDeducted = amountDeducted;
   invoice.balanceBefore = balanceBefore;
-  invoice.balanceAfter = balanceAfter;
+  invoice.balanceAfter = balanceAfterPreview;
   await invoice.save();
 
-  client.balance = balanceAfter;
-  await client.save();
+  const balanceAfter = await syncClientBalanceFromLedger(newClientId);
+  if (oldClientId !== newClientId) {
+    await syncClientBalanceFromLedger(oldClientId);
+  }
+  invoice.balanceAfter = balanceAfter;
+  await invoice.save();
 
   await logAction(user._id, user.name, 'UPDATE_COLLECTION_INVOICE', client.name, {
     amountPaid,
@@ -224,15 +232,13 @@ const deleteCollectionInvoice = async (id, user) => {
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
   assertCanMutateCollection(invoice, user);
 
-  const client = await Client.findById(invoice.clientId);
-  if (client) {
-    client.balance += invoice.amountPaid + invoice.amountDeducted;
-    await client.save();
-  }
+  const clientId = invoice.clientId;
 
   await TreasuryMovement.findByIdAndDelete(invoice.treasuryMovementId);
   await CollectionInvoice.findByIdAndDelete(id);
+  await syncClientBalanceFromLedger(clientId);
 
+  const client = await Client.findById(clientId).select('name');
   await logAction(user._id, user.name, 'DELETE_COLLECTION_INVOICE', client?.name ?? id, {
     amountPaid: invoice.amountPaid,
   });
