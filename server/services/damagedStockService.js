@@ -195,9 +195,22 @@ const getDamagedStockSummary = async () => {
     {
       $group: {
         _id: null,
-        totalQuantity: { $sum: '$quantity' },
-        totalNetWeight: { $sum: '$netWeight' },
-        entryCount: { $sum: 1 },
+        // Active هالك only — written_off must not keep stacking into new totals.
+        totalQuantity: {
+          $sum: {
+            $cond: [{ $ne: ['$status', 'written_off'] }, '$quantity', 0],
+          },
+        },
+        totalNetWeight: {
+          $sum: {
+            $cond: [{ $ne: ['$status', 'written_off'] }, '$netWeight', 0],
+          },
+        },
+        entryCount: {
+          $sum: {
+            $cond: [{ $ne: ['$status', 'written_off'] }, 1, 0],
+          },
+        },
         openQuantity: {
           $sum: {
             $cond: [
