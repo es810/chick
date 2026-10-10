@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.chickenfarm.chicken_farm"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

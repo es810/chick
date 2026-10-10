@@ -302,6 +302,31 @@ class AppLocalizations {
 
   'invoiceDetails': {'en': 'Invoice Details', 'ar': 'تفاصيل الفاتورة'},
   'printInvoice': {'en': 'Print', 'ar': 'طباعة'},
+  'printThermal': {'en': 'Print on thermal printer', 'ar': 'طباعة على الطابعة الحرارية'},
+  'printSystemPdf': {'en': 'System print (PDF)', 'ar': 'طباعة النظام (PDF)'},
+  'selectPrinter': {'en': 'Select printer', 'ar': 'اختر الطابعة'},
+  'selectPrinterHint': {
+    'en': 'Pair the Xprinter from phone Bluetooth settings first, then pick it here.',
+    'ar': 'اربط طابعة Xprinter من إعدادات بلوتوث الموبايل الأول، وبعدين اختارها من هنا.',
+  },
+  'noPairedPrinters': {
+    'en': 'No paired printers found. Pair the Xprinter in Bluetooth settings, then refresh.',
+    'ar': 'مفيش طابعات مقترنة. اربط الـ Xprinter من إعدادات البلوتوث، وبعدين حدّث القائمة.',
+  },
+  'bluetoothOff': {
+    'en': 'Bluetooth is off. Turn it on and try again.',
+    'ar': 'البلوتوث مطفي. شغّله وجرب تاني.',
+  },
+  'bluetoothPermissionDenied': {
+    'en': 'Bluetooth permission is required to print.',
+    'ar': 'محتاج إذن البلوتوث عشان تطبع.',
+  },
+  'thermalPrinted': {'en': 'Invoice sent to printer', 'ar': 'اتبعتت الفاتورة للطابعة'},
+  'thermalPrintError': {'en': 'Thermal print failed', 'ar': 'فشلت الطباعة الحرارية'},
+  'lastUsedPrinter': {'en': 'Last used', 'ar': 'آخر استخدام'},
+  'unknownPrinter': {'en': 'Printer', 'ar': 'طابعة'},
+  'refreshPrinters': {'en': 'Refresh list', 'ar': 'تحديث القائمة'},
+  'printingThermal': {'en': 'Printing...', 'ar': 'جاري الطباعة...'},
   'downloadPdf': {'en': 'Download PDF', 'ar': 'تحميل PDF'},
   'shareWhatsApp': {'en': 'Share via WhatsApp', 'ar': 'مشاركة عبر واتساب'},
   'generatingPdf': {'en': 'Generating PDF...', 'ar': 'جاري إنشاء PDF...'},
@@ -533,24 +558,24 @@ class AppLocalizations {
   'name': {'en': 'Name', 'ar': 'الاسم'},
   'phone': {'en': 'Phone', 'ar': 'رقم الهاتف'},
   'whatsappGroupLink': {
-    'en': 'WhatsApp group ID (for direct invoice share)',
-    'ar': 'معرف جروب واتساب (للإرسال المباشر)',
+    'en': 'WhatsApp group link',
+    'ar': 'لينك جروب واتساب',
   },
   'whatsappGroupLinkHint': {
-    'en': 'Example: 1203630…@g.us — not the invite link',
-    'ar': 'مثال: 1203630…@g.us — مش لينك الدعوة',
+    'en': 'Paste chat.whatsapp.com/… invite link',
+    'ar': 'الصق لينك الدعوة chat.whatsapp.com/…',
   },
   'whatsappGroupLinkHelp': {
     'en':
-        'Paste the group JID so share opens that group with the PDF. Invite links (chat.whatsapp.com) cannot send files directly. WhatsApp still needs one Send tap.',
+        'Paste the group invite link from WhatsApp (Group info → Invite via link). Share opens that group with the invoice. Tap the group once if asked, then Send.',
     'ar':
-        'حط معرف الجروب (JID) عشان المشاركة تفتح الجروب بالفاتورة على طول من غير ما تختار. لينك الدعوة chat.whatsapp.com مش بينفع للإرسال المباشر. واتساب بيلزم ضغط إرسال مرة',
+        'الصق لينك دعوة الجروب من واتساب (معلومات الجروب ← دعوة عبر رابط). المشاركة هتفتح الجروب بالفاتورة. لو طلب منك اختيار، اختار الجروب مرة وبعدين إرسال.',
   },
   'whatsappInviteLinkWarning': {
     'en':
-        'Invite link cannot open the group directly. Save the group ID (…@g.us) on the client.',
+        'Opening the group, then attach the invoice — tap the group if shown, then Send.',
     'ar':
-        'لينك الدعوة مش بيفتح الجروب على طول. سجّل معرف الجروب (…@g.us) عند العميل.',
+        'هنفتح الجروب ونرفق الفاتورة — لو ظهر اختيار اضغط على الجروب وبعدين إرسال.',
   },
   'address': {'en': 'Address', 'ar': 'العنوان'},
   'clientDebt': {'en': 'Debt (EGP)', 'ar': 'المديونية (ج.م)'},
@@ -904,6 +929,19 @@ class AppLocalizations {
 
   String get invoiceDetails => _get('invoiceDetails');
   String get printInvoice => _get('printInvoice');
+  String get printThermal => _get('printThermal');
+  String get printSystemPdf => _get('printSystemPdf');
+  String get selectPrinter => _get('selectPrinter');
+  String get selectPrinterHint => _get('selectPrinterHint');
+  String get noPairedPrinters => _get('noPairedPrinters');
+  String get bluetoothOff => _get('bluetoothOff');
+  String get bluetoothPermissionDenied => _get('bluetoothPermissionDenied');
+  String get thermalPrinted => _get('thermalPrinted');
+  String get thermalPrintError => _get('thermalPrintError');
+  String get lastUsedPrinter => _get('lastUsedPrinter');
+  String get unknownPrinter => _get('unknownPrinter');
+  String get refreshPrinters => _get('refreshPrinters');
+  String get printingThermal => _get('printingThermal');
   String get downloadPdf => _get('downloadPdf');
   String get shareWhatsApp => _get('shareWhatsApp');
   String get generatingPdf => _get('generatingPdf');

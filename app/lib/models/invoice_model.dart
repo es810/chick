@@ -130,7 +130,12 @@ class InvoiceModel extends Equatable {
   Map<String, dynamic> toJson() => {
         '_id': id,
         'invoiceNumber': invoiceNumber,
-        'clientId': {'id': clientId, 'name': clientName, 'phone': clientPhone},
+        'clientId': {
+          'id': clientId,
+          'name': clientName,
+          'phone': clientPhone,
+          'whatsappGroupLink': clientWhatsappGroupLink,
+        },
         'employeeId': {'id': employeeId, 'name': employeeName},
         'items': items.map((e) => e.toJson()..['total'] = e.total).toList(),
         'itemCount': itemCount,

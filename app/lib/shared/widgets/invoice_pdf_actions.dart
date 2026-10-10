@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/l10n/app_localizations.dart';
+import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/invoice_model.dart';
 import '../../services/pdf_service.dart';
+import 'bluetooth_printer_sheet.dart';
 
-class InvoicePdfActions extends StatefulWidget {
+class InvoicePdfActions extends ConsumerStatefulWidget {
   const InvoicePdfActions({
     super.key,
     required this.invoice,
@@ -19,11 +23,25 @@ class InvoicePdfActions extends StatefulWidget {
   final bool compact;
 
   @override
-  State<InvoicePdfActions> createState() => _InvoicePdfActionsState();
+  ConsumerState<InvoicePdfActions> createState() => _InvoicePdfActionsState();
 }
 
-class _InvoicePdfActionsState extends State<InvoicePdfActions> {
+class _InvoicePdfActionsState extends ConsumerState<InvoicePdfActions> {
   bool _isLoading = false;
+
+  String? _resolvedGroupLink() {
+    final direct = (widget.whatsappGroupLink ?? widget.invoice.clientWhatsappGroupLink)?.trim();
+    if (direct != null && direct.isNotEmpty) return direct;
+
+    final clients = ref.read(clientsProvider).valueOrNull;
+    if (clients == null) return null;
+    for (final c in clients) {
+      if (c.id == widget.invoice.clientId && c.whatsappGroupLink.trim().isNotEmpty) {
+        return c.whatsappGroupLink.trim();
+      }
+    }
+    return null;
+  }
 
   Future<void> _runPdfAction(
     Future<void> Function() action, {
@@ -62,8 +80,14 @@ class _InvoicePdfActionsState extends State<InvoicePdfActions> {
     }
   }
 
-  Future<void> _print() async {
-    // No timeout — system print UI stays open until the user finishes.
+  Future<void> _printThermal() async {
+    await showBluetoothPrinterPicker(
+      context: context,
+      invoice: widget.invoice,
+    );
+  }
+
+  Future<void> _printSystem() async {
     await _runPdfAction(
       () => pdfService.printInvoicePdf(widget.invoice),
     );
@@ -78,24 +102,33 @@ class _InvoicePdfActionsState extends State<InvoicePdfActions> {
   }
 
   Future<void> _shareWhatsApp() async {
-    final link =
-        widget.whatsappGroupLink ?? widget.invoice.clientWhatsappGroupLink;
-    if (pdfService.isWhatsAppInviteLinkOnly(link) && mounted) {
+    final link = _resolvedGroupLink();
+    if (link == null || link.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.whatsappGroupLinkHint),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+      }
+    } else if (pdfService.isWhatsAppInviteLinkOnly(link) && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.whatsappInviteLinkWarning),
-          backgroundColor: AppColors.warning,
+          backgroundColor: AppColors.primaryGreen,
         ),
       );
     }
     await _runPdfAction(
       () => pdfService.shareViaWhatsApp(
         widget.invoice,
-        clientPhone: widget.clientPhone,
+        clientPhone: widget.clientPhone ?? widget.invoice.clientPhone,
         whatsappGroupLink: link,
       ),
       successMessage: context.l10n.pdfShared,
-      timeout: const Duration(seconds: 45),
+      // Invite flow opens WhatsApp then share UI — allow more time.
+      timeout: const Duration(seconds: 60),
     );
   }
 
@@ -126,8 +159,13 @@ class _InvoicePdfActionsState extends State<InvoicePdfActions> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            tooltip: l10n.printInvoice,
-            onPressed: _print,
+            tooltip: l10n.printThermal,
+            onPressed: _printThermal,
+            icon: const Icon(Icons.bluetooth),
+          ),
+          IconButton(
+            tooltip: l10n.printSystemPdf,
+            onPressed: _printSystem,
             icon: const Icon(Icons.print_outlined),
           ),
           IconButton(
@@ -156,13 +194,24 @@ class _InvoicePdfActionsState extends State<InvoicePdfActions> {
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
-          onPressed: _print,
-          icon: const Icon(Icons.print),
-          label: Text(l10n.printInvoice),
+          onPressed: _printThermal,
+          icon: const Icon(Icons.bluetooth),
+          label: Text(l10n.printThermal),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryGreen,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _printSystem,
+          icon: const Icon(Icons.print),
+          label: Text(l10n.printSystemPdf),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            foregroundColor: AppColors.primaryGreen,
+            side: const BorderSide(color: AppColors.primaryGreen),
           ),
         ),
         const SizedBox(height: 10),

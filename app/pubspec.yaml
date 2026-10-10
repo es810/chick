@@ -1,7 +1,7 @@
 name: chicken_farm
 description: Chicken Farm Management System - Professional mobile app
 publish_to: 'none'
-version: 1.8.44+54
+version: 1.8.46+56
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
@@ -35,6 +35,10 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.2
   url_launcher: ^6.3.1
+  print_bluetooth_thermal: ^1.2.5
+  esc_pos_utils_plus: ^2.0.4
+  permission_handler: 11.4.0
+  image: ^4.10.2
 
 dev_dependencies:
   flutter_test:

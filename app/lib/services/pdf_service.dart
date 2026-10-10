@@ -125,6 +125,153 @@ class PdfService {
     return pdf.save();
   }
 
+  /// Narrow Arabic receipt for 58mm Bluetooth thermal printers (Xprinter).
+  Future<Uint8List> generateThermalInvoicePdf(InvoiceModel invoice) async {
+    await _ensureArabicFonts();
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: _arabicRegular!,
+        bold: _arabicBold!,
+      ),
+    );
+
+    const rollWidth = 58 * PdfPageFormat.mm;
+    // Tall enough for a full distribution receipt; unused paper is cropped by raster height.
+    const rollHeight = 220 * PdfPageFormat.mm;
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: const PdfPageFormat(rollWidth, rollHeight, marginAll: 3 * PdfPageFormat.mm),
+        build: (context) => pw.Directionality(
+          textDirection: pw.TextDirection.rtl,
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pw.Center(
+                child: pw.Text(
+                  companyName,
+                  style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Center(
+                child: pw.Text(
+                  companyPhone,
+                  style: const pw.TextStyle(fontSize: 9),
+                  textAlign: pw.TextAlign.center,
+                  textDirection: pw.TextDirection.ltr,
+                ),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Center(
+                child: pw.Text(
+                  'إيصال توزيع',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Text(
+                'العميل: ${invoice.clientName ?? '—'}',
+                style: const pw.TextStyle(fontSize: 9),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                'التاريخ: ${_formatDate(invoice.createdAt ?? DateTime.now())}',
+                style: const pw.TextStyle(fontSize: 9),
+              ),
+              if (invoice.invoiceNumber.isNotEmpty) ...[
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  'رقم: ${invoice.invoiceNumber}',
+                  style: const pw.TextStyle(fontSize: 8),
+                ),
+              ],
+              pw.SizedBox(height: 6),
+              _thermalReceiptTable(invoice),
+              pw.SizedBox(height: 8),
+              pw.Center(
+                child: pw.Text(
+                  companyChickenTypes,
+                  style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Center(
+                child: pw.Text(
+                  'شكراً لتعاملكم معنا',
+                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  pw.Widget _thermalReceiptTable(InvoiceModel invoice) {
+    final rows = <(String, String)>[
+      if (invoice.chickenTypesLabel.isNotEmpty)
+        ('نوع الصنف', invoice.chickenTypesLabel),
+      ('العدد', '${invoice.itemCount}'),
+      ('وزن القائم', _num(invoice.displayGrossWeight)),
+      ('الوزن الفارغ', _num(invoice.displayTareWeight)),
+      ('الوزن الصافي', _num(invoice.netWeight)),
+      ('السعر/كجم', _num(invoice.pricePerKg)),
+      ('حساب الوجبة', _num(invoice.totalPrice)),
+    ];
+    if (invoice.balanceBefore != null) {
+      rows.add(('مستحق قبل', _num(invoice.balanceBefore!)));
+    }
+    if (invoice.balanceAfter != null) {
+      rows.add(('مستحق بعد', _num(invoice.balanceAfter!)));
+    }
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.black, width: 0.6),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1.6),
+        1: pw.FlexColumnWidth(1),
+      },
+      children: [
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+          children: [
+            _thermalCell('البيان', bold: true),
+            _thermalCell('القيمة', bold: true),
+          ],
+        ),
+        ...rows.map(
+          (row) => pw.TableRow(
+            children: [
+              _thermalCell(row.$1),
+              _thermalCell(row.$2),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _thermalCell(String text, {bool bold = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 8,
+          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
   Future<Uint8List> generateCollectionPdf(TreasuryEntryItem entry) async {
     await _ensureArabicFonts();
 
@@ -372,9 +519,9 @@ class PdfService {
 
   /// Shares the PDF into WhatsApp with the file attached.
   ///
-  /// When [whatsappGroupLink] contains a real group JID (`…@g.us`), Android opens
-  /// that group chat with the PDF attached (no chat picker). WhatsApp still
-  /// requires one Send tap — silent send is not allowed by WhatsApp.
+  /// - Group JID (`…@g.us`): opens that chat with the PDF attached.
+  /// - Invite link (`chat.whatsapp.com/…`): opens the group, then shares the PDF
+  ///   so the same group is first in recent chats (one tap + Send).
   Future<void> _sharePdfToWhatsApp(
     PdfInvoiceResult result, {
     required String message,
@@ -382,6 +529,7 @@ class PdfService {
   }) async {
     final file = await _pdfAsXFile(result);
     final jid = _whatsAppJidFromStoredLink(whatsappGroupLink);
+    final inviteUrl = _whatsAppInviteUrlFromStoredLink(whatsappGroupLink);
 
     if (!kIsWeb && Platform.isAndroid) {
       try {
@@ -390,6 +538,7 @@ class PdfService {
           'text': message,
           'mime': 'application/pdf',
           if (jid != null) 'jid': jid,
+          if (inviteUrl != null) 'inviteUrl': inviteUrl,
         });
         return;
       } catch (_) {
@@ -399,13 +548,12 @@ class PdfService {
 
     await Share.shareXFiles(
       [file],
-      text: message,
+      text: inviteUrl != null ? '$message\n$inviteUrl' : message,
       subject: result.filename,
     );
   }
 
-  /// Invite links (`chat.whatsapp.com`) cannot target SEND.
-  /// Only a real chat JID opens the group directly.
+  /// Real chat JID for ACTION_SEND targeting (`…@g.us` / `…@s.whatsapp.net`).
   String? _whatsAppJidFromStoredLink(String? raw) {
     final value = (raw ?? '').trim();
     if (value.isEmpty) return null;
@@ -422,19 +570,40 @@ class PdfService {
       return '$local@$host';
     }
 
-    if (RegExp(r'^\d+(-\d+)?$').hasMatch(value)) {
+    // Bare numeric group id — not an invite code (invite codes are alphanumeric).
+    if (RegExp(r'^\d{10,}(-\d+)?$').hasMatch(value)) {
       return '$value@g.us';
     }
 
     return null;
   }
 
-  /// True when the stored value is an invite URL that cannot auto-target a group.
+  /// Normalizes `chat.whatsapp.com` invite links (and bare invite codes).
+  String? _whatsAppInviteUrlFromStoredLink(String? raw) {
+    final value = (raw ?? '').trim();
+    if (value.isEmpty) return null;
+
+    final match = RegExp(
+      r'(?:https?://)?(?:www\.)?chat\.whatsapp\.com/([A-Za-z0-9_-]+)',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (match != null) {
+      return 'https://chat.whatsapp.com/${match.group(1)}';
+    }
+
+    // Bare invite code (no digits-only — those are treated as JIDs above).
+    if (RegExp(r'^[A-Za-z0-9_-]{16,}$').hasMatch(value) &&
+        RegExp(r'[A-Za-z]').hasMatch(value)) {
+      return 'https://chat.whatsapp.com/$value';
+    }
+
+    return null;
+  }
+
+  /// True when the stored value is only an invite URL (no JID).
   bool isWhatsAppInviteLinkOnly(String? raw) {
-    final value = (raw ?? '').trim().toLowerCase();
-    if (value.isEmpty) return false;
     if (_whatsAppJidFromStoredLink(raw) != null) return false;
-    return value.contains('chat.whatsapp.com') || value.contains('whatsapp.com/');
+    return _whatsAppInviteUrlFromStoredLink(raw) != null;
   }
 
   /// Opens the system print dialog (connected printers + print apps).
