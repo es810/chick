@@ -132,15 +132,15 @@ const createCollectionInvoice = async (data, user) => {
     amountPaid,
     amountDeducted,
     balanceBefore,
+    // Receipt line = before − paid − discount (not the live global client balance).
     balanceAfter: balanceAfterPreview,
     treasuryMovementId: movement._id,
     createdBy: user._id,
     ...(clientMutationId ? { clientMutationId } : {}),
   });
 
-  const balanceAfter = await syncClientBalanceFromLedger(clientId);
-  invoice.balanceAfter = balanceAfter;
-  await invoice.save();
+  // Keep client.balance in sync with the ledger; do not overwrite receipt balanceAfter.
+  await syncClientBalanceFromLedger(clientId);
 
   await logAction(user._id, user.name, 'CREATE_COLLECTION_INVOICE', client.name, {
     amountPaid,
@@ -202,15 +202,14 @@ const updateCollectionInvoice = async (id, data, user) => {
   invoice.amountPaid = amountPaid;
   invoice.amountDeducted = amountDeducted;
   invoice.balanceBefore = balanceBefore;
+  // Receipt line = before − paid − discount (not the live global client balance).
   invoice.balanceAfter = balanceAfterPreview;
   await invoice.save();
 
-  const balanceAfter = await syncClientBalanceFromLedger(newClientId);
+  await syncClientBalanceFromLedger(newClientId);
   if (oldClientId !== newClientId) {
     await syncClientBalanceFromLedger(oldClientId);
   }
-  invoice.balanceAfter = balanceAfter;
-  await invoice.save();
 
   await logAction(user._id, user.name, 'UPDATE_COLLECTION_INVOICE', client.name, {
     amountPaid,
