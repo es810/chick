@@ -36,7 +36,11 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
       final number = inv.invoiceNumber.toLowerCase();
       final client = (inv.clientName ?? '').toLowerCase();
       final phone = (inv.clientPhone ?? '').toLowerCase();
-      return number.contains(q) || client.contains(q) || phone.contains(q);
+      final types = inv.chickenTypesLabel.toLowerCase();
+      return number.contains(q) ||
+          client.contains(q) ||
+          phone.contains(q) ||
+          types.contains(q);
     }).toList();
   }
 
@@ -155,34 +159,77 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                           ? DateFormat.jm(Localizations.localeOf(context).toString())
                               .format(invoice.createdAt!.toLocal())
                           : '';
+                      final typesLabel = invoice.chickenTypesLabel;
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
+                        child: InkWell(
                           onTap: () =>
                               context.push('${widget.basePath}/invoices/${invoice.id}'),
-                          leading: CircleAvatar(
-                            backgroundColor: invoice.id.startsWith('pending-')
-                                ? Colors.orange.withValues(alpha: 0.15)
-                                : AppColors.primaryGreen.withValues(alpha: 0.15),
-                            child: Icon(
-                              invoice.id.startsWith('pending-')
-                                  ? Icons.cloud_upload_outlined
-                                  : Icons.receipt,
-                              color: invoice.id.startsWith('pending-')
-                                  ? Colors.orange
-                                  : AppColors.primaryGreen,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: invoice.id.startsWith('pending-')
+                                      ? Colors.orange.withValues(alpha: 0.15)
+                                      : AppColors.primaryGreen.withValues(alpha: 0.15),
+                                  child: Icon(
+                                    invoice.id.startsWith('pending-')
+                                        ? Icons.cloud_upload_outlined
+                                        : Icons.receipt,
+                                    color: invoice.id.startsWith('pending-')
+                                        ? Colors.orange
+                                        : AppColors.primaryGreen,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        invoice.invoiceNumber,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        [
+                                          invoice.clientName ?? 'Client',
+                                          if (time.isNotEmpty) time,
+                                        ].join(' · '),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(color: Colors.grey.shade700),
+                                      ),
+                                      if (typesLabel.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          '${l10n.chickenType}: $typesLabel',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF2E7D32),
+                                              ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  context.formatCurrency(invoice.totalPrice),
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ],
                             ),
-                          ),
-                          title: Text(invoice.invoiceNumber),
-                          subtitle: Text(
-                            [
-                              invoice.clientName ?? 'Client',
-                              if (time.isNotEmpty) time,
-                            ].join(' • '),
-                          ),
-                          trailing: Text(
-                            context.formatCurrency(invoice.totalPrice),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       );
