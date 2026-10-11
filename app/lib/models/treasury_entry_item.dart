@@ -43,10 +43,19 @@ class TreasuryEntryItem {
 
   factory TreasuryEntryItem.fromJson(Map<String, dynamic> json) {
     final rawId = json['id'] ?? json['_id'];
+    double? asDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString());
+    }
+
+    final amountPaid = asDouble(json['amountPaid']);
+    final amount = asDouble(json['amount']) ?? amountPaid ?? 0;
+
     return TreasuryEntryItem(
       id: rawId?.toString() ?? '',
       category: json['category']?.toString() ?? 'collection',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      amount: amount,
       description: json['description'] as String? ?? '',
       subtitle: json['subtitle'] as String? ?? '',
       createdAt: json['createdAt'] != null
@@ -61,10 +70,10 @@ class TreasuryEntryItem {
       collectionDate: json['collectionDate'] != null
           ? DateTime.tryParse(json['collectionDate'].toString())
           : null,
-      amountPaid: (json['amountPaid'] as num?)?.toDouble(),
-      amountDeducted: (json['amountDeducted'] as num?)?.toDouble(),
-      balanceBefore: (json['balanceBefore'] as num?)?.toDouble(),
-      balanceAfter: (json['balanceAfter'] as num?)?.toDouble(),
+      amountPaid: amountPaid ?? (amount > 0 ? amount : null),
+      amountDeducted: asDouble(json['amountDeducted']),
+      balanceBefore: asDouble(json['balanceBefore']),
+      balanceAfter: asDouble(json['balanceAfter']),
       readOnly: json['readOnly'] == true ||
           (rawId?.toString().startsWith('supplier-debt-') ?? false),
     );

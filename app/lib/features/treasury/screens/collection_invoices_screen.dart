@@ -303,69 +303,135 @@ class _CollectionInvoicesScreenState extends ConsumerState<CollectionInvoicesScr
                                                 Localizations.localeOf(context).toString())
                                             .format(stamp.toLocal())
                                         : '';
+                                    final paid = entry.amountPaid ?? entry.amount;
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 8),
-                                      child: ListTile(
+                                      child: InkWell(
                                         onTap: _submitting ? null : () => _openDetail(entry),
-                                        leading: CircleAvatar(
-                                          backgroundColor:
-                                              const Color(0xFF66BB6A).withValues(alpha: 0.15),
-                                          child: const Icon(Icons.payments, color: Color(0xFF66BB6A)),
-                                        ),
-                                        title: Text(entry.clientName ?? entry.description),
-                                        subtitle: Text(
-                                          [
-                                            if (time.isNotEmpty) time,
-                                            if (entry.employeeName != null) entry.employeeName!,
-                                            '${l10n.amountPaid}: ${context.formatCurrency(entry.amountPaid ?? entry.amount)}',
-                                            if ((entry.amountDeducted ?? 0) > 0)
-                                              '${l10n.statementDiscount}: ${context.formatCurrency(entry.amountDeducted!)}',
-                                            '${l10n.balanceAfterPayment}: ${context.formatCurrency(entry.balanceAfter ?? 0)}',
-                                          ].join(' · '),
-                                          maxLines: 4,
-                                        ),
-                                        trailing: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            CollectionPdfActions(
-                                              entry: entry,
-                                              clientPhone: entry.clientPhone,
-                                              compact: true,
-                                            ),
-                                            PopupMenuButton<String>(
-                                              onSelected: (action) {
-                                                if (action == 'share') {
-                                                  showCollectionShareDialog(
-                                                    context: context,
-                                                    entry: entry,
-                                                  );
-                                                } else if (action == 'edit') {
-                                                  _openDetail(entry);
-                                                } else if (action == 'delete') {
-                                                  _confirmDelete(entry);
-                                                }
-                                              },
-                                              itemBuilder: (_) => [
-                                                PopupMenuItem(
-                                                  value: 'share',
-                                                  child: Text(l10n.shareInvoice),
-                                                ),
-                                                if (canManage(entry)) ...[
-                                                  PopupMenuItem(
-                                                    value: 'edit',
-                                                    child: Text(l10n.editEntry),
-                                                  ),
-                                                  PopupMenuItem(
-                                                    value: 'delete',
-                                                    child: Text(
-                                                      l10n.delete,
-                                                      style: const TextStyle(color: AppColors.error),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Padding(
+                                          padding: const EdgeInsets.fromLTRB(12, 10, 4, 8),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: [
+                                              Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  CircleAvatar(
+                                                    backgroundColor: const Color(0xFF66BB6A)
+                                                        .withValues(alpha: 0.15),
+                                                    child: const Icon(
+                                                      Icons.payments,
+                                                      color: Color(0xFF66BB6A),
                                                     ),
                                                   ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          entry.clientName ?? entry.description,
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .titleSmall
+                                                              ?.copyWith(
+                                                                fontWeight: FontWeight.w600,
+                                                              ),
+                                                        ),
+                                                        const SizedBox(height: 2),
+                                                        Text(
+                                                          [
+                                                            if (time.isNotEmpty) time,
+                                                            if ((entry.employeeName ?? '')
+                                                                .isNotEmpty)
+                                                              entry.employeeName!,
+                                                          ].join(' · '),
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .bodySmall
+                                                              ?.copyWith(
+                                                                color: Colors.grey.shade700,
+                                                              ),
+                                                        ),
+                                                        const SizedBox(height: 6),
+                                                        Text(
+                                                          '${l10n.amountPaid}: ${context.formatCurrency(paid)}',
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .bodyMedium
+                                                              ?.copyWith(
+                                                                fontWeight: FontWeight.w700,
+                                                                color: const Color(0xFF2E7D32),
+                                                              ),
+                                                        ),
+                                                        if ((entry.amountDeducted ?? 0) > 0) ...[
+                                                          const SizedBox(height: 2),
+                                                          Text(
+                                                            '${l10n.statementDiscount}: ${context.formatCurrency(entry.amountDeducted!)}',
+                                                            style: Theme.of(context)
+                                                                .textTheme
+                                                                .bodySmall,
+                                                          ),
+                                                        ],
+                                                        const SizedBox(height: 2),
+                                                        Text(
+                                                          '${l10n.balanceAfterPayment}: ${context.formatCurrency(entry.balanceAfter ?? 0)}',
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .bodySmall,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  PopupMenuButton<String>(
+                                                    onSelected: (action) {
+                                                      if (action == 'share') {
+                                                        showCollectionShareDialog(
+                                                          context: context,
+                                                          entry: entry,
+                                                        );
+                                                      } else if (action == 'edit') {
+                                                        _openDetail(entry);
+                                                      } else if (action == 'delete') {
+                                                        _confirmDelete(entry);
+                                                      }
+                                                    },
+                                                    itemBuilder: (_) => [
+                                                      PopupMenuItem(
+                                                        value: 'share',
+                                                        child: Text(l10n.shareInvoice),
+                                                      ),
+                                                      if (canManage(entry)) ...[
+                                                        PopupMenuItem(
+                                                          value: 'edit',
+                                                          child: Text(l10n.editEntry),
+                                                        ),
+                                                        PopupMenuItem(
+                                                          value: 'delete',
+                                                          child: Text(
+                                                            l10n.delete,
+                                                            style: const TextStyle(
+                                                              color: AppColors.error,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
                                                 ],
-                                              ],
-                                            ),
-                                          ],
+                                              ),
+                                              Align(
+                                                alignment: AlignmentDirectional.centerStart,
+                                                child: CollectionPdfActions(
+                                                  entry: entry,
+                                                  clientPhone: entry.clientPhone,
+                                                  compact: true,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     );
