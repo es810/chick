@@ -137,75 +137,78 @@ class PdfService {
     );
 
     const rollWidth = 58 * PdfPageFormat.mm;
-    // Tall enough for a full distribution receipt; unused paper is cropped by raster height.
-    const rollHeight = 220 * PdfPageFormat.mm;
+    // Keep the page short — empty white space rasterizes poorly on some Xprinters.
+    const rollHeight = 140 * PdfPageFormat.mm;
 
     pdf.addPage(
       pw.Page(
         pageFormat: const PdfPageFormat(rollWidth, rollHeight, marginAll: 3 * PdfPageFormat.mm),
-        build: (context) => pw.Directionality(
-          textDirection: pw.TextDirection.rtl,
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-            children: [
-              pw.Center(
-                child: pw.Text(
-                  companyName,
-                  style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
-                  textAlign: pw.TextAlign.center,
+        build: (context) => pw.Container(
+          color: PdfColors.white,
+          child: pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+              children: [
+                pw.Center(
+                  child: pw.Text(
+                    companyName,
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.center,
+                  ),
                 ),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Center(
-                child: pw.Text(
-                  companyPhone,
+                pw.SizedBox(height: 2),
+                pw.Center(
+                  child: pw.Text(
+                    companyPhone,
+                    style: const pw.TextStyle(fontSize: 9),
+                    textAlign: pw.TextAlign.center,
+                    textDirection: pw.TextDirection.ltr,
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Center(
+                  child: pw.Text(
+                    'إيصال توزيع',
+                    style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  'العميل: ${invoice.clientName ?? '—'}',
                   style: const pw.TextStyle(fontSize: 9),
-                  textAlign: pw.TextAlign.center,
-                  textDirection: pw.TextDirection.ltr,
                 ),
-              ),
-              pw.SizedBox(height: 6),
-              pw.Center(
-                child: pw.Text(
-                  'إيصال توزيع',
-                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
-                ),
-              ),
-              pw.SizedBox(height: 6),
-              pw.Text(
-                'العميل: ${invoice.clientName ?? '—'}',
-                style: const pw.TextStyle(fontSize: 9),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                'التاريخ: ${_formatDate(invoice.createdAt ?? DateTime.now())}',
-                style: const pw.TextStyle(fontSize: 9),
-              ),
-              if (invoice.invoiceNumber.isNotEmpty) ...[
                 pw.SizedBox(height: 2),
                 pw.Text(
-                  'رقم: ${invoice.invoiceNumber}',
-                  style: const pw.TextStyle(fontSize: 8),
+                  'التاريخ: ${_formatDate(invoice.createdAt ?? DateTime.now())}',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+                if (invoice.invoiceNumber.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    'رقم: ${invoice.invoiceNumber}',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                ],
+                pw.SizedBox(height: 6),
+                _thermalReceiptTable(invoice),
+                pw.SizedBox(height: 8),
+                pw.Center(
+                  child: pw.Text(
+                    companyChickenTypes,
+                    style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Center(
+                  child: pw.Text(
+                    'شكراً لتعاملكم معنا',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
                 ),
               ],
-              pw.SizedBox(height: 6),
-              _thermalReceiptTable(invoice),
-              pw.SizedBox(height: 8),
-              pw.Center(
-                child: pw.Text(
-                  companyChickenTypes,
-                  style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Center(
-                child: pw.Text(
-                  'شكراً لتعاملكم معنا',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -233,14 +236,14 @@ class PdfService {
     }
 
     return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.black, width: 0.6),
+      border: pw.TableBorder.all(color: PdfColors.black, width: 0.8),
       columnWidths: const {
         0: pw.FlexColumnWidth(1.6),
         1: pw.FlexColumnWidth(1),
       },
       children: [
         pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+          // Avoid grey fills — they invert badly on ESC/POS thermal raster.
           children: [
             _thermalCell('البيان', bold: true),
             _thermalCell('القيمة', bold: true),

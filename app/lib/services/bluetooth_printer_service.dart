@@ -45,7 +45,6 @@ class BluetoothPrinterService {
 
     final connect = statuses[Permission.bluetoothConnect];
     final scan = statuses[Permission.bluetoothScan];
-    // Location only needed on older Android; ignore if permanently denied on new OS.
     final okConnect = connect?.isGranted ?? await Permission.bluetoothConnect.isGranted;
     final okScan = scan?.isGranted ?? true;
     if (!okConnect) return false;
@@ -67,7 +66,6 @@ class BluetoothPrinterService {
   Future<bool> connect(String mac) async {
     final already = await PrintBluetoothThermal.connectionStatus;
     if (already) {
-      // Reconnect if different / ensure fresh session.
       await PrintBluetoothThermal.disconnect;
     }
     return PrintBluetoothThermal.connect(macPrinterAddress: mac);
@@ -100,22 +98,71 @@ class BluetoothPrinterService {
     final bytes = <int>[];
     bytes.addAll(generator.reset());
 
-    // 203 DPI is typical for 58mm thermal heads; resize to ESC/POS width (384 dots).
-    await for (final page in Printing.raster(pdfBytes, dpi: 203)) {
+    // ~180 DPI keeps Arabic sharp while staying under common BT write limits.
+    await for (final page in Printing.raster(pdfBytes, dpi: 180)) {
       final pngBytes = await page.toPng();
       final decoded = img.decodeImage(pngBytes);
       if (decoded == null) continue;
-      final resized = img.copyResize(
-        decoded,
-        width: PaperSize.mm58.width,
-        interpolation: img.Interpolation.linear,
-      );
-      bytes.addAll(generator.imageRaster(resized, align: PosAlign.center));
+
+      final prepared = _prepareThermalBitmap(decoded, targetWidth: PaperSize.mm58.width);
+      // ESC * bit-image is more reliable on portable Xprinters than GS v 0.
+      bytes.addAll(generator.image(prepared, align: PosAlign.center));
       bytes.addAll(generator.feed(2));
     }
 
-    // Portable Xprinters usually have no auto-cutter — feed enough to tear.
     bytes.addAll(generator.feed(4));
     return bytes;
+  }
+
+  /// Flattens onto white, crops empty bottom space, resizes for 58mm.
+  /// Output must be dark text on white — [Generator.image] inverts internally.
+  img.Image _prepareThermalBitmap(img.Image source, {required int targetWidth}) {
+    final canvas = img.Image(width: source.width, height: source.height);
+    img.fill(canvas, color: img.ColorRgb8(255, 255, 255));
+    img.compositeImage(canvas, source);
+
+    final cropped = _cropBottomWhitespace(canvas);
+    final resized = img.copyResize(
+      cropped,
+      width: targetWidth,
+      interpolation: img.Interpolation.average,
+    );
+
+    // Hard black/white for clean thermal dots (still white background).
+    for (final pixel in resized) {
+      final lum = img.getLuminanceRgb(pixel.r, pixel.g, pixel.b);
+      final v = lum < 140 ? 0 : 255;
+      pixel
+        ..r = v
+        ..g = v
+        ..b = v
+        ..a = 255;
+    }
+    return resized;
+  }
+
+  img.Image _cropBottomWhitespace(img.Image image) {
+    var lastContentRow = 0;
+    for (var y = 0; y < image.height; y++) {
+      var hasInk = false;
+      for (var x = 0; x < image.width; x++) {
+        final p = image.getPixel(x, y);
+        if (img.getLuminanceRgb(p.r, p.g, p.b) < 245) {
+          hasInk = true;
+          break;
+        }
+      }
+      if (hasInk) lastContentRow = y;
+    }
+
+    final padded = (lastContentRow + 16).clamp(1, image.height);
+    if (padded >= image.height) return image;
+    return img.copyCrop(
+      image,
+      x: 0,
+      y: 0,
+      width: image.width,
+      height: padded,
+    );
   }
 }
