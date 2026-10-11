@@ -80,6 +80,15 @@ String _localizeServerMessage(String message, Object? errors) {
   if (message == 'Adding clients is disabled for this employee') {
     return 'إضافة العملاء مقفولة للموظف ده';
   }
+  if (message == 'Not authorized to view this invoice') {
+    return 'مش مسموح تعرض الفاتورة دي';
+  }
+  if (message == 'Not authorized to access this collection invoice') {
+    return 'مش مسموح تعرض فاتورة التحصيل دي';
+  }
+  if (message == 'Not authorized to edit this invoice') {
+    return 'مش مسموح تعدّل الفاتورة دي';
+  }
   if (message == 'Cannot transfer to the same employee') {
     return 'لا يمكن التحويل لنفس الموظف';
   }

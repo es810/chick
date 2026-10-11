@@ -65,11 +65,9 @@ const getInvoice = asyncHandler(async (req, res) => {
     }
   }
 
-  if (
-    req.user.role === 'employee' &&
-    !hasPermission(req.user, 'canViewOthersWork') &&
-    !isSameId(invoice.employeeId, req.user._id)
-  ) {
+  // Employees may view any distribution invoice (details / print / client statement).
+  // Lists stay scoped unless canViewOthersWork; edit/delete remain owner-only.
+  if (req.user.role !== 'admin' && req.user.role !== 'employee' && req.user.role !== 'client') {
     throw new ApiError(403, 'Not authorized to view this invoice');
   }
 

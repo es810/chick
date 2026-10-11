@@ -62,14 +62,9 @@ const getCollectionInvoice = async (id, user) => {
     .populate('clientId', 'name phone whatsappGroupLink')
     .populate('employeeId', 'name');
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
+  // Employees may view any collection invoice (details / print / client statement).
+  // Lists stay scoped unless canViewOthersWork; mutate stays owner-only.
   if (user && user.role !== 'admin' && user.role !== 'employee') {
-    throw new ApiError(403, 'Not authorized to access this collection invoice');
-  }
-  if (
-    user?.role === 'employee' &&
-    !hasPermission(user, 'canViewOthersWork') &&
-    !isSameId(invoice.employeeId, user._id)
-  ) {
     throw new ApiError(403, 'Not authorized to access this collection invoice');
   }
   return toEntry(invoice);

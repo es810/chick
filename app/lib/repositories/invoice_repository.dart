@@ -204,6 +204,7 @@ class InvoiceRepository {
       await _cache.cacheData('invoice_$id', invoice.toJson());
       return invoice;
     } catch (e) {
+      // Prefer any local snapshot over a hard failure (offline or transient 403).
       if (local != null) return local;
       if (await _cache.shouldQueueError(e) || !await _cache.isOnline) {
         throw StateError('Invoice unavailable offline');
