@@ -187,6 +187,7 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     if (!items?.length) throw new ApiError(400, 'At least one item is required');
 
     const oldClientId = invoice.clientId.toString();
+    const oldPaymentStatus = invoice.paymentStatus;
     const invoiceReason = `Invoice #${invoice.invoiceNumber}`;
 
     await restoreStockForInvoice(
