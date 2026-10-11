@@ -50,9 +50,8 @@ class MainActivity : FlutterActivity() {
      * Shares a PDF into WhatsApp.
      *
      * - Real JID (`…@g.us`): opens that chat with the file attached.
-     * - Invite link (`chat.whatsapp.com/…`): opens the group, then presents the
-     *   file share so the same group is at the top of recent chats.
-     * WhatsApp still requires one Send tap — silent send is not allowed.
+     * - Invite link (`chat.whatsapp.com/…`): warms the group, then opens the
+     *   share composer with the PDF attached (user taps the group once + Send).
      */
     private fun shareFileToWhatsApp(
         path: String,
@@ -79,9 +78,7 @@ class MainActivity : FlutterActivity() {
         val normalizedJid = normalizeJid(jid)
         val normalizedInvite = normalizeInviteUrl(inviteUrl)
 
-        // Caption + EXTRA_STREAM together often make WhatsApp ignore `jid`.
-        // Keep caption on the clipboard when targeting a specific chat/group.
-        if (text.isNotBlank() && (!normalizedJid.isNullOrBlank() || !normalizedInvite.isNullOrBlank())) {
+        if (text.isNotBlank()) {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("invoice", text))
         }
@@ -99,72 +96,71 @@ class MainActivity : FlutterActivity() {
         }
 
         if (!normalizedInvite.isNullOrBlank()) {
-            shareViaInviteLink(target, uri, mime, normalizedInvite, text)
+            shareViaInviteLink(target, uri, mime, normalizedInvite)
             return
         }
 
-        // Fallback: open WhatsApp with the file (user picks the chat).
-        val fallback = Intent(Intent.ACTION_SEND).apply {
-            type = mime
-            putExtra(Intent.EXTRA_STREAM, uri)
-            if (text.isNotBlank()) {
-                putExtra(Intent.EXTRA_TEXT, text)
-            }
-            setPackage(target)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        startActivity(fallback)
+        startActivity(buildShareIntent(target, uri, mime))
     }
 
     /**
-     * Opens the group via invite link (lands on the chat if already a member),
-     * then starts a file share so that group appears first in WhatsApp recents.
+     * Invite links cannot carry EXTRA_STREAM. Strategy:
+     * 1) Open the group (so it sits at the top of WhatsApp recents)
+     * 2) Immediately open ACTION_SEND with the PDF on top
+     * User taps that same group once, then Send.
      */
     private fun shareViaInviteLink(
         packageName: String,
         uri: Uri,
         mime: String,
         inviteUrl: String,
-        text: String,
     ) {
         val viewIntent = Intent(Intent.ACTION_VIEW, Uri.parse(inviteUrl)).apply {
             setPackage(packageName)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+        val shareIntent = buildShareIntent(packageName, uri, mime)
+
+        // Prefer startActivities so the share composer (with PDF) ends on top.
+        try {
+            startActivities(arrayOf(viewIntent, shareIntent))
+            return
+        } catch (_: Exception) {
+            // fall through
+        }
+
+        // Fallback: open group, then force the share composer after WhatsApp settles.
         try {
             startActivity(viewIntent)
         } catch (_: Exception) {
-            // If VIEW fails, still try SEND below.
+            // ignore — still share below
         }
 
         mainHandler.postDelayed({
-            val share = Intent(Intent.ACTION_SEND).apply {
-                type = mime
-                putExtra(Intent.EXTRA_STREAM, uri)
-                // Don't put EXTRA_TEXT here — it often forces the chat picker
-                // away from the conversation we just opened.
-                setPackage(packageName)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
+            grantUriPermission(
+                packageName,
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
             try {
-                startActivity(share)
+                startActivity(shareIntent)
             } catch (_: Exception) {
-                // Last resort without package restriction.
-                startActivity(
-                    Intent.createChooser(
-                        Intent(Intent.ACTION_SEND).apply {
-                            type = mime
-                            putExtra(Intent.EXTRA_STREAM, uri)
-                            if (text.isNotBlank()) putExtra(Intent.EXTRA_TEXT, text)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        },
-                        "WhatsApp",
-                    ),
-                )
+                startActivity(Intent.createChooser(shareIntent, "WhatsApp"))
             }
-        }, 700)
+        }, 1200)
+    }
+
+    private fun buildShareIntent(packageName: String, uri: Uri, mime: String): Intent {
+        return Intent(Intent.ACTION_SEND).apply {
+            type = mime
+            clipData = ClipData.newUri(contentResolver, "invoice.pdf", uri)
+            putExtra(Intent.EXTRA_STREAM, uri)
+            // Do not set EXTRA_TEXT — it often drops the attachment composer.
+            setPackage(packageName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
     }
 
     private fun tryDirectShare(
@@ -178,12 +174,12 @@ class MainActivity : FlutterActivity() {
             "com.whatsapp.ContactPicker",
             "com.whatsapp.contact.ContactPicker",
             "com.whatsapp.contact.ui.ContactPicker",
-            "com.whatsapp.conversation.conversationrow.message.MessageReplyActivity",
         )
 
         for (className in classNames) {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = mime
+                clipData = ClipData.newUri(contentResolver, "invoice.pdf", uri)
                 putExtra(Intent.EXTRA_STREAM, uri)
                 putExtra("jid", jid)
                 setPackage(packageName)
@@ -200,13 +196,8 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        val plain = Intent(Intent.ACTION_SEND).apply {
-            type = mime
-            putExtra(Intent.EXTRA_STREAM, uri)
+        val plain = buildShareIntent(packageName, uri, mime).apply {
             putExtra("jid", jid)
-            setPackage(packageName)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return try {
             startActivity(plain)
@@ -230,7 +221,7 @@ class MainActivity : FlutterActivity() {
             return "$local@$host"
         }
 
-        if (value.matches(Regex("""^\d+(-\d+)?$"""))) {
+        if (value.matches(Regex("""^\d{10,}(-\d+)?$"""))) {
             return "$value@g.us"
         }
 
@@ -249,7 +240,6 @@ class MainActivity : FlutterActivity() {
             return "https://chat.whatsapp.com/${match.groupValues[1]}"
         }
 
-        // Bare invite code pasted without the domain.
         if (value.matches(Regex("""^[A-Za-z0-9_-]{16,}$"""))) {
             return "https://chat.whatsapp.com/$value"
         }

@@ -573,9 +573,9 @@ class AppLocalizations {
   },
   'whatsappInviteLinkWarning': {
     'en':
-        'Opening the group, then attach the invoice — tap the group if shown, then Send.',
+        'Invoice attached — tap the client group in the list, then Send.',
     'ar':
-        'هنفتح الجروب ونرفق الفاتورة — لو ظهر اختيار اضغط على الجروب وبعدين إرسال.',
+        'الفاتورة متعلقة — اضغط على جروب العميل من القائمة وبعدين إرسال.',
   },
   'address': {'en': 'Address', 'ar': 'العنوان'},
   'clientDebt': {'en': 'Debt (EGP)', 'ar': 'المديونية (ج.م)'},
