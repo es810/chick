@@ -188,6 +188,7 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
 
     const oldClientId = invoice.clientId.toString();
     const oldPaymentStatus = invoice.paymentStatus;
+    const previousTotalPrice = invoice.totalPrice || 0;
     const invoiceReason = `Invoice #${invoice.invoiceNumber}`;
 
     await restoreStockForInvoice(
@@ -244,13 +245,16 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     invoice.paymentStatus = newPaymentStatus;
     if (notes !== undefined) invoice.notes = notes;
 
-    // Snapshot balance before rebuild; then derive balance from invoices − collections
-    // so edits after partial/full collection never invent «مديونية سابقة».
-    invoice.balanceBefore = client.balance || 0;
+    // Prior debt must exclude this invoice. client.balance still includes the old
+    // unpaid total, so subtracting it prevents «مستحق قبل» from doubling the meal.
+    const sameClient = String(oldClientId) === String(newClientId);
+    const previousContribution =
+      sameClient && oldPaymentStatus !== 'paid' ? previousTotalPrice : 0;
+    invoice.balanceBefore = Math.max(0, (client.balance || 0) - previousContribution);
     await invoice.save({ session });
 
     const balanceAfter = await syncClientBalanceFromLedger(newClientId, session);
-    if (String(oldClientId) !== String(newClientId)) {
+    if (!sameClient) {
       await syncClientBalanceFromLedger(oldClientId, session);
     }
     invoice.balanceAfter = balanceAfter;

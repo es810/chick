@@ -350,11 +350,36 @@ const ensureMainTreasuryInSession = async (session) => {
 /** @deprecated Balance is computed from ledger aggregates; kept for compatibility, no-op on balance field. */
 const applyMainTreasuryDeltaInSession = async () => null;
 
+const getCairoNowMonthRange = () => {
+  const cairo = new Date(Date.now() + CAIRO_OFFSET_MS);
+  return getCairoMonthRange(cairo.getUTCFullYear(), cairo.getUTCMonth() + 1);
+};
+
 const getTreasurySummary = async () => {
-  const [treasury, ledgerRows, movementRows, supplierStockAgg, mainStockAgg] = await Promise.all([
+  const { start: monthStart, end: monthEnd } = getCairoNowMonthRange();
+  const monthFilter = { $gte: monthStart, $lt: monthEnd };
+
+  const [
+    treasury,
+    ledgerRows,
+    movementRows,
+    monthlyExpenseAgg,
+    monthlyWithdrawalAgg,
+    supplierStockAgg,
+    mainStockAgg,
+  ] = await Promise.all([
     getMainTreasury(),
     EmployeeLedger.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
     TreasuryMovement.aggregate([{ $group: { _id: '$type', total: { $sum: '$amount' } } }]),
+    // Dashboard shows this month only so expenses/withdrawals reset each month.
+    EmployeeLedger.aggregate([
+      { $match: { type: 'expense', createdAt: monthFilter } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+    TreasuryMovement.aggregate([
+      { $match: { type: 'withdrawal', createdAt: monthFilter } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
     SupplierStock.aggregate([
       {
         $group: {
@@ -390,20 +415,23 @@ const getTreasurySummary = async () => {
   ]);
 
   let totalLoading = 0;
-  let otherExpenses = 0;
+  let lifetimeExpenses = 0;
   for (const row of ledgerRows) {
     if (row._id === 'debt') totalLoading = row.total;
-    if (row._id === 'expense') otherExpenses = row.total;
+    if (row._id === 'expense') lifetimeExpenses = row.total;
   }
 
   let totalCollection = 0;
   let externalRevenue = 0;
-  let withdrawals = 0;
+  let lifetimeWithdrawals = 0;
   for (const row of movementRows) {
     if (row._id === 'collection') totalCollection = row.total;
     if (row._id === 'external_revenue') externalRevenue = row.total;
-    if (row._id === 'withdrawal') withdrawals = row.total;
+    if (row._id === 'withdrawal') lifetimeWithdrawals = row.total;
   }
+
+  const otherExpenses = monthlyExpenseAgg[0]?.total || 0;
+  const withdrawals = monthlyWithdrawalAgg[0]?.total || 0;
 
   const openingBalance = getOpeningBalance(treasury);
   // Inventory value is tracked separately and does not inflate cash treasury.
@@ -411,13 +439,14 @@ const getTreasurySummary = async () => {
   const supplierStockValue = supplierStockAgg[0]?.total || 0;
   const stockValue = Math.max(mainStockValue, supplierStockValue);
 
+  // Cash on hand always uses lifetime expenses/withdrawals.
   const balance = computeTreasuryBalance({
     openingBalance,
     totalCollection,
     externalRevenue,
     totalLoading,
-    otherExpenses,
-    withdrawals,
+    otherExpenses: lifetimeExpenses,
+    withdrawals: lifetimeWithdrawals,
   });
 
   return {

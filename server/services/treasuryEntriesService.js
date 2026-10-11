@@ -4,11 +4,24 @@ const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const { getTreasurySummary } = require('./treasuryService');
 const { addLedgerEntry } = require('./employeeLedgerService');
+const { getCairoMonthRange, CAIRO_OFFSET_MS } = require('../utils/businessCalendar');
 
 const { listCollectionInvoices } = require('./collectionInvoiceService');
 
+const currentCairoMonthFilter = () => {
+  const cairo = new Date(Date.now() + CAIRO_OFFSET_MS);
+  const { start, end } = getCairoMonthRange(cairo.getUTCFullYear(), cairo.getUTCMonth() + 1);
+  return { $gte: start, $lt: end };
+};
+
 const listMovements = async (type) => {
-  const movements = await TreasuryMovement.find({ type })
+  const query = { type };
+  // Match dashboard: withdrawals listed for the current Cairo month only.
+  if (type === 'withdrawal') {
+    query.createdAt = currentCairoMonthFilter();
+  }
+
+  const movements = await TreasuryMovement.find(query)
     .populate('createdBy', 'name')
     .sort({ createdAt: -1 });
 
@@ -23,7 +36,13 @@ const listMovements = async (type) => {
 };
 
 const listLedgerEntries = async (type) => {
-  const entries = await EmployeeLedger.find({ type })
+  const query = { type };
+  // Match dashboard: expenses listed for the current Cairo month only.
+  if (type === 'expense') {
+    query.createdAt = currentCairoMonthFilter();
+  }
+
+  const entries = await EmployeeLedger.find(query)
     .populate('employeeId', 'name')
     .populate('createdBy', 'name')
     .populate('supplierId', 'name')
