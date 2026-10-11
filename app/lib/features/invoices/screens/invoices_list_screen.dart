@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../models/invoice_model.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../../shared/widgets/invoice_pdf_actions.dart';
 import '../../../shared/widgets/loading_widget.dart';
 
 class InvoicesListScreen extends ConsumerStatefulWidget {
@@ -145,7 +146,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(invoicesProvider),
                   child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     itemCount: rows.length,
                     itemBuilder: (_, i) {
                       final row = rows[i];
@@ -160,6 +161,7 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                               .format(invoice.createdAt!.toLocal())
                           : '';
                       final typesLabel = invoice.chickenTypesLabel;
+                      final pending = invoice.id.startsWith('pending-');
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: InkWell(
@@ -167,66 +169,91 @@ class _InvoicesListScreenState extends ConsumerState<InvoicesListScreen> {
                               context.push('${widget.basePath}/invoices/${invoice.id}'),
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            padding: const EdgeInsets.fromLTRB(12, 10, 4, 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                CircleAvatar(
-                                  backgroundColor: invoice.id.startsWith('pending-')
-                                      ? Colors.orange.withValues(alpha: 0.15)
-                                      : AppColors.primaryGreen.withValues(alpha: 0.15),
-                                  child: Icon(
-                                    invoice.id.startsWith('pending-')
-                                        ? Icons.cloud_upload_outlined
-                                        : Icons.receipt,
-                                    color: invoice.id.startsWith('pending-')
-                                        ? Colors.orange
-                                        : AppColors.primaryGreen,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        invoice.invoiceNumber,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall
-                                            ?.copyWith(fontWeight: FontWeight.w600),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: pending
+                                          ? Colors.orange.withValues(alpha: 0.15)
+                                          : const Color(0xFF66BB6A)
+                                              .withValues(alpha: 0.15),
+                                      child: Icon(
+                                        pending
+                                            ? Icons.cloud_upload_outlined
+                                            : Icons.receipt,
+                                        color: pending
+                                            ? Colors.orange
+                                            : const Color(0xFF66BB6A),
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        [
-                                          invoice.clientName ?? 'Client',
-                                          if (time.isNotEmpty) time,
-                                        ].join(' · '),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(color: Colors.grey.shade700),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            invoice.clientName ?? invoice.invoiceNumber,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall
+                                                ?.copyWith(fontWeight: FontWeight.w600),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            [
+                                              if (invoice.invoiceNumber.isNotEmpty)
+                                                invoice.invoiceNumber,
+                                              if (time.isNotEmpty) time,
+                                              if ((invoice.employeeName ?? '').isNotEmpty)
+                                                invoice.employeeName!,
+                                            ].join(' · '),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(color: Colors.grey.shade700),
+                                          ),
+                                          if (typesLabel.isNotEmpty) ...[
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              '${l10n.chickenType}: $typesLabel',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w700,
+                                                    color: const Color(0xFF2E7D32),
+                                                  ),
+                                            ),
+                                          ],
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${l10n.totalPrice}: ${context.formatCurrency(invoice.totalPrice)}',
+                                            style: Theme.of(context).textTheme.bodySmall,
+                                          ),
+                                          if (invoice.balanceAfter != null) ...[
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${l10n.balanceAfterPayment}: ${context.formatCurrency(invoice.balanceAfter!)}',
+                                              style: Theme.of(context).textTheme.bodySmall,
+                                            ),
+                                          ],
+                                        ],
                                       ),
-                                      if (typesLabel.isNotEmpty) ...[
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          '${l10n.chickenType}: $typesLabel',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w700,
-                                                color: const Color(0xFF2E7D32),
-                                              ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  context.formatCurrency(invoice.totalPrice),
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                Align(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: InvoicePdfActions(
+                                    invoice: invoice,
+                                    clientPhone: invoice.clientPhone,
+                                    whatsappGroupLink: invoice.clientWhatsappGroupLink,
+                                    compact: true,
+                                  ),
                                 ),
                               ],
                             ),
