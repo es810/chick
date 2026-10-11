@@ -94,12 +94,31 @@ class SyncService {
       }),
     ]);
 
-    // Warm a few client statements for offline كشف حساب.
+    // Warm a few client statements for offline كشف حساب,
+    // and cache linked invoices/collections so employees can open them offline.
     try {
       final clients = await _ref.read(clientRepositoryProvider).getClients();
+      final invoiceRepo = _ref.read(invoiceRepositoryProvider);
+      final collectionRepo = _ref.read(collectionRepositoryProvider);
       for (final c in clients.take(40)) {
         await safe(() async {
-          await _ref.read(clientRepositoryProvider).getAccountStatement(c.id);
+          final statement =
+              await _ref.read(clientRepositoryProvider).getAccountStatement(c.id);
+          var warmed = 0;
+          for (final entry in statement.entries) {
+            if (warmed >= 20) break;
+            if (entry.type == 'distribution' && entry.id.isNotEmpty) {
+              await safe(() async {
+                await invoiceRepo.getInvoice(entry.id);
+              });
+              warmed++;
+            } else if (entry.type == 'collection' && entry.id.isNotEmpty) {
+              await safe(() async {
+                await collectionRepo.getInvoice(entry.id);
+              });
+              warmed++;
+            }
+          }
         });
       }
     } catch (_) {}

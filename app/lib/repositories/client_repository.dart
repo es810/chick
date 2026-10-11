@@ -120,12 +120,52 @@ class ClientRepository {
       final statement =
           AccountStatement.fromJson(data['data'] as Map<String, dynamic>);
       await _cache.cacheData('client_statement_$id', statement.toJson());
+      // Prefetch recent linked invoices/collections for offline open from statement.
+      await _warmStatementDocuments(statement);
       return statement;
     } catch (e) {
       if (await _cache.shouldQueueError(e) || !await _cache.isOnline) {
         return _statementOffline(id);
       }
       rethrow;
+    }
+  }
+
+  Future<void> _warmStatementDocuments(AccountStatement statement) async {
+    var count = 0;
+    for (final entry in statement.entries) {
+      if (count >= 25) break;
+      if (entry.id.isEmpty) continue;
+      try {
+        if (entry.type == 'distribution') {
+          if (_cache.getCached('invoice_${entry.id}') != null) continue;
+          final response = await _api.get('${ApiConstants.invoices}/${entry.id}');
+          final data = response.data as Map<String, dynamic>;
+          final raw = data['data'];
+          if (raw is Map) {
+            await _cache.cacheData(
+              'invoice_${entry.id}',
+              Map<String, dynamic>.from(raw),
+            );
+            count++;
+          }
+        } else if (entry.type == 'collection') {
+          if (_cache.getCached('collection_${entry.id}') != null) continue;
+          final response =
+              await _api.get('${ApiConstants.collections}/${entry.id}');
+          final data = response.data as Map<String, dynamic>;
+          final raw = data['data'];
+          if (raw is Map) {
+            await _cache.cacheData(
+              'collection_${entry.id}',
+              Map<String, dynamic>.from(raw),
+            );
+            count++;
+          }
+        }
+      } catch (_) {
+        // Best-effort warm; opening later can still fetch online.
+      }
     }
   }
 

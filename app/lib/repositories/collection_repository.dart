@@ -146,14 +146,16 @@ class CollectionRepository {
       throw StateError('Pending collection not found');
     }
 
+    if (!await _cache.isOnline) {
+      if (local != null) return local;
+      throw StateError('Collection unavailable offline');
+    }
+
     try {
       final response = await _api.get('${ApiConstants.collections}/$id');
       final data = response.data as Map<String, dynamic>;
       final entry = TreasuryEntryItem.fromJson(data['data'] as Map<String, dynamic>);
-      await _cache.cacheData(
-        'collection_$id',
-        _collectionToCacheMap(entry),
-      );
+      await _upsertCollectionCache(entry);
       return entry;
     } catch (e) {
       if (local != null) return local;
@@ -162,6 +164,24 @@ class CollectionRepository {
       }
       rethrow;
     }
+  }
+
+  Future<void> _upsertCollectionCache(TreasuryEntryItem entry) async {
+    final map = _collectionToCacheMap(entry);
+    await _cache.cacheData('collection_${entry.id}', map);
+    final cached = _cache.getCached('collections');
+    final items = <Map<String, dynamic>>[];
+    if (cached != null) {
+      for (final raw in (cached['items'] as List? ?? [])) {
+        if (raw is! Map) continue;
+        final existing = Map<String, dynamic>.from(raw);
+        final itemId =
+            existing['id']?.toString() ?? existing['_id']?.toString() ?? '';
+        if (itemId != entry.id) items.add(existing);
+      }
+    }
+    items.insert(0, map);
+    await _cache.cacheData('collections', {'items': items});
   }
 
   TreasuryEntryItem? _collectionFromLocal(String id) {
@@ -267,6 +287,7 @@ class CollectionRepository {
       final summary = payload['summary'] != null
           ? TreasurySummaryModel.fromJson(payload['summary'] as Map<String, dynamic>)
           : null;
+      await _upsertCollectionCache(entry);
       return CollectionCreateResult(entry: entry, summary: summary);
     } catch (e) {
       if (allowQueue && await _cache.shouldQueueError(e)) {
@@ -344,7 +365,7 @@ class CollectionRepository {
       final payload = data['data'] as Map<String, dynamic>;
       final entry =
           TreasuryEntryItem.fromJson(payload['entry'] as Map<String, dynamic>);
-      await _cache.cacheData('collection_$id', _collectionToCacheMap(entry));
+      await _upsertCollectionCache(entry);
       return entry;
     } catch (e) {
       if (allowQueue && await _cache.shouldQueueError(e)) {

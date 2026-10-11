@@ -197,11 +197,17 @@ class InvoiceRepository {
       throw StateError('Pending invoice not found');
     }
 
+    // Offline: open from cache immediately (employee list / prior online open).
+    if (!await _cache.isOnline) {
+      if (local != null) return local;
+      throw StateError('Invoice unavailable offline');
+    }
+
     try {
       final response = await _api.get('${ApiConstants.invoices}/$id');
       final data = response.data as Map<String, dynamic>;
       final invoice = InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
-      await _cache.cacheData('invoice_$id', invoice.toJson());
+      await _upsertInvoiceCache(invoice);
       return invoice;
     } catch (e) {
       // Prefer any local snapshot over a hard failure (offline or transient 403).
@@ -211,6 +217,26 @@ class InvoiceRepository {
       }
       rethrow;
     }
+  }
+
+  Future<void> _upsertInvoiceCache(InvoiceModel invoice) async {
+    final json = invoice.toJson();
+    await _cache.cacheData('invoice_${invoice.id}', json);
+    final cached = _cache.getCached('invoices');
+    final items = <Map<String, dynamic>>[];
+    if (cached != null) {
+      for (final raw in (cached['items'] as List? ?? [])) {
+        if (raw is! Map) continue;
+        final map = Map<String, dynamic>.from(raw);
+        final itemId = map['_id']?.toString() ?? map['id']?.toString() ?? '';
+        if (itemId != invoice.id) items.add(map);
+      }
+    }
+    items.insert(0, json);
+    await _cache.cacheData('invoices', {
+      'items': items,
+      'total': items.length,
+    });
   }
 
   InvoiceModel? _invoiceFromLocal(String id) {
@@ -255,7 +281,10 @@ class InvoiceRepository {
     try {
       final response = await _api.post(ApiConstants.invoices, data: body);
       final data = response.data as Map<String, dynamic>;
-      return InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
+      final invoice =
+          InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
+      await _upsertInvoiceCache(invoice);
+      return invoice;
     } catch (e) {
       if (allowQueue && await _cache.shouldQueueError(e)) {
         await _cache.addPendingSync(
@@ -295,7 +324,7 @@ class InvoiceRepository {
       final data = response.data as Map<String, dynamic>;
       final invoice =
           InvoiceModel.fromJson(data['data'] as Map<String, dynamic>);
-      await _cache.cacheData('invoice_$id', invoice.toJson());
+      await _upsertInvoiceCache(invoice);
       return invoice;
     } catch (e) {
       if (allowQueue && await _cache.shouldQueueError(e)) {
