@@ -118,7 +118,8 @@ const createInvoice = async (data, employee) => {
           totalWeight,
           totalPrice,
           balanceBefore,
-          balanceAfter: balanceBefore,
+          balanceAfter:
+            paymentStatus === 'paid' ? balanceBefore : balanceBefore + totalPrice,
           paymentStatus,
           notes,
           ...(clientMutationId ? { clientMutationId } : {}),
@@ -140,14 +141,12 @@ const createInvoice = async (data, employee) => {
       );
     }
 
+    // Receipt line = prior debt + this meal. Live client.balance is rebuilt
+    // from the full ledger and must not overwrite this snapshot.
     if (paymentStatus !== 'paid') {
-      const balanceAfter = await syncClientBalanceFromLedger(clientId, session);
-      invoice.balanceAfter = balanceAfter;
-      await invoice.save({ session });
-    } else {
-      invoice.balanceAfter = balanceBefore;
-      await invoice.save({ session });
+      await syncClientBalanceFromLedger(clientId, session);
     }
+    await invoice.save({ session });
 
     await session.commitTransaction();
 
@@ -251,14 +250,16 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     const previousContribution =
       sameClient && oldPaymentStatus !== 'paid' ? previousTotalPrice : 0;
     invoice.balanceBefore = Math.max(0, (client.balance || 0) - previousContribution);
+    invoice.balanceAfter =
+      newPaymentStatus === 'paid'
+        ? invoice.balanceBefore
+        : invoice.balanceBefore + totalPrice;
     await invoice.save({ session });
 
-    const balanceAfter = await syncClientBalanceFromLedger(newClientId, session);
+    await syncClientBalanceFromLedger(newClientId, session);
     if (!sameClient) {
       await syncClientBalanceFromLedger(oldClientId, session);
     }
-    invoice.balanceAfter = balanceAfter;
-    await invoice.save({ session });
 
     for (const item of processedItems) {
       await deductStockForInvoice(
