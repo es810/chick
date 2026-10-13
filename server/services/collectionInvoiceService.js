@@ -6,7 +6,6 @@ const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 const { isSameId } = require('../utils/refId');
 const { hasPermission } = require('../utils/employeePermissions');
-const { syncClientBalanceFromLedger } = require('./clientBalanceService');
 
 const toEntry = (doc) => ({
   id: doc._id,
@@ -139,8 +138,9 @@ const createCollectionInvoice = async (data, user) => {
     ...(clientMutationId ? { clientMutationId } : {}),
   });
 
-  // Keep client.balance in sync with the ledger; do not overwrite receipt balanceAfter.
-  await syncClientBalanceFromLedger(clientId);
+  // Apply the collection to the live balance so any opening debt is retained.
+  client.balance = balanceAfterPreview;
+  await client.save();
 
   await logAction(user._id, user.name, 'CREATE_COLLECTION_INVOICE', client.name, {
     amountPaid,
@@ -174,6 +174,10 @@ const updateCollectionInvoice = async (id, data, user) => {
   const client = await Client.findById(newClientId);
   if (!client) throw new ApiError(404, 'Client not found');
 
+  const oldClient =
+    oldClientId === newClientId ? client : await Client.findById(oldClientId);
+  if (!oldClient) throw new ApiError(404, 'Previous client not found');
+
   const employee = await User.findOne({ _id: employeeId, role: 'employee' });
   if (!employee) throw new ApiError(404, 'Employee not found');
 
@@ -206,9 +210,13 @@ const updateCollectionInvoice = async (id, data, user) => {
   invoice.balanceAfter = balanceAfterPreview;
   await invoice.save();
 
-  await syncClientBalanceFromLedger(newClientId);
-  if (oldClientId !== newClientId) {
-    await syncClientBalanceFromLedger(oldClientId);
+  if (oldClientId === newClientId) {
+    client.balance = balanceAfterPreview;
+    await client.save();
+  } else {
+    oldClient.balance = Math.max(0, (oldClient.balance || 0) + creditOld);
+    client.balance = balanceAfterPreview;
+    await Promise.all([oldClient.save(), client.save()]);
   }
 
   await logAction(user._id, user.name, 'UPDATE_COLLECTION_INVOICE', client.name, {
@@ -227,12 +235,16 @@ const deleteCollectionInvoice = async (id, user) => {
   assertCanMutateCollection(invoice, user);
 
   const clientId = invoice.clientId;
+  const client = await Client.findById(clientId);
+  if (!client) throw new ApiError(404, 'Client not found');
+
+  const credit = (invoice.amountPaid || 0) + (invoice.amountDeducted || 0);
+  client.balance = Math.max(0, (client.balance || 0) + credit);
+  await client.save();
 
   await TreasuryMovement.findByIdAndDelete(invoice.treasuryMovementId);
   await CollectionInvoice.findByIdAndDelete(id);
-  await syncClientBalanceFromLedger(clientId);
 
-  const client = await Client.findById(clientId).select('name');
   await logAction(user._id, user.name, 'DELETE_COLLECTION_INVOICE', client?.name ?? id, {
     amountPaid: invoice.amountPaid,
   });
