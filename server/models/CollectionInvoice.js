@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { receiptBalanceAfterCollection } = require('../utils/receiptBalances');
 
 const collectionInvoiceSchema = new mongoose.Schema(
   {
@@ -19,6 +20,16 @@ const collectionInvoiceSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+collectionInvoiceSchema.pre('validate', function applyReceiptBalances() {
+  const before = Math.max(0, Number(this.balanceBefore) || 0);
+  this.balanceBefore = before;
+  this.balanceAfter = receiptBalanceAfterCollection({
+    balanceBefore: before,
+    amountPaid: this.amountPaid,
+    amountDeducted: this.amountDeducted,
+  });
+});
 
 collectionInvoiceSchema.index({ collectionDate: -1 });
 collectionInvoiceSchema.index({ clientId: 1, collectionDate: -1 });
