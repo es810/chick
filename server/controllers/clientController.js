@@ -4,6 +4,7 @@ const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { logAction } = require('../services/auditService');
 const { getClientStatement } = require('../services/accountStatementService');
+const { setClientBalance } = require('../services/clientBalanceService');
 
 const formatClient = (client) => {
   const obj = client.toObject ? client.toObject() : client;
@@ -93,6 +94,7 @@ const createClient = asyncHandler(async (req, res) => {
     address,
     whatsappGroupLink: String(whatsappGroupLink || '').trim(),
     balance,
+    openingBalance: balance,
     userId: user._id,
   });
 
@@ -117,7 +119,7 @@ const updateClient = asyncHandler(async (req, res) => {
   if (whatsappGroupLink !== undefined) {
     client.whatsappGroupLink = String(whatsappGroupLink || '').trim();
   }
-  if (balance !== undefined) client.balance = balance;
+  if (balance !== undefined) await setClientBalance(client, balance);
 
   if (client.userId) {
     const user = await User.findById(client.userId).select('+password');

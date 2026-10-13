@@ -8,6 +8,9 @@ const clientSchema = new mongoose.Schema(
     /** Invite/open link for the client's WhatsApp group (chat.whatsapp.com/...) */
     whatsappGroupLink: { type: String, default: '', trim: true },
     balance: { type: Number, default: 0, min: 0 },
+    // Nullable for existing clients; initialized from their ledger before the
+    // first edit/delete so opening debt survives ledger rebuilds.
+    openingBalance: { type: Number, default: null, min: 0 },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }

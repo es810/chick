@@ -5,7 +5,10 @@ const Client = require('../models/Client');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');
 const { deductStockForInvoice, restoreStockForInvoice } = require('./stockService');
-const { syncClientBalanceFromLedger } = require('./clientBalanceService');
+const {
+  ensureClientOpeningBalance,
+  syncClientBalanceFromLedger,
+} = require('./clientBalanceService');
 const { receiptBalanceAfterInvoice } = require('../utils/receiptBalances');
 
 /** Tare weight (kg) = item count × TARE_KG_PER_UNIT */
@@ -70,6 +73,7 @@ const createInvoice = async (data, employee) => {
     const client = await Client.findById(clientId).session(session);
     if (!client) throw new ApiError(404, 'Client not found');
 
+    await ensureClientOpeningBalance(client, session);
     const balanceBefore = client.balance;
 
     const processedItems = [];
@@ -145,12 +149,8 @@ const createInvoice = async (data, employee) => {
       );
     }
 
-    // Keep any opening/prior debt already on the client. Rebuilding the balance
-    // from invoices alone here would drop debt that predates the ledger.
-    if (paymentStatus !== 'paid') {
-      client.balance = Math.max(0, Number(balanceBefore) || 0) + totalPrice;
-      await client.save({ session });
-    }
+    // Rebuild from ledger movements while retaining the separately stored opening debt.
+    await syncClientBalanceFromLedger(clientId, session);
     await invoice.save({ session });
 
     await session.commitTransaction();
@@ -205,6 +205,11 @@ const updateInvoiceFull = async (invoiceId, data, user) => {
     const newClientId = clientId || oldClientId;
     const client = await Client.findById(newClientId).session(session);
     if (!client) throw new ApiError(404, 'Client not found');
+    await ensureClientOpeningBalance(client, session);
+    if (String(oldClientId) !== String(newClientId)) {
+      const oldClient = await Client.findById(oldClientId).session(session);
+      if (oldClient) await ensureClientOpeningBalance(oldClient, session);
+    }
 
     const processedItems = [];
     let totalWeight = 0;
@@ -301,6 +306,8 @@ const updatePaymentStatus = async (invoiceId, paymentStatus, user) => {
   const invoice = await Invoice.findById(invoiceId).populate('clientId');
   if (!invoice) throw new ApiError(404, 'Invoice not found');
 
+  const clientId = invoice.clientId._id || invoice.clientId;
+  await ensureClientOpeningBalance(clientId);
   const oldStatus = invoice.paymentStatus;
   invoice.paymentStatus = paymentStatus;
   invoice.balanceAfter = receiptBalanceAfterInvoice({
@@ -310,7 +317,6 @@ const updatePaymentStatus = async (invoiceId, paymentStatus, user) => {
   });
   await invoice.save();
 
-  const clientId = invoice.clientId._id || invoice.clientId;
   await syncClientBalanceFromLedger(clientId);
 
   await logAction(user._id, user.name, 'UPDATE_PAYMENT', invoice.invoiceNumber, {
@@ -330,6 +336,8 @@ const deleteInvoice = async (invoiceId, user) => {
     if (!invoice) throw new ApiError(404, 'Invoice not found');
 
     const clientId = invoice.clientId;
+    const client = await Client.findById(clientId).session(session);
+    if (client) await ensureClientOpeningBalance(client, session);
 
     await restoreStockForInvoice(
       session,
