@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Client = require('../models/Client');
 const User = require('../models/User');
 const TreasuryMovement = require('../models/TreasuryMovement');
@@ -108,44 +109,76 @@ const createCollectionInvoice = async (data, user) => {
   const employeeId =
     user.role === 'employee' ? user._id.toString() : data.employeeId;
 
-  const client = await Client.findById(clientId);
-  if (!client) throw new ApiError(404, 'Client not found');
-  await ensureClientOpeningBalance(client);
+  const session = await mongoose.startSession();
+  let invoice;
+  let clientName;
+  try {
+    session.startTransaction();
 
-  const employee = await User.findOne({ _id: employeeId, role: 'employee' });
-  if (!employee) throw new ApiError(404, 'Employee not found');
+    const client = await Client.findById(clientId).session(session);
+    if (!client) throw new ApiError(404, 'Client not found');
+    await ensureClientOpeningBalance(client, session);
 
-  const balanceBefore = client.balance;
-  const balanceAfterPreview = validateAmounts({
-    amountPaid,
-    amountDeducted,
-    balanceBefore,
-  });
+    const employee = await User.findOne({ _id: employeeId, role: 'employee' }).session(session);
+    if (!employee) throw new ApiError(404, 'Employee not found');
 
-  const movement = await TreasuryMovement.create({
-    type: 'collection',
-    amount: amountPaid,
-    description: `تحصيل - ${client.name}`,
-    createdBy: user._id,
-  });
+    const balanceBefore = client.balance;
+    const balanceAfterPreview = validateAmounts({
+      amountPaid,
+      amountDeducted,
+      balanceBefore,
+    });
 
-  const invoice = await CollectionInvoice.create({
-    clientId,
-    employeeId,
-    collectionDate: new Date(collectionDate),
-    amountPaid,
-    amountDeducted,
-    balanceBefore,
-    // Receipt line = before − paid − discount (not the live global client balance).
-    balanceAfter: balanceAfterPreview,
-    treasuryMovementId: movement._id,
-    createdBy: user._id,
-    ...(clientMutationId ? { clientMutationId } : {}),
-  });
+    const [movement] = await TreasuryMovement.create(
+      [
+        {
+          type: 'collection',
+          amount: amountPaid,
+          description: `تحصيل - ${client.name}`,
+          createdBy: user._id,
+        },
+      ],
+      { session }
+    );
 
-  await syncClientBalanceFromLedger(clientId);
+    [invoice] = await CollectionInvoice.create(
+      [
+        {
+          clientId,
+          employeeId,
+          collectionDate: new Date(collectionDate),
+          amountPaid,
+          amountDeducted,
+          balanceBefore,
+          // Receipt line = before − paid − discount (not the live global client balance).
+          balanceAfter: balanceAfterPreview,
+          treasuryMovementId: movement._id,
+          createdBy: user._id,
+          ...(clientMutationId ? { clientMutationId } : {}),
+        },
+      ],
+      { session }
+    );
 
-  await logAction(user._id, user.name, 'CREATE_COLLECTION_INVOICE', client.name, {
+    await syncClientBalanceFromLedger(clientId, session);
+    clientName = client.name;
+    await session.commitTransaction();
+  } catch (error) {
+    await session.abortTransaction();
+    // Two retrying requests can pass the initial idempotency lookup together.
+    // The unique clientMutationId index selects one winner; return its invoice.
+    if (error?.code === 11000 && clientMutationId) {
+      const existing = await CollectionInvoice.findOne({ clientMutationId })
+        .populate('clientId', 'name phone whatsappGroupLink')
+        .populate('employeeId', 'name');
+      if (existing) return toEntry(existing);
+    }
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+
+  await logAction(user._id, user.name, 'CREATE_COLLECTION_INVOICE', clientName, {
     amountPaid,
     amountDeducted,
   });
