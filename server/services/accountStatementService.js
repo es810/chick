@@ -83,11 +83,16 @@ const getClientStatement = async (clientId) => {
 
   for (const invoice of invoices) {
     const affectsBalance = invoice.paymentStatus !== 'paid';
+    const chickenTypes = [
+      ...new Set((invoice.items || []).map((item) => item.chickenType).filter(Boolean)),
+    ].join('، ');
     entries.push({
       id: invoice._id.toString(),
       type: 'distribution',
       date: invoice.createdAt,
-      description: `فاتورة توزيع #${invoice.invoiceNumber}`,
+      description: `فاتورة توزيع #${invoice.invoiceNumber}${
+        chickenTypes ? ` — نوع: ${chickenTypes}` : ''
+      }`,
       subtitle: invoice.employeeId?.name ?? '',
       debit: affectsBalance ? invoice.totalPrice : 0,
       credit: 0,

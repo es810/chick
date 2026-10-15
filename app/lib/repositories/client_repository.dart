@@ -217,7 +217,8 @@ class ClientRepository {
           id: invoice.id,
           type: 'distribution',
           date: invoice.createdAt ?? DateTime.now(),
-          description: 'فاتورة توزيع #${invoice.invoiceNumber}',
+          description: 'فاتورة توزيع #${invoice.invoiceNumber}'
+              '${invoice.chickenTypesLabel.isNotEmpty ? ' — نوع: ${invoice.chickenTypesLabel}' : ''}',
           subtitle: invoice.employeeName ?? '',
           debit: affectsBalance ? invoice.totalPrice : 0,
           credit: 0,

@@ -137,8 +137,10 @@ class PdfService {
     );
 
     const rollWidth = 58 * PdfPageFormat.mm;
-    // Keep the page short — empty white space rasterizes poorly on some Xprinters.
-    const rollHeight = 140 * PdfPageFormat.mm;
+    // Keep enough height for the receipt table as one unbroken widget. With
+    // the old 140 mm page the table could be pushed past the page bottom and
+    // the thermal print contained only the header.
+    const rollHeight = 220 * PdfPageFormat.mm;
 
     pdf.addPage(
       pw.Page(
@@ -179,15 +181,33 @@ class PdfService {
                   style: const pw.TextStyle(fontSize: 9),
                 ),
                 pw.SizedBox(height: 2),
-                pw.Text(
-                  'التاريخ: ${_formatDate(invoice.createdAt ?? DateTime.now())}',
-                  style: const pw.TextStyle(fontSize: 9),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('التاريخ:', style: const pw.TextStyle(fontSize: 9)),
+                    pw.Directionality(
+                      textDirection: pw.TextDirection.ltr,
+                      child: pw.Text(
+                        _formatDate(invoice.createdAt ?? DateTime.now()),
+                        style: const pw.TextStyle(fontSize: 9),
+                      ),
+                    ),
+                  ],
                 ),
                 if (invoice.invoiceNumber.isNotEmpty) ...[
                   pw.SizedBox(height: 2),
-                  pw.Text(
-                    'رقم: ${invoice.invoiceNumber}',
-                    style: const pw.TextStyle(fontSize: 8),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('رقم:', style: const pw.TextStyle(fontSize: 8)),
+                      pw.Directionality(
+                        textDirection: pw.TextDirection.ltr,
+                        child: pw.Text(
+                          invoice.invoiceNumber.replaceAll('#', ''),
+                          style: const pw.TextStyle(fontSize: 8),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 pw.SizedBox(height: 6),
@@ -733,7 +753,9 @@ class PdfService {
     final y = local.year.toString();
     final h = local.hour.toString().padLeft(2, '0');
     final min = local.minute.toString().padLeft(2, '0');
-    return '$d/$m/$y $h:$min';
+    // Spaces avoid unsupported slash/colon glyphs that appear as X marks on
+    // some portable thermal printers; the enclosing date text is LTR.
+    return '$d $m $y $h $min';
   }
 }
 
