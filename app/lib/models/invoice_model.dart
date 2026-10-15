@@ -150,12 +150,8 @@ class InvoiceModel extends Equatable {
         'createdAt': createdAt?.toIso8601String(),
       };
 
-  double get netWeight {
-    if (grossWeight != null && tareWeight != null) {
-      return grossWeight! - tareWeight!;
-    }
-    return totalWeight;
-  }
+  // Invoice items are the source of truth used for pricing and stock deduction.
+  double get netWeight => totalWeight;
 
   double get displayGrossWeight => grossWeight ?? (totalWeight + (tareWeight ?? 0));
 

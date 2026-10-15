@@ -82,7 +82,11 @@ class _EditInvoiceScreenState extends ConsumerState<EditInvoiceScreen> {
     _invoice = invoice;
     _notesController.text = invoice.notes;
     _countController.text = '${invoice.itemCount}';
-    _grossController.text = formatInputNumber(invoice.displayGrossWeight);
+    // Preserve the net weight stored on the invoice items when reopening an
+    // older invoice whose entered gross/tare values do not match its item total.
+    _grossController.text = formatInputNumber(
+      invoice.totalWeight + invoiceTareWeight(invoice.itemCount),
+    );
     _priceController.text = formatInputNumber(invoice.pricePerKg);
     _selectedClient = clients.where((c) => c.id == invoice.clientId).firstOrNull;
     _chickenType = invoice.items.isNotEmpty ? invoice.items.first.chickenType : null;
