@@ -390,17 +390,17 @@ class PdfService {
       if (invoice.chickenTypesLabel.isNotEmpty)
         ('نوع الصنف', invoice.chickenTypesLabel),
       ('العدد', '${invoice.itemCount}'),
-      ('وزن القائم', _num(invoice.displayGrossWeight)),
-      ('الوزن الفارغ', _num(invoice.displayTareWeight)),
-      ('الوزن الصافي', _num(invoice.netWeight)),
-      ('السعر/كجم', _num(invoice.pricePerKg)),
-      ('حساب الوجبة', _num(invoice.totalPrice)),
+      ('وزن القائم بالكيلوجرام', _num(invoice.displayGrossWeight)),
+      ('الوزن الفارغ بالكيلوجرام', _num(invoice.displayTareWeight)),
+      ('الوزن الصافي بالكيلوجرام', _num(invoice.netWeight)),
+      ('السعر لكل كيلوجرام', _num(invoice.pricePerKg)),
+      ('حساب الوجبة بالجنيه المصري', _num(invoice.totalPrice)),
     ];
     if (invoice.balanceBefore != null) {
-      rows.add(('مستحق قبل', _num(invoice.balanceBefore!)));
+      rows.add(('المستحق قبل بالجنيه المصري', _num(invoice.balanceBefore!)));
     }
     if (invoice.balanceAfter != null) {
-      rows.add(('مستحق بعد', _num(invoice.balanceAfter!)));
+      rows.add(('المستحق بعد بالجنيه المصري', _num(invoice.balanceAfter!)));
     }
 
     return pw.Table(
@@ -563,18 +563,18 @@ class PdfService {
       if (invoice.chickenTypesLabel.isNotEmpty)
         ('نوع الصنف', invoice.chickenTypesLabel),
       ('العدد', '${invoice.itemCount}'),
-      ('وزن القائم (كجم)', _num(gross)),
-      ('الوزن الفارغ (كجم)', _num(tare)),
-      ('الوزن الصافي (كجم)', _num(net)),
-      ('السعر (ج.م / كجم)', _num(price)),
-      ('حساب الوجبة (ج.م)', _num(mealTotal)),
+      ('وزن القائم بالكيلوجرام', _num(gross)),
+      ('الوزن الفارغ بالكيلوجرام', _num(tare)),
+      ('الوزن الصافي بالكيلوجرام', _num(net)),
+      ('السعر لكل كيلوجرام بالجنيه المصري', _num(price)),
+      ('حساب الوجبة بالجنيه المصري', _num(mealTotal)),
     ];
 
     if (before != null) {
-      rows.add(('المستحق القديم قبل الفاتورة (ج.م)', _num(before)));
+      rows.add(('المستحق القديم قبل الفاتورة بالجنيه المصري', _num(before)));
     }
     if (after != null) {
-      rows.add(('المستحق الجديد بعد الفاتورة (ج.م)', _num(after)));
+      rows.add(('المستحق الجديد بعد الفاتورة بالجنيه المصري', _num(after)));
     }
 
     return pw.Table(
@@ -610,16 +610,16 @@ class PdfService {
     double? balanceAfter,
   }) {
     final rows = <(String, String)>[
-      ('المبلغ المحصل (ج.م)', _num(paid)),
+      ('المبلغ المحصل بالجنيه المصري', _num(paid)),
     ];
     if (deducted > 0) {
-      rows.add(('الخصم (ج.م)', _num(deducted)));
+      rows.add(('الخصم بالجنيه المصري', _num(deducted)));
     }
     if (balanceBefore != null) {
-      rows.add(('المستحق قبل التحصيل (ج.م)', _num(balanceBefore)));
+      rows.add(('المستحق قبل التحصيل بالجنيه المصري', _num(balanceBefore)));
     }
     if (balanceAfter != null) {
-      rows.add(('المستحق بعد التحصيل (ج.م)', _num(balanceAfter)));
+      rows.add(('المستحق بعد التحصيل بالجنيه المصري', _num(balanceAfter)));
     }
 
     return pw.Table(
