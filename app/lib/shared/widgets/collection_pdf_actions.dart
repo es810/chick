@@ -3,6 +3,7 @@ import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/treasury_entry_item.dart';
 import '../../services/pdf_service.dart';
+import 'bluetooth_printer_sheet.dart';
 
 class CollectionPdfActions extends StatefulWidget {
   const CollectionPdfActions({
@@ -69,6 +70,13 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
     );
   }
 
+  Future<void> _printThermal() async {
+    await showBluetoothCollectionPrinterPicker(
+      context: context,
+      entry: widget.entry,
+    );
+  }
+
   Future<void> _download() async {
     await _runPdfAction(
       () => pdfService.downloadCollectionPdf(widget.entry),
@@ -126,6 +134,11 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
+            tooltip: l10n.printThermal,
+            onPressed: _printThermal,
+            icon: const Icon(Icons.bluetooth),
+          ),
+          IconButton(
             tooltip: l10n.printInvoice,
             onPressed: _print,
             icon: const Icon(Icons.print_outlined),
@@ -138,7 +151,8 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
           IconButton(
             tooltip: l10n.shareWhatsApp,
             onPressed: _shareWhatsApp,
-            icon: const Icon(Icons.chat, color: Color(PdfService.whatsAppGreen)),
+            icon:
+                const Icon(Icons.chat, color: Color(PdfService.whatsAppGreen)),
           ),
         ],
       );
@@ -155,6 +169,17 @@ class _CollectionPdfActionsState extends State<CollectionPdfActions> {
               ),
         ),
         const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: _printThermal,
+          icon: const Icon(Icons.bluetooth),
+          label: Text(l10n.printThermal),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryGreen,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+        const SizedBox(height: 10),
         ElevatedButton.icon(
           onPressed: _print,
           icon: const Icon(Icons.print),

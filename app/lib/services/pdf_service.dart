@@ -31,8 +31,10 @@ class PdfService {
   /// Bundled fonts — avoids hanging on PdfGoogleFonts network download.
   Future<void> _ensureArabicFonts() async {
     if (_arabicRegular != null && _arabicBold != null) return;
-    final regularData = await rootBundle.load('assets/fonts/NotoSansArabic-Regular.ttf');
-    final boldData = await rootBundle.load('assets/fonts/NotoSansArabic-Bold.ttf');
+    final regularData =
+        await rootBundle.load('assets/fonts/NotoSansArabic-Regular.ttf');
+    final boldData =
+        await rootBundle.load('assets/fonts/NotoSansArabic-Bold.ttf');
     _arabicRegular = pw.Font.ttf(regularData);
     _arabicBold = pw.Font.ttf(boldData);
   }
@@ -45,7 +47,9 @@ class PdfService {
 
   Future<PdfInvoiceResult> buildCollectionPdf(TreasuryEntryItem entry) async {
     final bytes = await generateCollectionPdf(entry);
-    final shortId = entry.id.length > 6 ? entry.id.substring(entry.id.length - 6) : entry.id;
+    final shortId = entry.id.length > 6
+        ? entry.id.substring(entry.id.length - 6)
+        : entry.id;
     final filename = 'collection-$shortId.pdf';
     return PdfInvoiceResult(bytes: bytes, filename: filename);
   }
@@ -74,7 +78,8 @@ class PdfService {
               pw.Center(
                 child: pw.Text(
                   'إيصال توزيع',
-                  style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                      fontSize: 22, fontWeight: pw.FontWeight.bold),
                 ),
               ),
               pw.SizedBox(height: 24),
@@ -104,7 +109,8 @@ class PdfService {
               pw.Center(
                 child: pw.Text(
                   'تم إنشاء هذا الإيصال تلقائياً بواسطة النظام',
-                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                  style: const pw.TextStyle(
+                      fontSize: 10, color: PdfColors.grey700),
                 ),
               ),
               if (invoice.invoiceNumber.isNotEmpty) ...[
@@ -112,7 +118,8 @@ class PdfService {
                 pw.Center(
                   child: pw.Text(
                     invoice.invoiceNumber,
-                    style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                    style: const pw.TextStyle(
+                        fontSize: 9, color: PdfColors.grey600),
                   ),
                 ),
               ],
@@ -144,7 +151,8 @@ class PdfService {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: const PdfPageFormat(rollWidth, rollHeight, marginAll: 3 * PdfPageFormat.mm),
+        pageFormat: const PdfPageFormat(rollWidth, rollHeight,
+            marginAll: 3 * PdfPageFormat.mm),
         build: (context) => pw.Container(
           color: PdfColors.white,
           child: pw.Directionality(
@@ -155,7 +163,8 @@ class PdfService {
                 pw.Center(
                   child: pw.Text(
                     companyName,
-                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                    style: pw.TextStyle(
+                        fontSize: 14, fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
@@ -172,7 +181,8 @@ class PdfService {
                 pw.Center(
                   child: pw.Text(
                     'إيصال توزيع',
-                    style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                    style: pw.TextStyle(
+                        fontSize: 12, fontWeight: pw.FontWeight.bold),
                   ),
                 ),
                 pw.SizedBox(height: 6),
@@ -216,7 +226,8 @@ class PdfService {
                 pw.Center(
                   child: pw.Text(
                     companyChickenTypes,
-                    style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                    style: pw.TextStyle(
+                        fontSize: 8, fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
@@ -235,6 +246,143 @@ class PdfService {
     );
 
     return pdf.save();
+  }
+
+  /// Narrow Arabic receipt for collection invoices on 58mm thermal printers.
+  Future<Uint8List> generateThermalCollectionPdf(
+    TreasuryEntryItem entry,
+  ) async {
+    await _ensureArabicFonts();
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: _arabicRegular!,
+        bold: _arabicBold!,
+      ),
+    );
+    final date = entry.collectionDate ?? entry.createdAt ?? DateTime.now();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: const PdfPageFormat(
+          58 * PdfPageFormat.mm,
+          160 * PdfPageFormat.mm,
+          marginAll: 3 * PdfPageFormat.mm,
+        ),
+        build: (context) => pw.Container(
+          color: PdfColors.white,
+          child: pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+              children: [
+                pw.Center(
+                  child: pw.Text(
+                    companyName,
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Center(
+                  child: pw.Text(
+                    companyPhone,
+                    style: const pw.TextStyle(fontSize: 9),
+                    textDirection: pw.TextDirection.ltr,
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Center(
+                  child: pw.Text(
+                    'إيصال تحصيل',
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  'العميل: ${entry.clientName ?? entry.description}',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('التاريخ:', style: const pw.TextStyle(fontSize: 9)),
+                    pw.Directionality(
+                      textDirection: pw.TextDirection.ltr,
+                      child: pw.Text(
+                        _formatDate(date),
+                        style: const pw.TextStyle(fontSize: 9),
+                      ),
+                    ),
+                  ],
+                ),
+                if ((entry.employeeName ?? entry.subtitle).isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    'المحصل: ${entry.employeeName ?? entry.subtitle}',
+                    style: const pw.TextStyle(fontSize: 9),
+                  ),
+                ],
+                pw.SizedBox(height: 6),
+                _thermalCollectionReceiptTable(entry),
+                pw.SizedBox(height: 8),
+                pw.Center(
+                  child: pw.Text(
+                    'شكراً لتعاملكم معنا',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  pw.Widget _thermalCollectionReceiptTable(TreasuryEntryItem entry) {
+    final rows = <(String, String)>[
+      ('المبلغ المحصل', _num(entry.amountPaid ?? entry.amount)),
+      if ((entry.amountDeducted ?? 0) > 0)
+        ('الخصم', _num(entry.amountDeducted!)),
+      if (entry.balanceBefore != null)
+        ('المستحق قبل التحصيل', _num(entry.balanceBefore!)),
+      if (entry.balanceAfter != null)
+        ('المستحق بعد التحصيل', _num(entry.balanceAfter!)),
+    ];
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.black, width: 0.8),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1.6),
+        1: pw.FlexColumnWidth(1),
+      },
+      children: [
+        pw.TableRow(
+          children: [
+            _thermalCell('البيان', bold: true),
+            _thermalCell('القيمة', bold: true),
+          ],
+        ),
+        ...rows.map(
+          (row) => pw.TableRow(
+            children: [
+              _thermalCell(row.$1),
+              _thermalCell(row.$2),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   pw.Widget _thermalReceiptTable(InvoiceModel invoice) {
@@ -323,7 +471,8 @@ class PdfService {
               pw.Center(
                 child: pw.Text(
                   'إيصال تحصيل',
-                  style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                      fontSize: 22, fontWeight: pw.FontWeight.bold),
                 ),
               ),
               pw.SizedBox(height: 24),
@@ -365,7 +514,8 @@ class PdfService {
               pw.Center(
                 child: pw.Text(
                   'تم إنشاء هذا الإيصال تلقائياً بواسطة النظام',
-                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                  style: const pw.TextStyle(
+                      fontSize: 10, color: PdfColors.grey700),
                 ),
               ),
             ],
@@ -498,11 +648,14 @@ class PdfService {
     );
   }
 
-  pw.Widget _tableCell(String text, {bool bold = false, pw.TextAlign align = pw.TextAlign.right}) {
+  pw.Widget _tableCell(String text,
+      {bool bold = false, pw.TextAlign align = pw.TextAlign.right}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: pw.Align(
-        alignment: align == pw.TextAlign.left ? pw.Alignment.centerLeft : pw.Alignment.centerRight,
+        alignment: align == pw.TextAlign.left
+            ? pw.Alignment.centerLeft
+            : pw.Alignment.centerRight,
         child: pw.Text(
           text,
           style: pw.TextStyle(
@@ -718,7 +871,8 @@ class PdfService {
   }
 
   String _shareMessage(InvoiceModel invoice, {String? groupHint}) {
-    final total = CurrencyFormatter.format(invoice.totalPrice, languageCode: 'ar');
+    final total =
+        CurrencyFormatter.format(invoice.totalPrice, languageCode: 'ar');
     final typeLine = invoice.chickenTypesLabel.isNotEmpty
         ? 'نوع الصنف: ${invoice.chickenTypesLabel}\n'
         : '';

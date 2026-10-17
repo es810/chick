@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_constants.dart';
 import '../models/invoice_model.dart';
+import '../models/treasury_entry_item.dart';
 import 'pdf_service.dart';
 
 class BluetoothPrinterDevice {
@@ -23,8 +24,10 @@ class BluetoothPrinterService {
   final SharedPreferences _prefs;
   final PdfService _pdf;
 
-  String? get lastPrinterMac => _prefs.getString(AppConstants.lastPrinterMacKey);
-  String? get lastPrinterName => _prefs.getString(AppConstants.lastPrinterNameKey);
+  String? get lastPrinterMac =>
+      _prefs.getString(AppConstants.lastPrinterMacKey);
+  String? get lastPrinterName =>
+      _prefs.getString(AppConstants.lastPrinterNameKey);
 
   Future<void> rememberPrinter(BluetoothPrinterDevice device) async {
     await _prefs.setString(AppConstants.lastPrinterMacKey, device.mac);
@@ -45,11 +48,13 @@ class BluetoothPrinterService {
 
     final connect = statuses[Permission.bluetoothConnect];
     final scan = statuses[Permission.bluetoothScan];
-    final okConnect = connect?.isGranted ?? await Permission.bluetoothConnect.isGranted;
+    final okConnect =
+        connect?.isGranted ?? await Permission.bluetoothConnect.isGranted;
     final okScan = scan?.isGranted ?? true;
     if (!okConnect) return false;
 
-    final pluginGranted = await PrintBluetoothThermal.isPermissionBluetoothGranted;
+    final pluginGranted =
+        await PrintBluetoothThermal.isPermissionBluetoothGranted;
     return pluginGranted || (okConnect && okScan);
   }
 
@@ -81,10 +86,29 @@ class BluetoothPrinterService {
   Future<void> printInvoice(InvoiceModel invoice, {required String mac}) async {
     final connected = await connect(mac);
     if (!connected) {
-      throw Exception('تعذر الاتصال بالطابعة. تأكد أنها قريبة ومقترنة بالهاتف.');
+      throw Exception(
+          'تعذر الاتصال بالطابعة. تأكد أنها قريبة ومقترنة بالهاتف.');
     }
 
     final pdfBytes = await _pdf.generateThermalInvoicePdf(invoice);
+    final ticket = await _buildTicketFromPdf(pdfBytes);
+    final ok = await PrintBluetoothThermal.writeBytes(ticket);
+    if (!ok) {
+      throw Exception('فشل إرسال الطباعة للطابعة.');
+    }
+  }
+
+  Future<void> printCollection(
+    TreasuryEntryItem entry, {
+    required String mac,
+  }) async {
+    final connected = await connect(mac);
+    if (!connected) {
+      throw Exception(
+          'تعذر الاتصال بالطابعة. تأكد أنها قريبة ومقترنة بالهاتف.');
+    }
+
+    final pdfBytes = await _pdf.generateThermalCollectionPdf(entry);
     final ticket = await _buildTicketFromPdf(pdfBytes);
     final ok = await PrintBluetoothThermal.writeBytes(ticket);
     if (!ok) {
@@ -104,7 +128,8 @@ class BluetoothPrinterService {
       final decoded = img.decodeImage(pngBytes);
       if (decoded == null) continue;
 
-      final prepared = _prepareThermalBitmap(decoded, targetWidth: PaperSize.mm58.width);
+      final prepared =
+          _prepareThermalBitmap(decoded, targetWidth: PaperSize.mm58.width);
       // ESC * bit-image is more reliable on portable Xprinters than GS v 0.
       bytes.addAll(generator.image(prepared, align: PosAlign.center));
       bytes.addAll(generator.feed(2));
@@ -116,7 +141,8 @@ class BluetoothPrinterService {
 
   /// Flattens onto white, crops empty bottom space, resizes for 58mm.
   /// Output must be dark text on white — [Generator.image] inverts internally.
-  img.Image _prepareThermalBitmap(img.Image source, {required int targetWidth}) {
+  img.Image _prepareThermalBitmap(img.Image source,
+      {required int targetWidth}) {
     final canvas = img.Image(width: source.width, height: source.height);
     img.fill(canvas, color: img.ColorRgb8(255, 255, 255));
     img.compositeImage(canvas, source);

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/invoice_model.dart';
+import '../../models/treasury_entry_item.dart';
 import '../../services/bluetooth_printer_service.dart';
 import '../../services/pdf_service.dart';
 
@@ -30,13 +31,37 @@ Future<void> showBluetoothPrinterPicker({
   );
 }
 
+Future<void> showBluetoothCollectionPrinterPicker({
+  required BuildContext context,
+  required TreasuryEntryItem entry,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final service = BluetoothPrinterService(prefs, pdfService);
+
+  if (!context.mounted) return;
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) => _BluetoothPrinterSheet(
+      collection: entry,
+      service: service,
+    ),
+  );
+}
+
 class _BluetoothPrinterSheet extends StatefulWidget {
   const _BluetoothPrinterSheet({
-    required this.invoice,
     required this.service,
-  });
+    this.invoice,
+    this.collection,
+  }) : assert(invoice != null || collection != null);
 
-  final InvoiceModel invoice;
+  final InvoiceModel? invoice;
+  final TreasuryEntryItem? collection;
   final BluetoothPrinterService service;
 
   @override
@@ -99,7 +124,13 @@ class _BluetoothPrinterSheetState extends State<_BluetoothPrinterSheet> {
     if (_printing) return;
     setState(() => _printing = true);
     try {
-      await widget.service.printInvoice(widget.invoice, mac: device.mac);
+      final invoice = widget.invoice;
+      final collection = widget.collection;
+      if (invoice != null) {
+        await widget.service.printInvoice(invoice, mac: device.mac);
+      } else if (collection != null) {
+        await widget.service.printCollection(collection, mac: device.mac);
+      }
       await widget.service.rememberPrinter(device);
       if (!mounted) return;
       Navigator.pop(context);
@@ -209,14 +240,15 @@ class _BluetoothPrinterSheetState extends State<_BluetoothPrinterSheet> {
                         Icons.print,
                         color: isLast ? AppColors.primaryGreen : null,
                       ),
-                      title: Text(d.name.isEmpty ? l10n.unknownPrinter : d.name),
+                      title:
+                          Text(d.name.isEmpty ? l10n.unknownPrinter : d.name),
                       subtitle: Text(d.mac),
                       trailing: isLast
                           ? Chip(
                               label: Text(l10n.lastUsedPrinter),
                               visualDensity: VisualDensity.compact,
-                              backgroundColor:
-                                  AppColors.primaryGreen.withValues(alpha: 0.12),
+                              backgroundColor: AppColors.primaryGreen
+                                  .withValues(alpha: 0.12),
                             )
                           : const Icon(Icons.chevron_left),
                       onTap: () => _printTo(d),
