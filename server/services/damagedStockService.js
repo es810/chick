@@ -428,13 +428,14 @@ const recordDamagedStock = async ({ stockId, quantity, netWeight, reason = '' },
     }
     await stock.save({ session });
 
+    const damagedWeight = kg > 0 ? kg : weightOut;
     const [entry] = await DamagedStock.create(
       [
         {
           stockId: stock._id,
           chickenType: stock.chickenType,
           quantity: qty,
-          netWeight: kg > 0 ? kg : weightOut,
+          netWeight: damagedWeight,
           reason: reason.trim(),
           source: 'manual',
           status: 'written_off',
@@ -444,27 +445,75 @@ const recordDamagedStock = async ({ stockId, quantity, netWeight, reason = '' },
       { session }
     );
 
-    await StockMovement.create(
-      [
-        {
-          type: 'OUT',
-          stockId: stock._id,
-          chickenType: stock.chickenType,
-          quantity: qty || 0,
-          netWeight: kg > 0 ? kg : weightOut,
-          location: stock.location,
-          reason: reason.trim() ? `Damaged stock: ${reason.trim()}` : 'Damaged stock',
-          employeeId: user._id,
-        },
-      ],
-      { session }
+    // Keep the per-load ledger in sync with aggregate stock. Without this,
+    // manual write-offs lower Stock but leave StockLoad at 100% remaining.
+    const { consumeFromLoads } = require('./stockLoadService');
+    const { allocations } = await consumeFromLoads(
+      session,
+      stock.chickenType,
+      qty,
+      damagedWeight
     );
+    if (allocations.length === 1) {
+      entry.stockLoadId = allocations[0].load._id;
+      await entry.save({ session });
+    }
+
+    const movementReason = reason.trim()
+      ? `Damaged stock: ${reason.trim()}`
+      : 'Damaged stock';
+    let allocatedQty = 0;
+    let allocatedKg = 0;
+    for (const allocation of allocations) {
+      const movementQty = allocation.quantity || 0;
+      const movementKg = round2(allocation.netWeight || 0);
+      allocatedQty += movementQty;
+      allocatedKg = round2(allocatedKg + movementKg);
+      await StockMovement.create(
+        [
+          {
+            type: 'OUT',
+            stockId: stock._id,
+            chickenType: stock.chickenType,
+            quantity: movementQty,
+            netWeight: movementKg,
+            location: stock.location,
+            reason: movementReason,
+            employeeId: user._id,
+            stockLoadId: allocation.load._id,
+          },
+        ],
+        { session }
+      );
+    }
+
+    // Preserve a movement for any legacy/untracked stock that has no load,
+    // or when the load ledger is smaller than the aggregate stock balance.
+    const unallocatedQty = Math.max(0, qty - allocatedQty);
+    const unallocatedKg = Math.max(0, round2(damagedWeight - allocatedKg));
+    if (unallocatedQty > 0 || unallocatedKg > 0.001) {
+      await StockMovement.create(
+        [
+          {
+            type: 'OUT',
+            stockId: stock._id,
+            chickenType: stock.chickenType,
+            quantity: unallocatedQty,
+            netWeight: unallocatedKg,
+            location: stock.location,
+            reason: movementReason,
+            employeeId: user._id,
+          },
+        ],
+        { session }
+      );
+    }
 
     await session.commitTransaction();
 
     await logAction(user._id, user.name, 'RECORD_DAMAGED_STOCK', stock.chickenType, {
       quantity: qty,
-      netWeight: kg > 0 ? kg : weightOut,
+      netWeight: damagedWeight,
       reason,
     });
 
