@@ -280,7 +280,7 @@ class PdfService {
                   child: pw.Text(
                     companyName,
                     style: pw.TextStyle(
-                      fontSize: 14,
+                      fontSize: 17,
                       fontWeight: pw.FontWeight.bold,
                     ),
                     textAlign: pw.TextAlign.center,
@@ -290,7 +290,7 @@ class PdfService {
                 pw.Center(
                   child: pw.Text(
                     companyPhone,
-                    style: const pw.TextStyle(fontSize: 9),
+                    style: const pw.TextStyle(fontSize: 11),
                     textDirection: pw.TextDirection.ltr,
                   ),
                 ),
@@ -299,7 +299,7 @@ class PdfService {
                   child: pw.Text(
                     'إيصال تحصيل',
                     style: pw.TextStyle(
-                      fontSize: 12,
+                      fontSize: 15,
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),
@@ -307,18 +307,18 @@ class PdfService {
                 pw.SizedBox(height: 6),
                 pw.Text(
                   'العميل: ${entry.clientName ?? entry.description}',
-                  style: const pw.TextStyle(fontSize: 9),
+                  style: const pw.TextStyle(fontSize: 11),
                 ),
                 pw.SizedBox(height: 2),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('التاريخ:', style: const pw.TextStyle(fontSize: 9)),
+                    pw.Text('التاريخ:', style: const pw.TextStyle(fontSize: 11)),
                     pw.Directionality(
                       textDirection: pw.TextDirection.ltr,
                       child: pw.Text(
                         _formatDate(date),
-                        style: const pw.TextStyle(fontSize: 9),
+                        style: const pw.TextStyle(fontSize: 11),
                       ),
                     ),
                   ],
@@ -327,7 +327,7 @@ class PdfService {
                   pw.SizedBox(height: 2),
                   pw.Text(
                     'المحصل: ${entry.employeeName ?? entry.subtitle}',
-                    style: const pw.TextStyle(fontSize: 9),
+                    style: const pw.TextStyle(fontSize: 11),
                   ),
                 ],
                 pw.SizedBox(height: 6),
@@ -336,7 +336,7 @@ class PdfService {
                 pw.Center(
                   child: pw.Text(
                     'شكراً لتعاملكم معنا',
-                    style: const pw.TextStyle(fontSize: 8),
+                    style: const pw.TextStyle(fontSize: 10),
                   ),
                 ),
               ],
@@ -369,15 +369,15 @@ class PdfService {
       children: [
         pw.TableRow(
           children: [
-            _thermalCell('البيان', bold: true),
-            _thermalCell('القيمة', bold: true),
+            _thermalCell('البيان', bold: true, fontSize: 11),
+            _thermalCell('القيمة', bold: true, fontSize: 11),
           ],
         ),
         ...rows.map(
           (row) => pw.TableRow(
             children: [
-              _thermalCell(row.$1),
-              _thermalCell(row.$2),
+              _thermalCell(row.$1, fontSize: 10.5),
+              _thermalCell(row.$2, fontSize: 10.5),
             ],
           ),
         ),
@@ -429,13 +429,17 @@ class PdfService {
     );
   }
 
-  pw.Widget _thermalCell(String text, {bool bold = false}) {
+  pw.Widget _thermalCell(
+    String text, {
+    bool bold = false,
+    double fontSize = 8,
+  }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
       child: pw.Text(
         text,
         style: pw.TextStyle(
-          fontSize: 8,
+          fontSize: fontSize,
           fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
         ),
         textAlign: pw.TextAlign.center,
