@@ -15,6 +15,7 @@ import '../../../shared/widgets/client_picker_field.dart';
 import '../../../shared/widgets/invoice_number_field.dart';
 import '../../../services/cache_service.dart';
 import '../../../services/sync_service.dart';
+import '../../../shared/widgets/invoice_pdf_actions.dart';
 
 class CreateInvoiceScreen extends ConsumerStatefulWidget {
   const CreateInvoiceScreen({super.key, this.basePath = '/employee'});
@@ -343,6 +344,8 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.invoiceCreated(invoice.invoiceNumber))),
         );
+        await showInvoiceShareDialog(context: context, invoice: invoice);
+        if (!mounted) return;
         context.go('${widget.basePath}/invoices');
       }
     } on OfflineQueuedException {

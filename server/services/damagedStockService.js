@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Stock = require('../models/Stock');
 const DamagedStock = require('../models/DamagedStock');
+const StockMovement = require('../models/StockMovement');
 const Invoice = require('../models/Invoice');
 const ApiError = require('../utils/apiError');
 const { logAction } = require('./auditService');

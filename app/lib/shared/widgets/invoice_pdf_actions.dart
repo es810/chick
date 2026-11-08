@@ -240,3 +240,30 @@ class _InvoicePdfActionsState extends ConsumerState<InvoicePdfActions> {
     );
   }
 }
+
+Future<void> showInvoiceShareDialog({
+  required BuildContext context,
+  required InvoiceModel invoice,
+  String? clientPhone,
+  String? whatsappGroupLink,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(context.l10n.shareInvoice),
+      content: SingleChildScrollView(
+        child: InvoicePdfActions(
+          invoice: invoice,
+          clientPhone: clientPhone,
+          whatsappGroupLink: whatsappGroupLink,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text(context.l10n.cancel),
+        ),
+      ],
+    ),
+  );
+}
