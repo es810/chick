@@ -79,18 +79,18 @@ class PdfService {
                 child: pw.Text(
                   'إيصال توزيع',
                   style: pw.TextStyle(
-                      fontSize: 22, fontWeight: pw.FontWeight.bold),
+                      fontSize: 23, fontWeight: pw.FontWeight.bold),
                 ),
               ),
               pw.SizedBox(height: 24),
               pw.Text(
                 'العميل: ${invoice.clientName ?? '—'}',
-                style: const pw.TextStyle(fontSize: 14),
+                style: const pw.TextStyle(fontSize: 15),
               ),
               pw.SizedBox(height: 8),
               pw.Text(
                 'التاريخ: ${_formatDate(invoice.createdAt ?? DateTime.now())}',
-                style: const pw.TextStyle(fontSize: 14),
+                style: const pw.TextStyle(fontSize: 15),
               ),
               pw.SizedBox(height: 24),
               _receiptTable(invoice),
@@ -182,24 +182,24 @@ class PdfService {
                   child: pw.Text(
                     'إيصال توزيع',
                     style: pw.TextStyle(
-                        fontSize: 12, fontWeight: pw.FontWeight.bold),
+                        fontSize: 13, fontWeight: pw.FontWeight.bold),
                   ),
                 ),
                 pw.SizedBox(height: 6),
                 pw.Text(
                   'العميل: ${invoice.clientName ?? '—'}',
-                  style: const pw.TextStyle(fontSize: 9),
+                  style: const pw.TextStyle(fontSize: 9.5),
                 ),
                 pw.SizedBox(height: 2),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('التاريخ:', style: const pw.TextStyle(fontSize: 9)),
+                    pw.Text('التاريخ:', style: const pw.TextStyle(fontSize: 9.5)),
                     pw.Directionality(
                       textDirection: pw.TextDirection.ltr,
                       child: pw.Text(
                         _formatDate(invoice.createdAt ?? DateTime.now()),
-                        style: const pw.TextStyle(fontSize: 9),
+                        style: const pw.TextStyle(fontSize: 9.5),
                       ),
                     ),
                   ],
@@ -432,7 +432,7 @@ class PdfService {
   pw.Widget _thermalCell(
     String text, {
     bool bold = false,
-    double fontSize = 8,
+    double fontSize = 8.5,
   }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
@@ -663,7 +663,7 @@ class PdfService {
         child: pw.Text(
           text,
           style: pw.TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
           ),
         ),

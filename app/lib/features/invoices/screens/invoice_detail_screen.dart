@@ -218,7 +218,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                                 Text('${l10n.employee}: ${invoice.employeeName ?? "N/A"}'),
                                 if (invoice.createdAt != null)
                                   Text(
-                                    '${l10n.date}: ${DateFormat.yMMMd().add_jm().format(invoice.createdAt!)}',
+                                    '${l10n.date}: ${DateFormat.yMMMd().add_jm().format(invoice.createdAt!.toLocal())}',
                                   ),
                               ],
                             ),
