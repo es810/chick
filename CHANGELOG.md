@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.8.58] — 2026-11-11
+
+### Invoices and startup
+- Increase distribution invoice text size in PDF and thermal receipts
+- Display invoice timestamps in the device's local time
+- Reduce background cache requests during startup
+- Offer print and share actions after creating a distribution invoice
+- Fix manual write-off movement recording
+
 ## [1.8.12] — 2026-08-27
 
 ### Distribution invoices
