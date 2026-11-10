@@ -15,6 +15,7 @@ class SyncService {
   final Ref _ref;
 
   bool _syncing = false;
+  bool _warmingCaches = false;
   StreamSubscription? _connectivitySub;
   String? lastError;
 
@@ -43,110 +44,64 @@ class SyncService {
     });
   }
 
-  /// Prefetch employee day-to-day data so the app works offline after one online session.
+  /// Prefetch the main lists so common workflows remain available offline.
   Future<void> warmOfflineCaches() async {
-    if (!await _cache.isOnline) return;
-    if (_ref.read(authProvider).user == null) return;
-
-    Future<void> safe(Future<void> Function() run) async {
-      try {
-        await run();
-      } catch (e) {
-        debugPrint('Warm offline cache step failed: $e');
-      }
-    }
-
-    await Future.wait([
-      safe(() async {
-        await _ref.read(clientRepositoryProvider).getClients();
-      }),
-      safe(() async {
-        await _ref.read(invoiceRepositoryProvider).getInvoices();
-      }),
-      safe(() async {
-        await _ref.read(collectionRepositoryProvider).listInvoices();
-      }),
-      safe(() async {
-        await _ref.read(stockRepositoryProvider).getStock();
-      }),
-      safe(() async {
-        await _ref.read(supplierRepositoryProvider).getSuppliers();
-      }),
-      safe(() async {
-        await _ref.read(collectionRepositoryProvider).listEmployees();
-      }),
-      safe(() async {
-        await _ref.read(employeeRepositoryProvider).getMyTreasury();
-      }),
-      safe(() async {
-        await _ref.read(employeeRepositoryProvider).getMyLedger();
-      }),
-      safe(() async {
-        await _ref.read(employeeRepositoryProvider).getMyTreasuryStatement();
-      }),
-      safe(() async {
-        await _ref.read(stockLoadRepositoryProvider).list(
-              status: 'open,pending_writeoff,closed',
-            );
-      }),
-      safe(() async {
-        await _ref.read(damagedStockRepositoryProvider).list();
-      }),
-    ]);
-
-    // Warm a few client statements for offline كشف حساب,
-    // and cache linked invoices/collections so employees can open them offline.
+    if (_warmingCaches) return;
+    _warmingCaches = true;
     try {
-      final clients = await _ref.read(clientRepositoryProvider).getClients();
-      final invoiceRepo = _ref.read(invoiceRepositoryProvider);
-      final collectionRepo = _ref.read(collectionRepositoryProvider);
-      for (final c in clients.take(40)) {
-        await safe(() async {
-          final statement =
-              await _ref.read(clientRepositoryProvider).getAccountStatement(c.id);
-          var warmed = 0;
-          for (final entry in statement.entries) {
-            if (warmed >= 20) break;
-            if (entry.type == 'distribution' && entry.id.isNotEmpty) {
-              await safe(() async {
-                await invoiceRepo.getInvoice(entry.id);
-              });
-              warmed++;
-            } else if (entry.type == 'collection' && entry.id.isNotEmpty) {
-              await safe(() async {
-                await collectionRepo.getInvoice(entry.id);
-              });
-              warmed++;
-            }
-          }
-        });
-      }
-    } catch (_) {}
+      // Let the first screen load before background cache requests use the network.
+      await Future<void>.delayed(const Duration(seconds: 2));
+      if (!await _cache.isOnline) return;
+      if (_ref.read(authProvider).user == null) return;
 
-    // Warm a few supplier statements (first page of suppliers) for offline كشف حساب.
-    try {
-      final suppliers =
+      Future<void> safe(Future<void> Function() run) async {
+        try {
+          await run();
+        } catch (e) {
+          debugPrint('Warm offline cache step failed: $e');
+        }
+      }
+
+      await Future.wait([
+        safe(() async {
+          await _ref.read(clientRepositoryProvider).getClients();
+        }),
+        safe(() async {
+          await _ref.read(invoiceRepositoryProvider).getInvoices();
+        }),
+        safe(() async {
+          await _ref.read(collectionRepositoryProvider).listInvoices();
+        }),
+        safe(() async {
+          await _ref.read(stockRepositoryProvider).getStock();
+        }),
+        safe(() async {
           await _ref.read(supplierRepositoryProvider).getSuppliers();
-      for (final s in suppliers.take(30)) {
-        await safe(() async {
-          await _ref
-              .read(supplierRepositoryProvider)
-              .getAccountStatement(s.id);
-        });
-      }
-    } catch (_) {}
-
-    // Warm open stock-load statements.
-    try {
-      final loads = await _ref.read(stockLoadRepositoryProvider).list(
-            status: 'open,pending_writeoff,closed',
-          );
-      for (final load in loads.take(20)) {
-        await safe(() async {
-          await _ref.read(stockLoadRepositoryProvider).getStatement(load.id);
-        });
-      }
-    } catch (_) {}
+        }),
+        safe(() async {
+          await _ref.read(collectionRepositoryProvider).listEmployees();
+        }),
+        safe(() async {
+          await _ref.read(employeeRepositoryProvider).getMyTreasury();
+        }),
+        safe(() async {
+          await _ref.read(employeeRepositoryProvider).getMyLedger();
+        }),
+        safe(() async {
+          await _ref.read(employeeRepositoryProvider).getMyTreasuryStatement();
+        }),
+        safe(() async {
+          await _ref.read(stockLoadRepositoryProvider).list(
+                status: 'open,pending_writeoff,closed',
+              );
+        }),
+        safe(() async {
+          await _ref.read(damagedStockRepositoryProvider).list();
+        }),
+      ]);
+    } finally {
+      _warmingCaches = false;
+    }
   }
 
   void dispose() {
