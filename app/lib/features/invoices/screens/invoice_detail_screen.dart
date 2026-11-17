@@ -298,31 +298,33 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                           invoice: invoice,
                           clientPhone: invoice.clientPhone,
                         ),
-                        if (_canManage) ...[
+                        if (_canEdit || _canDelete) ...[
                           const SizedBox(height: 16),
-                          OutlinedButton.icon(
-                            onPressed: _isDeleting || _isPendingOffline
-                                ? null
-                                : () => context.push(
-                                      '${widget.basePath}/invoices/${widget.invoiceId}/edit',
-                                    ),
-                            icon: const Icon(Icons.edit_outlined),
-                            label: Text(l10n.editInvoice),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                          if (_canEdit)
+                            OutlinedButton.icon(
+                              onPressed: _isDeleting || _isPendingOffline
+                                  ? null
+                                  : () => context.push(
+                                        '${widget.basePath}/invoices/${widget.invoiceId}/edit',
+                                      ),
+                              icon: const Icon(Icons.edit_outlined),
+                              label: Text(l10n.editInvoice),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            onPressed: _isDeleting ? null : () => _confirmDelete(invoice),
-                            icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                            label: Text(l10n.deleteInvoice),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.error,
-                              side: const BorderSide(color: AppColors.error),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                          if (_canEdit && _canDelete) const SizedBox(height: 12),
+                          if (_canDelete)
+                            OutlinedButton.icon(
+                              onPressed: _isDeleting ? null : () => _confirmDelete(invoice),
+                              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                              label: Text(l10n.deleteInvoice),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.error,
+                                side: const BorderSide(color: AppColors.error),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
                             ),
-                          ),
                         ],
                       ],
                     ),

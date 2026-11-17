@@ -261,27 +261,29 @@ class _CollectionInvoiceDetailScreenState
                           entry: entry,
                           clientPhone: entry.clientPhone,
                         ),
-                        if (canManage) ...[
+                        if (canEdit || canDelete) ...[
                           const SizedBox(height: 16),
-                          OutlinedButton.icon(
-                            onPressed: _busy ? null : _edit,
-                            icon: const Icon(Icons.edit_outlined),
-                            label: Text(l10n.editEntry),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                          if (canEdit)
+                            OutlinedButton.icon(
+                              onPressed: _busy ? null : _edit,
+                              icon: const Icon(Icons.edit_outlined),
+                              label: Text(l10n.editEntry),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            onPressed: _busy ? null : _confirmDelete,
-                            icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                            label: Text(l10n.delete),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.error,
-                              side: const BorderSide(color: AppColors.error),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                          if (canEdit && canDelete) const SizedBox(height: 12),
+                          if (canDelete)
+                            OutlinedButton.icon(
+                              onPressed: _busy ? null : _confirmDelete,
+                              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                              label: Text(l10n.delete),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.error,
+                                side: const BorderSide(color: AppColors.error),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
                             ),
-                          ),
                         ],
                       ],
                     ),
