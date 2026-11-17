@@ -5,6 +5,7 @@ enum UserRole { admin, employee, client }
 class EmployeePermissions extends Equatable {
   const EmployeePermissions({
     this.canEditInvoices = true,
+    this.canDeleteInvoices = true,
     this.canViewOthersWork = false,
     this.canTransfer = false,
     this.canAddExpense = true,
@@ -13,6 +14,7 @@ class EmployeePermissions extends Equatable {
   });
 
   final bool canEditInvoices;
+  final bool canDeleteInvoices;
   final bool canViewOthersWork;
   final bool canTransfer;
   final bool canAddExpense;
@@ -23,6 +25,8 @@ class EmployeePermissions extends Equatable {
     if (json == null) return const EmployeePermissions();
     return EmployeePermissions(
       canEditInvoices: json['canEditInvoices'] as bool? ?? true,
+      canDeleteInvoices: json['canDeleteInvoices'] as bool? ??
+          (json['canEditInvoices'] as bool? ?? true),
       canViewOthersWork: json['canViewOthersWork'] as bool? ?? false,
       canTransfer: json['canTransfer'] as bool? ?? false,
       canAddExpense: json['canAddExpense'] as bool? ?? true,
@@ -33,6 +37,7 @@ class EmployeePermissions extends Equatable {
 
   Map<String, dynamic> toJson() => {
         'canEditInvoices': canEditInvoices,
+        'canDeleteInvoices': canDeleteInvoices,
         'canViewOthersWork': canViewOthersWork,
         'canTransfer': canTransfer,
         'canAddExpense': canAddExpense,
@@ -42,6 +47,7 @@ class EmployeePermissions extends Equatable {
 
   EmployeePermissions copyWith({
     bool? canEditInvoices,
+    bool? canDeleteInvoices,
     bool? canViewOthersWork,
     bool? canTransfer,
     bool? canAddExpense,
@@ -50,6 +56,7 @@ class EmployeePermissions extends Equatable {
   }) {
     return EmployeePermissions(
       canEditInvoices: canEditInvoices ?? this.canEditInvoices,
+      canDeleteInvoices: canDeleteInvoices ?? this.canDeleteInvoices,
       canViewOthersWork: canViewOthersWork ?? this.canViewOthersWork,
       canTransfer: canTransfer ?? this.canTransfer,
       canAddExpense: canAddExpense ?? this.canAddExpense,
@@ -61,6 +68,7 @@ class EmployeePermissions extends Equatable {
   @override
   List<Object?> get props => [
         canEditInvoices,
+        canDeleteInvoices,
         canViewOthersWork,
         canTransfer,
         canAddExpense,

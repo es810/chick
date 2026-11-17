@@ -40,6 +40,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _init() async {
     try {
       final cached = _repo.getCachedUser();
+
+      // Use the locally mirrored session to show the app immediately. Secure
+      // storage and server validation continue in the background.
+      if (cached != null && _repo.hasCachedToken) {
+        state = AuthState(user: cached, isLoading: false);
+        unawaited(_refreshUserInBackground());
+        unawaited(_ref.read(syncServiceProvider).syncPending());
+        unawaited(_ref.read(syncServiceProvider).warmOfflineCaches());
+        return;
+      }
+
       final hasToken = await _repo.hasToken().timeout(
         const Duration(seconds: 5),
         onTimeout: () => false,

@@ -48,13 +48,14 @@ const listCollectionInvoices = async (filters = {}) => {
 };
 
 /** View is open to employees; mutate only own invoices. */
-const assertCanMutateCollection = (invoice, user) => {
+const assertCanMutateCollection = (invoice, user, action) => {
   if (!user || user.role === 'admin') return;
   if (user.role !== 'employee') {
     throw new ApiError(403, 'Not authorized to access this collection invoice');
   }
-  if (!hasPermission(user, 'canEditInvoices')) {
-    throw new ApiError(403, 'Editing invoices is disabled for this employee');
+  const permission = action === 'delete' ? 'canDeleteInvoices' : 'canEditInvoices';
+  if (!hasPermission(user, permission)) {
+    throw new ApiError(403, `${action === 'delete' ? 'Deleting' : 'Editing'} invoices is disabled for this employee`);
   }
   if (!isSameId(invoice.employeeId, user._id)) {
     throw new ApiError(403, 'Not authorized to access this collection invoice');
@@ -191,7 +192,7 @@ const createCollectionInvoice = async (data, user) => {
 const updateCollectionInvoice = async (id, data, user) => {
   const invoice = await CollectionInvoice.findById(id);
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
-  assertCanMutateCollection(invoice, user);
+  assertCanMutateCollection(invoice, user, 'edit');
 
   const {
     clientId,
@@ -266,7 +267,7 @@ const updateCollectionInvoice = async (id, data, user) => {
 const deleteCollectionInvoice = async (id, user) => {
   const invoice = await CollectionInvoice.findById(id);
   if (!invoice) throw new ApiError(404, 'Collection invoice not found');
-  assertCanMutateCollection(invoice, user);
+  assertCanMutateCollection(invoice, user, 'delete');
 
   const clientId = invoice.clientId;
   const client = await Client.findById(clientId);

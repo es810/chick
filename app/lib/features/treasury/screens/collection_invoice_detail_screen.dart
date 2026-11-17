@@ -159,30 +159,37 @@ class _CollectionInvoiceDetailScreenState
     final l10n = context.l10n;
     final entry = _entry;
     final user = ref.watch(currentUserProvider);
-    final canManage = entry != null &&
+    final canEdit = entry != null &&
         !_busy &&
         !_isPendingOffline &&
         (user?.role == UserRole.admin ||
             (user?.role == UserRole.employee &&
                 (user?.permissions.canEditInvoices ?? true) &&
                 entry.employeeId == user?.id));
+    final canDelete = entry != null &&
+        !_busy &&
+        !_isPendingOffline &&
+        (user?.role == UserRole.admin ||
+            (user?.role == UserRole.employee &&
+                (user?.permissions.canDeleteInvoices ?? true) &&
+                entry.employeeId == user?.id));
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.collectionInvoice),
         actions: [
-          if (canManage) ...[
+          if (canDelete)
             IconButton(
               icon: const Icon(Icons.delete_outline),
               tooltip: l10n.delete,
               onPressed: _confirmDelete,
             ),
+          if (canEdit)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: l10n.editEntry,
               onPressed: _edit,
             ),
-          ],
         ],
       ),
       body: _loading || _busy

@@ -390,17 +390,17 @@ class PdfService {
       if (invoice.chickenTypesLabel.isNotEmpty)
         ('نوع الصنف', invoice.chickenTypesLabel),
       ('العدد', '${invoice.itemCount}'),
-      ('وزن القائم بالكيلوجرام', _num(invoice.displayGrossWeight)),
-      ('الوزن الفارغ بالكيلوجرام', _num(invoice.displayTareWeight)),
-      ('الوزن الصافي بالكيلوجرام', _num(invoice.netWeight)),
-      ('السعر لكل كيلوجرام', _num(invoice.pricePerKg)),
-      ('حساب الوجبة بالجنيه المصري', _num(invoice.totalPrice)),
+      ('وزن القائم كجم', _num(invoice.displayGrossWeight)),
+      ('الوزن الفارغ كجم', _num(invoice.displayTareWeight)),
+      ('الوزن الصافي كجم', _num(invoice.netWeight)),
+      ('السعر لكل كجم', _num(invoice.pricePerKg)),
+      ('حساب الوجبة بالجنيه', _num(invoice.totalPrice)),
     ];
     if (invoice.balanceBefore != null) {
-      rows.add(('المستحق قبل بالجنيه المصري', _num(invoice.balanceBefore!)));
+      rows.add(('المستحق قبل بالجنيه', _num(invoice.balanceBefore!)));
     }
     if (invoice.balanceAfter != null) {
-      rows.add(('المستحق بعد بالجنيه المصري', _num(invoice.balanceAfter!)));
+      rows.add(('المستحق بعد بالجنيه', _num(invoice.balanceAfter!)));
     }
 
     return pw.Table(
@@ -421,7 +421,7 @@ class PdfService {
           (row) => pw.TableRow(
             children: [
               _thermalCell(row.$1),
-              _thermalCell(row.$2),
+              _thermalCell(row.$2, bold: true, fontSize: 10.5),
             ],
           ),
         ),
@@ -567,18 +567,18 @@ class PdfService {
       if (invoice.chickenTypesLabel.isNotEmpty)
         ('نوع الصنف', invoice.chickenTypesLabel),
       ('العدد', '${invoice.itemCount}'),
-      ('وزن القائم بالكيلوجرام', _num(gross)),
-      ('الوزن الفارغ بالكيلوجرام', _num(tare)),
-      ('الوزن الصافي بالكيلوجرام', _num(net)),
-      ('السعر لكل كيلوجرام بالجنيه المصري', _num(price)),
-      ('حساب الوجبة بالجنيه المصري', _num(mealTotal)),
+      ('وزن القائم كجم', _num(gross)),
+      ('الوزن الفارغ كجم', _num(tare)),
+      ('الوزن الصافي كجم', _num(net)),
+      ('السعر لكل كجم بالجنيه', _num(price)),
+      ('حساب الوجبة بالجنيه', _num(mealTotal)),
     ];
 
     if (before != null) {
-      rows.add(('المستحق القديم قبل الفاتورة بالجنيه المصري', _num(before)));
+      rows.add(('المستحق القديم قبل الفاتورة بالجنيه', _num(before)));
     }
     if (after != null) {
-      rows.add(('المستحق الجديد بعد الفاتورة بالجنيه المصري', _num(after)));
+      rows.add(('المستحق الجديد بعد الفاتورة بالجنيه', _num(after)));
     }
 
     return pw.Table(
@@ -599,7 +599,12 @@ class PdfService {
           (row) => pw.TableRow(
             children: [
               _tableCell(row.$1),
-              _tableCell(row.$2, align: pw.TextAlign.left),
+              _tableCell(
+                row.$2,
+                align: pw.TextAlign.left,
+                bold: true,
+                fontSize: 20,
+              ),
             ],
           ),
         ),
@@ -653,7 +658,11 @@ class PdfService {
   }
 
   pw.Widget _tableCell(String text,
-      {bool bold = false, pw.TextAlign align = pw.TextAlign.right}) {
+      {
+    bool bold = false,
+    double fontSize = 12,
+    pw.TextAlign align = pw.TextAlign.right,
+  }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: pw.Align(
@@ -663,7 +672,7 @@ class PdfService {
         child: pw.Text(
           text,
           style: pw.TextStyle(
-            fontSize: 12,
+            fontSize: fontSize,
             fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
           ),
         ),
@@ -909,11 +918,12 @@ class PdfService {
     final d = local.day.toString().padLeft(2, '0');
     final m = local.month.toString().padLeft(2, '0');
     final y = local.year.toString();
-    final h = local.hour.toString().padLeft(2, '0');
+    final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final h = hour12.toString().padLeft(2, '0');
     final min = local.minute.toString().padLeft(2, '0');
-    // Spaces avoid unsupported slash/colon glyphs that appear as X marks on
-    // some portable thermal printers; the enclosing date text is LTR.
-    return '$d $m $y $h $min';
+    final period = local.hour < 12 ? 'ص' : 'م';
+    // Use printer-safe separators instead of slash/colon glyphs.
+    return '$d-$m-$y | $h-$min $period';
   }
 }
 

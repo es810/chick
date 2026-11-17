@@ -80,6 +80,7 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
     var isActive = employee?['isActive'] as bool? ?? true;
     final permsRaw = employee?['permissions'];
     var canEditInvoices = true;
+    var canDeleteInvoices = true;
     var canViewOthersWork = false;
     var canTransfer = false;
     var canAddExpense = true;
@@ -87,6 +88,7 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
     var canAddClients = true;
     if (permsRaw is Map) {
       canEditInvoices = permsRaw['canEditInvoices'] as bool? ?? true;
+      canDeleteInvoices = permsRaw['canDeleteInvoices'] as bool? ?? canEditInvoices;
       canViewOthersWork = permsRaw['canViewOthersWork'] as bool? ?? false;
       canTransfer = permsRaw['canTransfer'] as bool? ?? false;
       canAddExpense = permsRaw['canAddExpense'] as bool? ?? true;
@@ -201,6 +203,12 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.permCanDeleteInvoices),
+                    value: canDeleteInvoices,
+                    onChanged: (v) => setDialogState(() => canDeleteInvoices = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
                     title: Text(l10n.permCanViewOthersWork),
                     value: canViewOthersWork,
                     onChanged: (v) => setDialogState(() => canViewOthersWork = v),
@@ -275,6 +283,7 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
       'salary': double.parse(salaryText),
       'permissions': {
         'canEditInvoices': canEditInvoices,
+        'canDeleteInvoices': canDeleteInvoices,
         'canViewOthersWork': canViewOthersWork,
         'canTransfer': canTransfer,
         'canAddExpense': canAddExpense,

@@ -29,11 +29,18 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   String? _error;
   InvoiceModel? _invoice;
 
-  bool get _canManage {
+  bool get _canEdit {
     if (widget.basePath.contains('admin')) return true;
     if (!widget.basePath.contains('employee')) return false;
     final user = ref.read(currentUserProvider);
     return user?.permissions.canEditInvoices ?? true;
+  }
+
+  bool get _canDelete {
+    if (widget.basePath.contains('admin')) return true;
+    if (!widget.basePath.contains('employee')) return false;
+    final user = ref.read(currentUserProvider);
+    return user?.permissions.canDeleteInvoices ?? true;
   }
 
   bool get _isPendingOffline => widget.invoiceId.startsWith('pending-');
@@ -172,13 +179,13 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
       appBar: AppBar(
         title: Text(l10n.invoiceDetails),
         actions: [
-          if (_canManage && invoice != null && !_isDeleting && !_isPendingOffline)
+          if (_canDelete && invoice != null && !_isDeleting)
             IconButton(
               icon: const Icon(Icons.delete_outline),
               tooltip: l10n.deleteInvoice,
               onPressed: () => _confirmDelete(invoice),
             ),
-          if (_canManage && invoice != null && !_isPendingOffline)
+          if (_canEdit && invoice != null && !_isPendingOffline)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: l10n.editInvoice,

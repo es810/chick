@@ -43,6 +43,11 @@ class StorageService {
     return null;
   }
 
+  /// Fast startup hint: SharedPreferences mirrors the token saved at login.
+  /// Secure storage is still checked in the background before API calls.
+  bool get hasCachedToken =>
+      (_prefs.getString(AppConstants.tokenKey) ?? '').isNotEmpty;
+
   Future<void> clearToken() async {
     await _prefs.remove(AppConstants.tokenKey);
     try {

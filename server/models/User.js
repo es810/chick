@@ -5,6 +5,7 @@ const { DEFAULT_PERMISSIONS } = require('../utils/employeePermissions');
 const permissionsSchema = new mongoose.Schema(
   {
     canEditInvoices: { type: Boolean, default: DEFAULT_PERMISSIONS.canEditInvoices },
+    canDeleteInvoices: { type: Boolean, default: DEFAULT_PERMISSIONS.canDeleteInvoices },
     canViewOthersWork: { type: Boolean, default: DEFAULT_PERMISSIONS.canViewOthersWork },
     canTransfer: { type: Boolean, default: DEFAULT_PERMISSIONS.canTransfer },
     canAddExpense: { type: Boolean, default: DEFAULT_PERMISSIONS.canAddExpense },

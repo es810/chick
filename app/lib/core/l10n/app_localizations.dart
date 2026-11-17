@@ -128,7 +128,11 @@ class AppLocalizations {
   },
   'permCanEditInvoices': {
     'en': 'Edit / delete invoices',
-    'ar': 'تعديل ومسح الفواتير',
+    'ar': 'تعديل الفواتير',
+  },
+  'permCanDeleteInvoices': {
+    'en': 'Delete invoices',
+    'ar': 'مسح الفواتير',
   },
   'permCanViewOthersWork': {
     'en': 'Open other employees\' work',
@@ -826,6 +830,7 @@ class AppLocalizations {
   String get confirmResetTreasury => _get('confirmResetTreasury');
   String get employeePermissions => _get('employeePermissions');
   String get permCanEditInvoices => _get('permCanEditInvoices');
+  String get permCanDeleteInvoices => _get('permCanDeleteInvoices');
   String get permCanViewOthersWork => _get('permCanViewOthersWork');
   String get permCanTransfer => _get('permCanTransfer');
   String get permCanAddExpense => _get('permCanAddExpense');

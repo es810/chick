@@ -4,6 +4,7 @@
  */
 const DEFAULT_PERMISSIONS = {
   canEditInvoices: true,
+  canDeleteInvoices: true,
   canViewOthersWork: false,
   canTransfer: false,
   canAddExpense: true,
@@ -18,6 +19,12 @@ const normalizePermissions = (raw) => {
       src.canEditInvoices !== undefined
         ? Boolean(src.canEditInvoices)
         : DEFAULT_PERMISSIONS.canEditInvoices,
+    canDeleteInvoices:
+      src.canDeleteInvoices !== undefined
+        ? Boolean(src.canDeleteInvoices)
+        : src.canEditInvoices !== undefined
+          ? Boolean(src.canEditInvoices)
+          : DEFAULT_PERMISSIONS.canDeleteInvoices,
     canViewOthersWork:
       src.canViewOthersWork !== undefined
         ? Boolean(src.canViewOthersWork)
@@ -45,6 +52,7 @@ const getPermissions = (user) => {
   if (!user || user.role === 'admin') {
     return {
       canEditInvoices: true,
+      canDeleteInvoices: true,
       canViewOthersWork: true,
       canTransfer: true,
       canAddExpense: true,

@@ -121,7 +121,14 @@ const updateInvoice = asyncHandler(async (req, res) => {
 const deleteInvoiceHandler = asyncHandler(async (req, res) => {
   const invoice = await Invoice.findById(req.params.id);
   if (!invoice) throw new ApiError(404, 'Invoice not found');
-  assertEmployeeCanEdit(req.user, invoice);
+  if (req.user.role === 'employee') {
+    if (!hasPermission(req.user, 'canDeleteInvoices')) {
+      throw new ApiError(403, 'Deleting invoices is disabled for this employee');
+    }
+    if (!isSameId(invoice.employeeId, req.user._id)) {
+      throw new ApiError(403, 'Not authorized to delete this invoice');
+    }
+  }
   const result = await deleteInvoice(req.params.id, req.user);
   res.status(200).json({ success: true, data: result });
 });
