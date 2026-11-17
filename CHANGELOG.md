@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.59] — 2026-11-18
+
+### Invoices and employee access
+- Separate employee permissions to edit and delete invoices
+- Enlarge invoice values and shorten weight and currency labels on receipts
+- Open from a cached session while checking credentials in the background
+
 ## [1.8.58] — 2026-11-11
 
 ### Invoices and startup
